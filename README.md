@@ -38,3 +38,11 @@ Debug URL flags: `?bot=1` autoplay, `&god=1` no death, `&fast=8` time multiplier
 - Hearts absorb enemies, debris, sandbars and vortex cores. Barges, bridge piers and lock gates sink you outright.
 - Weapons: Vape Cloud, Slipstream (trail), Fog Bank (area blast), Vape Storm (orbiters). Each evolves at max level if you hold its partner passive.
 - Cash is banked on death and spent in the shop; the Vape Engine (speed burst per vape) is the first unlock.
+
+## Music
+
+- `music/ufo.mp3` ("Riding a UFO") plays for levels 1-5, `music/arab.mp3` ("Arabian Dancer") from level 6, with a crossfade.
+  Both were supplied by the project owner as royalty-free chiptune tracks; check the original licence / attribution terms before publishing.
+- The files are trimmed (leading silence and fade-outs removed) and loop at sample-matched points set in `MUSIC.TRACKS` in `src/config.js`.
+- The main-menu tune is synthesised live in `src/music.js` (no audio file).
+- Music is low-passed ("muffled") whenever a menu, the shop, pause or the level-up screen is showing.

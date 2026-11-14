@@ -12,6 +12,7 @@ export const shopLvl = (id) => save.shop[id] || 0;
 
 // ---- audio ------------------------------------------------------------------
 let ac = null, noiseBuf = null, lastKill = 0;
+export const getAC = () => ac;
 export function unlockAudio() {
   if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
   const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;

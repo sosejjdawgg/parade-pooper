@@ -218,6 +218,20 @@ export const FLAVOUR = {
 
 export const REWARD = { CASH_PER_100M: 1, CASH_PER_LEVEL: 1 };
 
+export const MUSIC = {
+  VOLUME: 0.5,
+  MUFFLE_HZ: 550,          // low-pass cutoff while a menu is up
+  MUFFLE_GAIN: 0.75,       // and slightly quieter
+  XFADE: 2.5,              // seconds to crossfade between tracks
+  SWITCH_LEVEL: 5,         // first track plays through this level, second track after
+  MENU_BPM: 124,
+  // loop points are in seconds within the trimmed files; found by waveform matching
+  TRACKS: {
+    ufo:  { src: 'music/ufo.mp3',  loopStart: 23.690356, loopEnd: 62.607 },   // "Riding a UFO": intro once, then B + A' forever
+    arab: { src: 'music/arab.mp3', loopStart: 19.12,     loopEnd: 51.12 },    // "Arabian Dancer": quiet lead-in once, then the 32 s body
+  },
+};
+
 export const JUICE = {
   SHAKE_HIT: 6, SHAKE_KILL: 0.6, SHAKE_NOVA: 3, SHAKE_DEATH: 12,
   HITSTOP_DEATH: 0.45, MAX_FLOATERS: 48, MAX_PARTICLES: 500,

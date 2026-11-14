@@ -1,9 +1,10 @@
 // Boot, main loop and every menu screen (immediate-mode UI).
-import { VIEW, COLORS, SHOP, FLAVOUR } from './config.js';
+import { VIEW, COLORS, SHOP, FLAVOUR, MUSIC } from './config.js';
+import { preloadMusic, musicFrame, musicState } from './music.js';
 import { ctx, view, resize, rect, box, text, textO, textW, wrap, draw, buildSprites, SPR, face } from './gfx.js';
 import { G, newRun, update, idle, nudge, choose, playerY, enemies, clouds, vapes } from './game.js';
 import { drawWorld, drawHud, dither, PAUSE_RECT } from './render.js';
-import { save, loadSave, writeSave, resetSave, shopLvl, sfx, input, initInput, requestTilt } from './platform.js';
+import { save, loadSave, writeSave, resetSave, shopLvl, sfx, input, initInput, requestTilt, getAC } from './platform.js';
 
 const { BG, FG, GINGER } = COLORS, W = VIEW.W, STEP = 1 / 60;
 const params = new URLSearchParams(location.search);
@@ -160,7 +161,7 @@ function frame(ts) {
       if (!t.key && hit(t, PAUSE_RECT.x, PAUSE_RECT.y, PAUSE_RECT.w, PAUSE_RECT.h)) input.pause = true;
       else nudge(t.x < W / 2 ? -1 : 1);
     }
-    if (input.pause && !G.dead) G.mode = 'pause';
+    if (input.pause && !G.dead) { G.mode = 'pause'; input.pause = false; }   // consume it, or the pause screen reads it as 'resume'
     else {
       acc += dt * FAST;
       while (acc >= STEP && G.mode === 'play') { update(STEP); acc -= STEP; }
@@ -173,6 +174,8 @@ function frame(ts) {
     if (G.mode === 'dead') { (window.__runs = window.__runs || []).push({ ...G.result, cause: G.cause, t: G.t, weapons: { ...G.weapons }, evo: { ...G.evo } }); newRun(); G.bot = true; }
   }
 
+  const onTitle = G.mode === 'title' || G.mode === 'settings' || (G.mode === 'shop' && backTo === 'title');
+  musicFrame(onTitle ? 'menu' : G.level <= MUSIC.SWITCH_LEVEL ? 'ufo' : 'arab', G.mode !== 'play' && G.mode !== 'title');
   const menu = G.mode === 'title' || G.mode === 'settings' || (G.mode === 'shop');
   drawWorld(menu ? 'menu' : 'full');
   if (!menu) drawHud();
@@ -188,17 +191,18 @@ function frame(ts) {
 }
 
 function boot() {
-  loadSave(); resize(); buildSprites(); initInput();
+  loadSave(); resize(); buildSprites(); initInput(); preloadMusic();
   window.addEventListener('resize', resize);
   window.addEventListener('orientationchange', resize);
-  document.addEventListener('visibilitychange', () => { if (document.hidden && G.mode === 'play' && !G.dead && !G.bot) G.mode = 'pause'; });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && G.mode === 'play' && !G.dead && !G.bot) G.mode = 'pause';
+    const a = getAC(); if (a) { if (document.hidden) a.suspend(); else a.resume(); } });
   window.addEventListener('keydown', (e) => {
     if (G.mode === 'levelup' && modeT > 0.3 && '123'.includes(e.key)) choose(+e.key - 1);
     if ((e.key === 'Enter' || e.key === ' ') && modeT > 0.3 && (G.mode === 'title' || G.mode === 'dead')) newRun();
   });
   newRun(); G.mode = 'title'; G.banner = ''; G.inv = 0;
   if (params.get('bot')) { newRun(); G.bot = true; G.god = !!params.get('god'); G.hits = G.crashes = 0; }
-  window.__vc = { G, save, newRun, enemies, clouds, vapes, SPR, face };
+  window.__vc = { musicState, G, save, newRun, enemies, clouds, vapes, SPR, face };
   requestAnimationFrame(frame);
 }
 boot();

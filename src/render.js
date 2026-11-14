@@ -200,10 +200,10 @@ export function drawHud() {
   ctx.drawImage(face(tier, mode), 174 + jolt, y0 + 17);
   if (G.hurtT > 0.5) { ctx.globalCompositeOperation = 'difference'; rect(172, y0 + 14, 40, 48); ctx.globalCompositeOperation = 'source-over'; }
   // pause button stays up top, out of the thumbs' way
-  rect(W - 21, 6, 15, 15, BG); box(W - 21, 6, 15, 15); rect(W - 16, 10, 2, 7); rect(W - 12, 10, 2, 7);
+  rect(W - 28, 6, 22, 22, BG); box(W - 28, 6, 22, 22, FG, 2); rect(W - 21, 12, 3, 10); rect(W - 16, 12, 3, 10);
   if (G.bannerT > 0 && !(G.bannerT < 0.8 && ((G.t * 12) & 1))) textO(G.banner, W / 2, H * 0.2, 3, FG, 0.5);
   if (save.runs < 2 && G.t < 6 && !G.dead && ((G.t * 3) & 1)) {
     textO('< TAP', 28, PY + 70, 2); textO('TAP >', W - 28, PY + 70, 2, FG, 1);
   }
 }
-export const PAUSE_RECT = { x: W - 32, y: 0, w: 32, h: 30 };
+export const PAUSE_RECT = { x: W - 48, y: 0, w: 48, h: 44 };   // generous: thumbs are big
