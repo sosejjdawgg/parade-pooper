@@ -50,7 +50,7 @@ Angela Rayner's: Vape Kayak starts as a tight, one-thumb endless runner. Tap lef
 
 Then it stops being a runner.
 
-Every vape is experience. Every level is a choice. A polite little puff of vapour becomes six directions of fog, a toxic slipstream, hoops the size of a narrowboat, and finally weather. By the time you reach the jungle you are no longer avoiding the swans. The swans are avoiding you.
+Every vape is experience. Every level is a choice. A polite little puff of vapour becomes six directions of fog, a toxic vapetrail, hoops the size of a narrowboat, and finally weather. By the time you reach the jungle you are no longer avoiding the swans. The swans are avoiding you.
 
 **What's in the kayak**
 

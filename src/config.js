@@ -144,13 +144,13 @@ export const WEAPONS = {
     desc: ['', 'MORE DAMAGE, FASTER', 'THREE DIRECTIONS, ALWAYS ON', 'BIGGER, STRONGER', 'FOUR DIRECTIONS', 'SIX DIRECTIONS'],
   },
   trail: {
-    name: 'SLIPSTREAM', maxLvl: 5, tick: 0.25, every: 0.1,
+    name: 'VAPETRAIL', maxLvl: 5, tick: 0.25, every: 0.1,
     levels: [
       { dmg: 3, r: 11, life: 1.2 }, { dmg: 4, r: 13, life: 1.5 }, { dmg: 6, r: 15, life: 1.8 },
       { dmg: 8, r: 17, life: 2.2 }, { dmg: 10, r: 20, life: 2.6 },
     ],
     evo: { dmg: 18, r: 34, life: 4 },
-    desc: ['A TOXIC FOG TRAIL BEHIND YOU', 'THICKER TRAIL', 'STRONGER TRAIL', 'LONGER TRAIL', 'MUCH THICKER TRAIL'],
+    desc: ['HURTS ENEMIES', 'THICKER TRAIL', 'STRONGER TRAIL', 'LONGER TRAIL', 'MUCH THICKER TRAIL'],
   },
   nova: {
     name: 'FOG BANK', maxLvl: 5, expand: 300,
