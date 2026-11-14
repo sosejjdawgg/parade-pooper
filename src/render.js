@@ -127,7 +127,6 @@ function drawEnemies() {
     const e = enemies.items[i], y = sy(e.wy);
     if (y < -24 || y > view.H + 24) continue;
     const s = SPR[e.type], bob = e.type === 'mozzie' ? 0 : Math.round(Math.sin(G.t * 6 + e.seed) * 1);
-    drawDisc(e.x, y, e.r + 5 + (((G.t * 5 + e.seed) | 0) & 1), 3);                 // pulsing threat ring: enemy, not a vape
     if (e.flash > 0) drawDisc(e.x, y, e.r + 2, 0); else draw(s, e.x, y + bob);
   }
 }

@@ -10,7 +10,7 @@ export const VIEW = {
   PLAYER_Y: 0.68,    // canoe sits this far down the screen
 };
 
-export const COLORS = { BG: '#000000', FG: '#ffffff', GINGER: '#ff5a1f' };
+export const COLORS = { BG: '#000000', FG: '#ffffff', GINGER: '#ff5a1f', ENEMY: '#ff1a2e' };   // ENEMY = thin outline on hostiles
 
 export const WORLD = { PX_PER_M: 20 };
 
@@ -44,7 +44,9 @@ export const ENGINE = {      // Vape Engine (meta unlock)
 export const VAPING = { EVERY: [3.5, 7], DRAG: 0.6, EXHALE: 1.0, PUFF_EVERY: 0.11 };
 
 export const XP = {
-  need: (lvl) => Math.round(10 + 8 * lvl + 0.6 * lvl * lvl),   // vapes-worth of XP to clear level `lvl`
+  // vapes-worth of XP to clear level `lvl`. First level-up lands at FIRST vapes, then each level costs more.
+  FIRST: 50, STEP: 20, CURVE: 1.5,
+  need: (lvl) => Math.round(XP.FIRST + XP.STEP * (lvl - 1) + XP.CURVE * (lvl - 1) * (lvl - 1)),
   VAPE: 1, BIG_VAPE: 5,
 };
 
@@ -107,8 +109,10 @@ export const SPAWN = {
   START_M: 50,                       // no enemies before this
   RATE: [0.55, 1.2, 3.2],             // enemies/sec per biome at biome start
   RATE_GROWTH_PER_KM: 0.7,           // multiplicative growth: rate *= 1 + km * this
+  // enemy numbers also follow the player's level, so slow levellers aren't swamped and strong builds get a horde
+  LEVEL_BASE: 0.55, LEVEL_PER: 0.045, LEVEL_MAX: 1.8,
   MAX_ALIVE: 150,
-  HP_GROWTH_PER_KM: 0.45,            // enemy hp *= 1 + km * this
+  HP_GROWTH_PER_KM: 0.3,            // enemy hp *= 1 + km * this
   PACK_CHANCE: [0.05, 0.15, 0.45],   // chance a spawn is a pack
   PACK_SIZE: [3, 5, 9],
   BEHIND_CHANCE: [0, 0.1, 0.25],     // chasers that come from behind

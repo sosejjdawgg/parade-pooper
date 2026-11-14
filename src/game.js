@@ -584,7 +584,8 @@ export function update(dt) {
   if (bi !== G.biomeIdx) { G.biomeIdx = bi; G.banner = BIOMES.NAMES[bi]; G.bannerT = 3; }
   if (G.bannerT > 0) G.bannerT -= dt;
   if (m > SPAWN.START_M) {
-    G.spawnT += lerp3(SPAWN.RATE, b) * (1 + m / 1000 * SPAWN.RATE_GROWTH_PER_KM) * Math.sqrt(G.speed / PLAYER.SPEED_START) * dt;
+    G.spawnT += lerp3(SPAWN.RATE, b) * (1 + m / 1000 * SPAWN.RATE_GROWTH_PER_KM) * Math.sqrt(G.speed / PLAYER.SPEED_START)
+      * Math.min(SPAWN.LEVEL_MAX, SPAWN.LEVEL_BASE + G.level * SPAWN.LEVEL_PER) * dt;
     while (G.spawnT >= 1) { G.spawnT--; if (enemies.n < SPAWN.MAX_ALIVE) spawnWave(b); }
   }
 
