@@ -1,5 +1,5 @@
 // Boot, main loop and every menu screen (immediate-mode UI).
-import { VIEW, COLORS, SHOP, FLAVOUR, MUSIC } from './config.js';
+import { VIEW, COLORS, SHOP, FLAVOUR, MUSIC, LEGAL } from './config.js';
 import { preloadMusic, musicFrame, musicState, openerFinished } from './music.js';
 import { ctx, view, resize, rect, box, text, textO, textW, wrap, draw, buildSprites, SPR, face } from './gfx.js';
 import { G, newRun, update, idle, nudge, choose, playerY, enemies, clouds, vapes } from './game.js';
@@ -46,7 +46,7 @@ function titleScreen() {
   textO('COLLECT VAPES. GET POWERFUL.', W / 2, H * 0.79 + 16, 2, FG, 0.5);
   if (save.best) textO('BEST ' + save.best + ' VAPES   ' + save.bestDist + 'M   £' + save.cash, W / 2, H * 0.9, 2, FG, 0.5);
   textO('NO STAMP DUTY PAYABLE ON KAYAKS.', W / 2, H * 0.79 + 34, 2, FG, 0.5);
-  textO('A PARODY. NOT AFFILIATED WITH ANYONE.', W / 2, H - 12, 1, FG, 0.5);
+  textO('A FREE, NON-COMMERCIAL PARODY. NOT AFFILIATED WITH ANYONE.', W / 2, H - 12, 1, FG, 0.5);
 }
 
 function levelUpScreen() {
@@ -125,8 +125,8 @@ function shopScreen() {
 
 function settingsScreen() {
   shade();
-  const y = Math.round(view.H / 2 - 150);
-  panel(20, y, W - 40, 300);
+  const y = Math.round(view.H / 2 - 170);
+  panel(20, y, W - 40, 340);
   text('SETTINGS', W / 2, y + 20, 5, FG, 0.5);
   if (button(40, y + 64, W - 80, 40, 'SOUND: ' + (save.sound ? 'ON' : 'OFF'), { scale: 3 })) { save.sound = !save.sound; writeSave(); }
   if (button(40, y + 114, W - 80, 40, 'TILT STEER: ' + (save.tilt ? 'ON' : 'OFF'), { scale: 3 })) {
@@ -137,7 +137,21 @@ function settingsScreen() {
   if (button(40, y + 164, W - 80, 40, armed ? 'TAP AGAIN TO WIPE' : 'RESET PROGRESS', { scale: 2, inv: armed })) {
     if (armed) { resetSave(); resetArm = 0; say('PROGRESS RESET'); } else resetArm = G.t;
   }
-  if (button(40, y + 236, W - 80, 44, 'BACK', { scale: 3, inv: true })) G.mode = 'title';
+  if (button(40, y + 214, W - 80, 40, 'ABOUT AND LEGAL', { scale: 2 })) G.mode = 'legal';
+  if (button(40, y + 276, W - 80, 44, 'BACK', { scale: 3, inv: true })) G.mode = 'title';
+}
+
+function legalScreen() {
+  shade();
+  rect(10, 10, W - 20, view.H - 20, BG); box(10, 10, W - 20, view.H - 20, FG, 2);
+  text('ABOUT AND LEGAL', W / 2, 24, 4, FG, 0.5);
+  let y = 58;
+  LEGAL.forEach((block, i) => {
+    if (i % 2 === 0) { text(block, 24, y, 3, GINGER); y += 21; return; }
+    wrap(block, 39).forEach((l) => { text(l, 24, y, 2); y += 13; });
+    y += 9;
+  });
+  if (button(40, view.H - 66, W - 80, 44, 'BACK', { scale: 3, inv: true })) G.mode = 'settings';
 }
 
 function pauseScreen() {
@@ -166,7 +180,7 @@ function frame(ts) {
       acc += dt * FAST;
       while (acc >= STEP && G.mode === 'play') { update(STEP); acc -= STEP; }
     }
-  } else if (G.mode === 'title' || G.mode === 'shop' || G.mode === 'settings') idle(dt);
+  } else if (G.mode === 'title' || G.mode === 'shop' || G.mode === 'settings' || G.mode === 'legal') idle(dt);
   else G.t += dt;
 
   if (G.bot) {      // headless balance runs
@@ -174,9 +188,9 @@ function frame(ts) {
     if (G.mode === 'dead') { (window.__runs = window.__runs || []).push({ ...G.result, cause: G.cause, t: G.t, weapons: { ...G.weapons }, evo: { ...G.evo } }); newRun(); G.bot = true; }
   }
 
-  const onTitle = G.mode === 'title' || G.mode === 'settings' || (G.mode === 'shop' && backTo === 'title');
+  const onTitle = G.mode === 'title' || G.mode === 'settings' || G.mode === 'legal' || (G.mode === 'shop' && backTo === 'title');
   musicFrame(!openerFinished() ? MUSIC.OPENER : onTitle ? 'menu' : MUSIC.BIOME_TRACKS[G.biomeIdx || 0], G.mode !== 'play' && G.mode !== 'title');
-  const menu = G.mode === 'title' || G.mode === 'settings' || (G.mode === 'shop');
+  const menu = G.mode === 'title' || G.mode === 'settings' || G.mode === 'legal' || (G.mode === 'shop');
   drawWorld(menu ? 'menu' : 'full');
   if (!menu) drawHud();
   if (G.mode === 'title') titleScreen();
@@ -184,6 +198,7 @@ function frame(ts) {
   else if (G.mode === 'dead') deadScreen();
   else if (G.mode === 'shop') shopScreen();
   else if (G.mode === 'settings') settingsScreen();
+  else if (G.mode === 'legal') legalScreen();
   else if (G.mode === 'pause') pauseScreen();
   if (toastT > 0) { toastT -= dt; const tw = textW(toast, 2) + 20; rect(W / 2 - tw / 2, view.H - 96, tw, 22, FG); text(toast, W / 2, view.H - 90, 2, BG, 0.5); }
 

@@ -11,7 +11,9 @@ export const openerFinished = () => openerDone;
 
 export const musicState = () => ({ cur, loaded: Object.keys(buffers), ctx: ac && ac.state, cutoff: filter && Math.round(filter.frequency.value) });
 export function preloadMusic() {
+  if (window.__NO_OPENER) openerDone = true;        // public builds ship without the opening track
   for (const k in MUSIC.TRACKS) {
+    if (window.__NO_OPENER && k === MUSIC.OPENER) continue;
     const url = (window.__MUSIC && window.__MUSIC[k]) || MUSIC.TRACKS[k].src;
     fetch(url).then((r) => r.arrayBuffer()).then((b) => { raw[k] = b; }).catch(() => { if (k === MUSIC.OPENER) openerDone = true; });
   }

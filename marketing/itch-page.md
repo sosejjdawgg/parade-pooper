@@ -12,7 +12,7 @@ Everything below is ready to paste into itch.io's "Create new project" form.
 | Classification | Games |
 | Kind of project | HTML |
 | Release status | Released (or "In development" while you're still tuning) |
-| Pricing | No payments (free) or "$0 or donate" |
+| Pricing | **No payments.** Do not enable donations or "pay what you want": the game is strictly non-commercial |
 | Genre | Action |
 | Tags | `pixel-art`, `endless-runner`, `bullet-heaven`, `roguelite`, `satire`, `parody`, `mobile`, `one-button`, `arcade`, `1-bit` |
 | Made with | HTML5 canvas, vanilla JavaScript |
@@ -70,14 +70,20 @@ Every vape is experience. Every level is a choice. A polite little puff of vapou
 
 **The small print**
 
-This is a work of parody and satire. It is not affiliated with, endorsed by or connected to any politician, party or vape manufacturer. No kayaks were harmed.
+This is a free, non-commercial work of parody and satire. It is not affiliated with, endorsed by or connected to any politician, party, company or vape manufacturer, and nothing in it is a statement of fact. It is not sold, has no ads, takes no donations and makes no money for anyone.
+
+No accounts, no tracking, no data collected: your progress is saved only in your own browser.
+
+All names, likenesses and music belong to their respective owners. Rights holders: message me here and it comes down. No kayaks were harmed.
 
 ## Credits block
 
 - Game design: (your name / handle)
 - Code and in-game pixel art: built with Claude Code
 - Key art: (your credit)
-- Music: list each track with its author and licence. **Before going public, confirm you have the right to distribute every track.** "River" (8 Bit Universe's 8-bit cover of the Eminem song) is a commercial cover of a copyrighted song, not royalty-free; clear it or replace it. The two chiptune tracks were supplied as royalty-free; check whether they require attribution.
+- Music: "Riding a UFO" and "Arabian Dancer" — add the original author's name, link and licence line here. They were supplied as royalty-free; check whether the licence requires attribution or forbids redistribution.
+- The upload zip deliberately leaves out "River" (an 8-bit cover of a commercial song). Being a non-commercial parody does not cover redistributing someone else's music, so the public build opens on the menu chiptune instead.
+- The full legal notice is `LEGAL.md` in the repo and `LEGAL.txt` inside the zip; the same wording is in the game under Settings > About and Legal.
 
 ## Launch posts
 
@@ -87,7 +93,7 @@ This is a work of parody and satire. It is not affiliated with, endorsed by or c
 
 **Longer (Reddit, r/WebGames or r/incremental_games style)**
 
-> I made a free browser game: it starts as a one-thumb endless runner and turns into a bullet heaven about four minutes in. You're a deputy-prime-ministerial figure in a kayak with a vape. 1-bit pixel art, plays on a phone, no install, no ads. Feedback on the difficulty curve very welcome. [link]
+> I made a free browser game: it starts as a one-thumb endless runner and turns into a bullet heaven about four minutes in. You're a deputy-prime-ministerial figure in a kayak with a vape. 1-bit pixel art, plays on a phone, no install, no ads, no money involved - it's a non-commercial parody. Feedback on the difficulty curve very welcome. [link]
 
 **Devlog title ideas**
 

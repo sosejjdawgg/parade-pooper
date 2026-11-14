@@ -40,6 +40,11 @@ Debug URL flags: `?bot=1` autoplay, `&god=1` no death, `&fast=8` time multiplier
 - Weapons: Vape Cloud, Vapetrail (trail), Fog Bank (area blast), Vape Storm (orbiters). Each evolves at max level if you hold its partner passive.
 - Cash is banked on death and spent in the shop; the Vape Engine (speed burst per vape) is the first unlock.
 
+## Legal
+
+Free, non-commercial parody: no sales, ads or donations, no data collected. Full wording in `LEGAL.md` (also in-game under Settings > About and Legal).
+`node tools/bundle.cjs --itch` builds the public zip, which excludes `music/river.mp3`.
+
 ## Music
 
 - `music/river.mp3` plays once, starting on the main menu and carrying on into the run. It is an 8-bit cover of a commercial song
