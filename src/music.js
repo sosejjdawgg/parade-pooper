@@ -5,20 +5,22 @@ import { save, getAC } from './platform.js';
 
 let ac = null, bus = null, filter = null;
 const raw = {}, buffers = {}, decoding = {};
-let cur = null, curGain = null, curSrc = null;
+let cur = null, curGain = null, curSrc = null, openerDone = false;
+/** true once the opening track has played all the way through (or could not be loaded) */
+export const openerFinished = () => openerDone;
 
 export const musicState = () => ({ cur, loaded: Object.keys(buffers), ctx: ac && ac.state, cutoff: filter && Math.round(filter.frequency.value) });
 export function preloadMusic() {
   for (const k in MUSIC.TRACKS) {
     const url = (window.__MUSIC && window.__MUSIC[k]) || MUSIC.TRACKS[k].src;
-    fetch(url).then((r) => r.arrayBuffer()).then((b) => { raw[k] = b; }).catch(() => { /* play on without music */ });
+    fetch(url).then((r) => r.arrayBuffer()).then((b) => { raw[k] = b; }).catch(() => { if (k === MUSIC.OPENER) openerDone = true; });
   }
 }
 function decodePending() {
   for (const k in raw) {
     if (buffers[k] || decoding[k]) continue;
     decoding[k] = true;
-    ac.decodeAudioData(raw[k].slice(0), (b) => { buffers[k] = b; }, () => { /* unsupported: stay silent */ });
+    ac.decodeAudioData(raw[k].slice(0), (b) => { buffers[k] = b; }, () => { if (k === MUSIC.OPENER) openerDone = true; });
   }
 }
 function fadeOut() {
@@ -38,8 +40,11 @@ function start(track) {
   g.connect(filter); curGain = g;
   if (track === 'menu') { chip.gain = g; chip.next = t + 0.1; chip.step = 0; return; }
   const def = MUSIC.TRACKS[track], s = ac.createBufferSource();
-  s.buffer = buffers[track]; s.loop = true; s.loopStart = def.loopStart; s.loopEnd = def.loopEnd;
-  s.connect(g); s.start(t); curSrc = s;
+  s.buffer = buffers[track];
+  if (def.once) s.onended = () => { if (track === MUSIC.OPENER) openerDone = true; };
+  else { s.loop = true; s.loopStart = def.loopStart; s.loopEnd = def.loopEnd; }
+  const trim = ac.createGain(); trim.gain.value = def.gain || 1;
+  s.connect(trim).connect(g); s.start(t); curSrc = s;
 }
 
 /** Call every frame with the track that should be playing ('menu' | track id | null). */

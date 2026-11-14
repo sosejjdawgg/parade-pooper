@@ -117,6 +117,7 @@ function drawPickups() {
   for (let i = 0; i < vapes.n; i++) {
     const v = vapes.items[i], y = sy(v.wy);
     if (y < -20 || y > view.H + 20) continue;
+    if (v.kind === 'tea') { draw(SPR.tea, v.x, y + Math.round(Math.sin(G.t * 4 + v.ang) * 1.5)); continue; }
     if (v.kind === 'cash') { draw(SPR.cash, v.x, y + Math.round(Math.sin(G.t * 5 + v.ang) * 1.5)); continue; }
     const fr = v.kind === 'big' ? SPR.bigVape : SPR.vape;
     draw(fr[((v.ang / 6.283 * 16) | 0) & 15], v.x, y);

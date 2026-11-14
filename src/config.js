@@ -55,6 +55,10 @@ export const PICKUPS = {
   BIG_CHANCE: 0.05,          // chance a pattern vape is upgraded to a big one
   SPIN_BASE: 5, SPIN_BIG: 2.5,
   SPIN_ACCEL: 2.2,           // rad/s gained per second on screen
+  TEA_CHUNK_CHANCE: 0.07,    // chance a chunk has a cup of tea (heals a heart)...
+  TEA_HURT_MULT: 3,          // ...multiplied when you're below full health
+  TEA_HEAL: 1,
+  TEA_FULL_XP: 5,            // XP instead, if already at full health
   CASH_VALUE: 5,
   CASH_CHUNK_CHANCE: 0.3,    // chance a chunk hides a cash bag
   DENSITY_PER_M: 0.00012,    // extra vapes in patterns per metre travelled
@@ -102,7 +106,7 @@ export const ENEMIES = {
   tumble:  { hp: 9,  r: 6, speed: 30, steer: 70, mode: 'bounce', xp: 1, drop: 0.4 },
   piranha: { hp: 11, r: 5, speed: 66, steer: 0,  mode: 'chase',  xp: 2, drop: 0.45, turn: 1.3, stamina: 6 },
   mozzie:  { hp: 3,  r: 3, speed: 84, steer: 0,  mode: 'chase',  xp: 1, drop: 0.25, turn: 2.0, stamina: 7 },
-  croc:    { hp: 60, r: 9, speed: 26, steer: 14, mode: 'drift',  xp: 8, drop: 1, big: true },
+  croc:    { hp: 60, r: 9, speed: 26, steer: 14, mode: 'drift',  xp: 8, drop: 1, big: true, tea: 0.3 },   // tea: chance to drop a cuppa
 };
 
 export const SPAWN = {
@@ -231,10 +235,12 @@ export const MUSIC = {
   MUFFLE_HZ: 550,          // low-pass cutoff while a menu is up
   MUFFLE_GAIN: 0.75,       // and slightly quieter
   XFADE: 2.5,              // seconds to crossfade between tracks
-  SWITCH_LEVEL: 5,         // first track plays through this level, second track after
+  OPENER: 'river',         // plays once from the main menu into the run; then the biome tracks take over
+  BIOME_TRACKS: ['ufo', 'arab', 'ufo'],   // canal, desert, jungle: the track changes when the scenery does
   MENU_BPM: 124,
   // loop points are in seconds within the trimmed files; found by waveform matching
   TRACKS: {
+    river: { src: 'music/river.mp3', once: true, gain: 1.7 },                  // 8-bit cover supplied by the owner; plays through once
     ufo:  { src: 'music/ufo.mp3',  loopStart: 23.690356, loopEnd: 62.607 },   // "Riding a UFO": intro once, then B + A' forever
     arab: { src: 'music/arab.mp3', loopStart: 19.12,     loopEnd: 51.12 },    // "Arabian Dancer": quiet lead-in once, then the 32 s body
   },

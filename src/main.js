@@ -1,6 +1,6 @@
 // Boot, main loop and every menu screen (immediate-mode UI).
 import { VIEW, COLORS, SHOP, FLAVOUR, MUSIC } from './config.js';
-import { preloadMusic, musicFrame, musicState } from './music.js';
+import { preloadMusic, musicFrame, musicState, openerFinished } from './music.js';
 import { ctx, view, resize, rect, box, text, textO, textW, wrap, draw, buildSprites, SPR, face } from './gfx.js';
 import { G, newRun, update, idle, nudge, choose, playerY, enemies, clouds, vapes } from './game.js';
 import { drawWorld, drawHud, dither, PAUSE_RECT } from './render.js';
@@ -175,7 +175,7 @@ function frame(ts) {
   }
 
   const onTitle = G.mode === 'title' || G.mode === 'settings' || (G.mode === 'shop' && backTo === 'title');
-  musicFrame(onTitle ? 'menu' : G.level <= MUSIC.SWITCH_LEVEL ? 'ufo' : 'arab', G.mode !== 'play' && G.mode !== 'title');
+  musicFrame(!openerFinished() ? MUSIC.OPENER : onTitle ? 'menu' : MUSIC.BIOME_TRACKS[G.biomeIdx || 0], G.mode !== 'play' && G.mode !== 'title');
   const menu = G.mode === 'title' || G.mode === 'settings' || (G.mode === 'shop');
   drawWorld(menu ? 'menu' : 'full');
   if (!menu) drawHud();

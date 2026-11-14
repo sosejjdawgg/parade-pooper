@@ -225,6 +225,9 @@ function genChunk() {
     const wy = G.genY + rnd(len);
     addPickup('cash', laneX(wy, pick([0, 1]), 12), wy);     // hugging the bank: a risk to grab
   }
+  if (G.chunkN >= 2 && Math.random() < PICKUPS.TEA_CHUNK_CHANCE * (G.hp < G.maxHp ? PICKUPS.TEA_HURT_MULT : 1)) {
+    const wy = G.genY + rnd(len); addPickup('tea', laneX(wy, rnd(0.15, 0.85)), wy);
+  }
   G.chunkN++;
   G.genY += len + lerp3(BIOMES.CHUNK_GAP, b);
 }
@@ -274,6 +277,11 @@ function gainXp(x) {
 }
 function collect(v) {
   v.dead = true;
+  if (v.kind === 'tea') {
+    if (G.hp < G.maxHp) { G.hp = Math.min(G.maxHp, G.hp + PICKUPS.TEA_HEAL); addFloater('+1 HEART', v.x, v.wy + 10, 2); }
+    else { gainXp(PICKUPS.TEA_FULL_XP); addFloater('LOVELY', v.x, v.wy + 10, 1); }
+    burst(v.x, v.wy, 12, 90); sfx.heal(); G.grinT = Math.max(G.grinT, 1); return;
+  }
   if (v.kind === 'cash') {
     const n = Math.round(PICKUPS.CASH_VALUE * S.cash); G.cash += n;
     addFloater('+£' + n, v.x, v.wy + 10, 2); burst(v.x, v.wy, 10, 90); sfx.cash(); return;
@@ -300,7 +308,8 @@ function damageEnemy(e, dmg) {
   e.dead = true; G.kills++; gainXp(d.xp);
   burst(e.x, e.wy, d.big ? 16 : 6, d.big ? 120 : 80, 0.35, d.big ? 3 : 2);
   G.shake = Math.max(G.shake, JUICE.SHAKE_KILL); sfx.kill();
-  if (Math.random() < d.drop) addPickup(d.big ? 'big' : 'vape', e.x, e.wy);
+  if (d.tea && G.hp < G.maxHp && Math.random() < d.tea) addPickup('tea', e.x, e.wy);
+  else if (Math.random() < d.drop) addPickup(d.big ? 'big' : 'vape', e.x, e.wy);
 }
 
 // ---- level-up choices ---------------------------------------------------------------
