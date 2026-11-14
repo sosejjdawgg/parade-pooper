@@ -1,7 +1,7 @@
 // Simulation: canal, chunks, pickups, enemies, weapons, level-ups. No drawing here.
 import {
   VIEW, WORLD, PLAYER, ENGINE, XP, PICKUPS, BIOMES, HAZARDS, ENEMIES, SPAWN,
-  WEAPONS, PASSIVES, EVOLUTIONS, LEVELUP, REWARD, JUICE, VAPING, FLAVOUR, SIDE_ART,
+  WEAPONS, PASSIVES, EVOLUTIONS, LEVELUP, REWARD, JUICE, VAPING, FLAVOUR, SIDE_ART, IMMUNITY, BANKS,
 } from './config.js';
 import { view } from './gfx.js';
 import { save, shopLvl, writeSave, sfx, input } from './platform.js';
@@ -48,6 +48,7 @@ export function centreAt(wy) {
   const amp = clamp((VIEW.W - widthAt(wy)) / 2 - SIDE_ART.BORDER - SIDE_ART.LAND_MIN, 0, BIOMES.MEANDER);   // never wander under the border
   return VIEW.W / 2 + amp * (0.6 * Math.sin(wy * 0.0052 + G.ph[0]) + 0.4 * Math.sin(wy * 0.0113 + G.ph[1]));
 }
+export const dangerAt = (wy) => wy / WORLD.PX_PER_M >= BANKS.DANGER_AT_M;
 export const leftAt = (wy) => centreAt(wy) - widthAt(wy) / 2;
 export const rightAt = (wy) => centreAt(wy) + widthAt(wy) / 2;
 const laneX = (wy, f, margin = 18) => { const l = leftAt(wy) + margin, r = rightAt(wy) - margin; return l + (r - l) * f; };
@@ -62,7 +63,7 @@ export function newRun() {
     weapons: { cloud: 1 + shopLvl('starter') }, passives: {}, evo: {},
     cd: { cloud: 0.5, trail: 0, nova: 1.5, rings: 0.5 }, orbA: 0, orbTick: 0, cloudId: 0,
     genY: 240, chunkN: 0, spawnT: 0, shake: 0, flash: 0, hitstop: 0, dead: false, deadT: 0,
-    banner: BIOMES.NAMES[0], bannerT: 2.5, biomeIdx: 0, pending: 0, choices: null, cause: '', result: null, puffT: 0, vapeT: 2.5, dragT: 0, hurtT: 0, grinT: 0,
+    banner: BIOMES.NAMES[0], bannerT: 2.5, biomeIdx: 0, pending: 0, choices: null, cause: '', result: null, puffT: 0, vapeT: 2.5, dragT: 0, hurtT: 0, grinT: 0, shieldT: 0, danger: false,
   });
   G.ph = [rnd(6.28), rnd(6.28), rnd(6.28)];
   G.px = centreAt(0);
@@ -80,7 +81,7 @@ function calcStats() {
   S.nudge = 1 + plvl('paddle') * PASSIVES.paddle.per;
   S.xp = 1 + shopLvl('xp') * 0.1;
   S.cash = 1 + shopLvl('cash') * 0.2;
-  G.maxHp = PLAYER.HEARTS + shopLvl('heart') + plvl('hivis');
+  G.maxHp = PLAYER.HP + shopLvl('heart') * 25 + plvl('hivis') * PASSIVES.hivis.per;
 }
 /** current stats of a weapon (evolved form if evolved) */
 export function wp(id) {
@@ -228,6 +229,13 @@ function genChunk() {
   if (G.chunkN >= 2 && Math.random() < PICKUPS.TEA_CHUNK_CHANCE * (G.hp < G.maxHp ? PICKUPS.TEA_HURT_MULT : 1)) {
     const wy = G.genY + rnd(len); addPickup('tea', laneX(wy, rnd(0.15, 0.85)), wy);
   }
+  if (dangerAt(G.genY)) {          // late game: trouble hugs the sides
+    const span = len + lerp3(BIOMES.CHUNK_GAP, b);
+    if (Math.random() < BANKS.SIDE_DEBRIS_CHANCE) for (let i = 0, n = 1 + ((Math.random() * 2) | 0); i < n; i++) {
+      const wy = G.genY + rnd(span); addHazard('debris', laneX(wy, pick([0, 1]), 14), wy, 6, 5, { kind: pick(['trolley', 'barrel', 'cone']) });
+    }
+    if (Math.random() < BANKS.SIDE_BARGE_CHANCE) { const wy = G.genY + len + lerp3(BIOMES.CHUNK_GAP, b) * 0.5; addHazard('barge', laneX(wy, pick([0, 1]), 17), wy, 13, 32, { len: 70 }); }
+  }
   G.chunkN++;
   G.genY += len + lerp3(BIOMES.CHUNK_GAP, b);
 }
@@ -255,7 +263,7 @@ export function nudge(dir) {
 function hurt(n, cause) {
   if (G.inv > 0 || G.dead) return;
   if (G.god) { G.hits = (G.hits || 0) + 1; G.inv = 0.5; return; }
-  G.hp -= n; G.hurtT = 0.7; G.inv = PLAYER.INVULN_HIT; G.shake = JUICE.SHAKE_HIT; G.flash = 0.12; sfx.hurt();
+  G.hp -= n * PLAYER.HIT_DMG; G.hurtT = 0.7; G.inv = PLAYER.INVULN_HIT; G.shake = JUICE.SHAKE_HIT; G.flash = 0.12; sfx.hurt();
   burst(G.px, G.dist, 14, 120);
   if (G.hp <= 0) die(cause);
 }
@@ -278,7 +286,7 @@ function gainXp(x) {
 function collect(v) {
   v.dead = true;
   if (v.kind === 'tea') {
-    if (G.hp < G.maxHp) { G.hp = Math.min(G.maxHp, G.hp + PICKUPS.TEA_HEAL); addFloater('+1 HEART', v.x, v.wy + 10, 2); }
+    if (G.hp < G.maxHp) { G.hp = Math.min(G.maxHp, G.hp + PICKUPS.TEA_HEAL); addFloater('+HEALTH', v.x, v.wy + 10, 2); }
     else { gainXp(PICKUPS.TEA_FULL_XP); addFloater('LOVELY', v.x, v.wy + 10, 1); }
     burst(v.x, v.wy, 12, 90); sfx.heal(); G.grinT = Math.max(G.grinT, 1); return;
   }
@@ -335,7 +343,7 @@ function rollChoices() {
     out.push(c.splice(i, 1)[0]);
   }
   if (out.length < 3) out.push({ kind: 'cash', title: 'GIFT FROM A LORD', desc: '+£' + LEVELUP.FILLER_CASH + '. FULLY DECLARED, OBVIOUSLY.', tag: '' });
-  if (out.length < 3) out.push({ kind: 'heal', title: 'CUP OF TEA', desc: 'RESTORE ALL HEARTS', tag: '' });
+  if (out.length < 3) out.push({ kind: 'heal', title: 'CUP OF TEA', desc: 'RESTORE ALL HEALTH', tag: '' });
   return out;
 }
 export function choose(i) {
@@ -469,7 +477,10 @@ function updateEnemies(dt) {
     if (e.x < l) { e.x = l; if (e.vx < 0) e.vx = -e.vx; } else if (e.x > r) { e.x = r; if (e.vx > 0) e.vx = -e.vx; }
     if (e.wy < below) { e.dead = true; continue; }
     if (Math.abs(e.x - G.px) < e.r + PLAYER.HIT_W && Math.abs(e.wy - G.dist) < e.r + PLAYER.HIT_H && G.inv <= 0) {
-      hurt(1, e.type); e.dead = true; burst(e.x, e.wy, 6, 80);
+      if (shopLvl('immunity') && G.shieldT <= 0 && !d.big) {            // political immunity: it dies, you don't
+        G.shieldT = IMMUNITY.COOLDOWN[shopLvl('immunity') - 1];
+        damageEnemy(e, 1e6); burst(G.px, G.dist, 18, 150, 0.4); addFloater('IMMUNE!', G.px, G.dist + 26, 1); sfx.nova(); G.shake = Math.max(G.shake, 3);
+      } else { hurt(1, e.type); e.dead = true; burst(e.x, e.wy, 6, 80); }
     }
   }
 }
@@ -554,9 +565,9 @@ export function update(dt) {
   // speed
   const m = G.dist / WORLD.PX_PER_M;
   let base = PLAYER.SPEED_START + (PLAYER.SPEED_MAX - PLAYER.SPEED_START) * Math.min(1, m / PLAYER.SPEED_RAMP_M);
-  if (shopLvl('engine')) base *= ENGINE.SPEED_MULT;
+  if (shopLvl('engine')) base *= ENGINE.SPEED_MULT + shopLvl('turbo') * ENGINE.TUNING_SPEED;
   G.burst *= Math.exp(-ENGINE.BURST_DECAY * dt);
-  G.slow += (1 - G.slow) * Math.min(1, dt * HAZARDS.SLOW_RECOVER);
+  G.slow = Math.min(1, G.slow + HAZARDS.SLOW_RECOVER * dt);      // steady climb back to whatever full speed currently is
   G.speed = (base + G.burst) * G.slow;
   G.dist += G.speed * dt;
 
@@ -572,9 +583,13 @@ export function update(dt) {
   const l = leftAt(G.dist) + 9, r = rightAt(G.dist) - 9;
   if (G.px < l || G.px > r) {
     if (Math.abs(vx) > 30 || Math.random() < dt * 8) addPart(G.px < l ? l - 8 : r + 8, G.dist + rnd(-10, 10), 0, G.speed - 40, 0.3);
+    const leftSide = G.px < l;
     G.px = clamp(G.px, l, r); G.pvx = 0;
+    if (G.danger) { hurt(1, 'bank'); G.pvx = (leftSide ? 1 : -1) * BANKS.PUSH; }
   }
   if (G.inv > 0) G.inv -= dt;
+  if (G.shieldT > 0) G.shieldT -= dt;
+  if (!G.danger && dangerAt(G.dist)) { G.danger = true; G.banner = "RED WALL: DON'T TOUCH!"; G.bannerT = 4; }
   if (G.hurtT > 0) G.hurtT -= dt;
   if (G.grinT > 0) G.grinT -= dt;
   if (G.comboT > 0) G.comboT -= dt;

@@ -29,7 +29,8 @@ export const PLAYER = {
   TILT_SPEED: 230,        // max lateral speed from tilt
   TILT_FULL_DEG: 22,      // tilt angle for full speed
   HIT_W: 4, HIT_H: 12,    // half-size of the (forgiving) hitbox
-  HEARTS: 3,
+  HP: 100,                // starting health; shown as a percentage of this
+  HIT_DMG: 34,            // health lost per hit (enemy, debris, sandbar, vortex core, red bank)
   INVULN_HIT: 1.3,
   INVULN_LEVELUP: 1.2,
   PICKUP_R: 13,
@@ -39,8 +40,9 @@ export const PLAYER = {
 
 export const ENGINE = {      // Vape Engine (meta unlock)
   SPEED_MULT: 1.1,
-  BURST_ADD: [26, 34, 42, 52],   // per vape, indexed by turbo level
-  BURST_CAP: [90, 120, 150, 190],
+  TUNING_SPEED: 0.02,                    // extra base speed per Engine Tuning level
+  BURST_ADD: [24, 28, 33, 38, 45, 52],   // per vape, indexed by Engine Tuning level (0 = engine only)
+  BURST_CAP: [80, 100, 120, 140, 165, 190], // top speed reached at the fifth tuning level
   BURST_DECAY: 1.5,              // exponential decay rate
   SHAKE: 0.75,
 };
@@ -62,7 +64,7 @@ export const PICKUPS = {
   SPIN_ACCEL: 2.2,           // rad/s gained per second on screen
   TEA_CHUNK_CHANCE: 0.07,    // chance a chunk has a cup of tea (heals a heart)...
   TEA_HURT_MULT: 3,          // ...multiplied when you're below full health
-  TEA_HEAL: 1,
+  TEA_HEAL: 34,
   TEA_FULL_XP: 5,            // XP instead, if already at full health
   CASH_VALUE: 5,
   CASH_CHUNK_CHANCE: 0.3,    // chance a chunk hides a cash bag
@@ -92,11 +94,22 @@ export const BIOMES = {
   },
 };
 
+// Shield from the shop: recharge time in seconds per level. Big enemies (crocs) ignore it.
+export const IMMUNITY = { COOLDOWN: [10, 8, 5, 3, 2], RADIUS: 21 };
+
+// Late game: the banks turn red and hurt on contact, and extra hazards hug the sides.
+export const BANKS = {
+  DANGER_AT_M: 1500,          // distance where the banks go live
+  PUSH: 170,                  // shove back toward the middle after touching one
+  SIDE_DEBRIS_CHANCE: 0.7,    // per chunk: debris tucked against a bank
+  SIDE_BARGE_CHANCE: 0.25,    // per chunk: a moored barge against a bank
+};
+
 export const HAZARDS = {
   VORTEX_R: 64, VORTEX_PULL: 300, VORTEX_CORE: 9,
   VORTEX_JUNGLE_MULT: 1.6,
   SANDBAR_SLOW: 0.45, VINE_SLOW: 0.55, VINE_STEER: 0.35,
-  SLOW_RECOVER: 1.2,           // how fast speed returns after a snag
+  SLOW_RECOVER: 0.3,           // after a snag, speed climbs back steadily: this much of full speed per second
   BARGE_MOVE_CHANCE_PER_KM: 0.3,
   BARGE_VX: 18,
   FAKE_REVEAL: 120,            // heat-haze fakes vanish this close
@@ -187,7 +200,7 @@ export const PASSIVES = {
   linger: { name: 'THICKER CLOUDS',     maxLvl: 5, per: 0.15, desc: '+15% CLOUD DURATION' },
   magnet: { name: 'DUTY FREE',   maxLvl: 5, per: 0.3,  desc: '+30% PICKUP RANGE' },
   paddle: { name: 'BIG PADDLE',  maxLvl: 3, per: 0.12, desc: '+12% STEERING' },
-  hivis:  { name: 'HI-VIS VEST', maxLvl: 3, per: 1,    desc: '+1 MAX HEART AND A FULL HEAL' },
+  hivis:  { name: 'HI-VIS VEST', maxLvl: 3, per: 34,   desc: '+34% MAX HEALTH AND A FULL HEAL' },
 };
 
 // weapon at max level + this passive (any level) => evolution offered
@@ -203,12 +216,13 @@ export const LEVELUP = { OWNED_WEIGHT: 3, NEW_WEIGHT: 1, EVO_WEIGHT: 8, FILLER_C
 // ---- Between-run shop. costs[] length = max level. --------------------------
 export const SHOP = [
   { id: 'engine',  name: 'VAPE ENGINE',   costs: [40], desc: 'EVERY VAPE = SPEED BURST.', flavour: 'THE DESERT ISLAND ESSENTIAL.' },
-  { id: 'turbo',   name: 'ENGINE TUNING', costs: [70, 140, 240], desc: 'BIGGER, LONGER SPEED BURSTS.', needs: 'engine', flavour: 'DEPUTY NO MORE. FULL STEAM AHEAD.' },
+  { id: 'turbo',   name: 'ENGINE TUNING', costs: [70, 140, 240, 360, 500], desc: 'FASTER, BIGGER SPEED BURSTS.', needs: 'engine', flavour: 'DEPUTY NO MORE. FULL STEAM AHEAD.' },
   { id: 'starter', name: 'WARM-UP PUFF',  costs: [80, 220], desc: 'START WITH A STRONGER CLOUD.', flavour: 'A CHEEKY ONE BEFORE CONFERENCE.' },
   { id: 'xp',      name: 'FAST LEARNER',  costs: [30, 60, 100, 160, 240], desc: '+10% XP.', per: 0.1, flavour: 'LEFT SCHOOL AT 16. LEARNT ANYWAY.' },
   { id: 'cash',    name: 'EXPENSES',      costs: [30, 60, 100, 160, 240], desc: '+20% CASH.', per: 0.2, flavour: 'AIRPODS SOLD SEPARATELY.' },
   { id: 'magnet',  name: 'MAGNETIC HAIR', costs: [25, 50, 90, 140, 200], desc: '+15% PICKUP RANGE.', per: 0.15, flavour: 'ATTRACTS VAPES AND HEADLINES.' },
-  { id: 'heart',   name: 'THICK SKIN',    costs: [100, 260], desc: '+1 STARTING HEART.', flavour: 'FOR WHEN THE SUNDAY PAPERS CALL.' },
+  { id: 'heart',   name: 'THICK SKIN',    costs: [60, 120, 200, 300], desc: '+25% MAX HEALTH.', per: 25, flavour: 'FOR WHEN THE SUNDAY PAPERS CALL.' },
+  { id: 'immunity', name: 'POLITICAL IMMUNITY', costs: [80, 150, 250, 400, 600], desc: 'SHIELD KILLS ENEMIES ON TOUCH.', flavour: 'RECHARGE 10S, THEN 8, 5, 3, 2.' },
 ];
 
 // ---- flavour text (satire: sly nods to things on the public record) ---------
@@ -227,7 +241,7 @@ export const FLAVOUR = {
   ],
   CAUSES: {
     barge: "RAMMED SOMEONE'S SECOND HOME", pier: 'HIT A LOW BRIDGE', gate: 'HIT A LOCK GATE', vortex: 'DOWN THE PLUGHOLE',
-    debris: 'SUNK BY FLY-TIPPING', sandbar: 'RAN AGROUND', swan: 'A SWAN TOOK IT PERSONALLY', pap: 'PAPPED MID-PUFF',
+    debris: 'SUNK BY FLY-TIPPING', bank: 'HIT THE RED WALL', sandbar: 'RAN AGROUND', swan: 'A SWAN TOOK IT PERSONALLY', pap: 'PAPPED MID-PUFF',
     tumble: 'TUMBLEWEEDED', piranha: 'NIBBLED BY THE BACKBENCHES', mozzie: 'BITTEN TO BITS', croc: 'SNAPPED UP',
   },
   BANK_SIGNS: ['SOLD', 'TO LET'],

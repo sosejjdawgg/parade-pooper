@@ -1,8 +1,8 @@
 // Draws the world and the in-run HUD. Three colours only: black, white, ginger.
-import { VIEW, COLORS, VAPING, JUICE, SIDE_ART } from './config.js';
+import { VIEW, COLORS, VAPING, JUICE, SIDE_ART, IMMUNITY, PLAYER } from './config.js';
 import { ctx, view, rect, box, text, textO, textW, draw, drawDisc, face, sideArt, SPR, hash } from './gfx.js';
-import { G, vapes, enemies, hazards, clouds, parts, floaters, orbs, biomeAt, leftAt, rightAt, playerY, metres } from './game.js';
-import { save } from './platform.js';
+import { G, vapes, enemies, hazards, clouds, parts, floaters, orbs, biomeAt, dangerAt, leftAt, rightAt, playerY, metres } from './game.js';
+import { save, shopLvl } from './platform.js';
 
 const { BG, FG } = COLORS, W = VIEW.W;
 export const BAR_H = 64;
@@ -26,10 +26,10 @@ function drawWater(lo, hi) {
     }
   }
 }
-function bankGlyph(bi, x, y, j) {
-  if (bi === 0) { rect(x, y + 3, 6, 1); rect(x + ((j & 1) ? 1 : 4), y + 4, 1, 3); }
-  else if (bi === 1) { rect(x + 1, y + 2, 1, 1); rect(x + 5, y + 5, 1, 1); }
-  else { rect(x + 1, y + 3, 4, 1); rect(x + 2, y + 2, 2, 1); rect(x + 3, y + 4, 2, 1); }
+function bankGlyph(bi, x, y, j, c) {
+  if (bi === 0) { rect(x, y + 3, 6, 1, c); rect(x + ((j & 1) ? 1 : 4), y + 4, 1, 3, c); }
+  else if (bi === 1) { rect(x + 1, y + 2, 1, 1, c); rect(x + 5, y + 5, 1, 1, c); }
+  else { rect(x + 1, y + 3, 4, 1, c); rect(x + 2, y + 2, 2, 1, c); rect(x + 3, y + 4, 2, 1, c); }
 }
 let hudShown = true;
 function drawBanks(lo, hi) {
@@ -38,15 +38,16 @@ function drawBanks(lo, hi) {
     const wy = j * 8, y = sy(wy + 8);
     const l = Math.round(leftAt(wy) / 4) * 4, r = Math.round(rightAt(wy) / 4) * 4;
     rect(0, y, l, 8, BG); rect(r, y, W - r, 8, BG);
-    rect(l - 2, y, 2, 8); rect(r, y, 2, 8);
-    if (lp !== null && lp !== l) rect(Math.min(l, lp) - 2, y + 7, Math.abs(l - lp) + 2, 2);
-    if (rp !== null && rp !== r) rect(Math.min(r, rp), y + 7, Math.abs(r - rp) + 2, 2);
+    const hot = dangerAt(wy), c = hot ? COLORS.ENEMY : FG, t = hot ? 3 : 2;      // late game: the banks go red and bite
+    rect(l - t, y, t, 8, c); rect(r, y, t, 8, c);
+    if (lp !== null && lp !== l) rect(Math.min(l, lp) - t, y + 7, Math.abs(l - lp) + t, 2, c);
+    if (rp !== null && rp !== r) rect(Math.min(r, rp), y + 7, Math.abs(r - rp) + t, 2, c);
     lp = l; rp = r;
     const b = biomeAt(wy), bi = Math.min(2, Math.floor(b) + (hash(j * 53) < b % 1 ? 1 : 0));
     ctx.fillStyle = FG;
     for (let k = 1; k <= 4; k++) {
-      if (hash(j * 977 + k * 31) < 0.55 / k) bankGlyph(bi, l - 4 - k * 8, y, j + k);
-      if (hash(j * 613 + k * 17) < 0.55 / k) bankGlyph(bi, r - 2 + k * 8, y, j + k);
+      if (hash(j * 977 + k * 31) < 0.55 / k) bankGlyph(bi, l - 4 - k * 8, y, j + k, c);
+      if (hash(j * 613 + k * 17) < 0.55 / k) bankGlyph(bi, r - 2 + k * 8, y, j + k, c);
     }
     const dh = hash(j * 271);
     if (dh < 0.045) {
@@ -192,6 +193,11 @@ export function drawWorld(mode = 'full') {
   }
   if (full && !G.dead) { const x = Math.round(G.px); rect(x - 7, PY - 23, 15, 47, BG); rect(x - 10, PY - 18, 21, 37, BG); rect(x - 13, PY - 11, 27, 23, BG); }   // keep her readable inside the fog
   if (!G.dead && !(full && G.inv > 0 && ((G.t * 14) & 1))) draw(SPR.kayak[G.paddle], G.px, PY);
+  if (full && !G.dead && shopLvl('immunity')) {             // political immunity: solid ring when ready, dots filling in while it recharges
+    const R = IMMUNITY.RADIUS, cd = IMMUNITY.COOLDOWN[shopLvl('immunity') - 1];
+    if (G.shieldT <= 0) drawDisc(G.px, PY, R + (((G.t * 4) | 0) & 1), 3);
+    else { const n = Math.floor((1 - G.shieldT / cd) * 16); ctx.fillStyle = FG; for (let i = 0; i < n; i++) { const a = i / 16 * 6.283 - 1.571; ctx.fillRect(Math.round(G.px + Math.cos(a) * R), Math.round(PY + Math.sin(a) * R), 2, 2); } }
+  }
   if (full) drawHazards(true);
   drawFx();
   if (full && G.burst > 22) {
@@ -216,9 +222,9 @@ export function drawHud() {
   rect(0, y0, W, BAR_H, BG); rect(0, y0, W, 2);
   // XP strip
   box(3, y0 + 4, W - 6, 7); rect(5, y0 + 6, Math.round((W - 10) * Math.min(1, G.xp / G.xpNeed)), 3);
-  const frac = G.maxHp ? Math.max(0, G.hp) / G.maxHp : 0;
+  const frac = G.maxHp ? Math.max(0, G.hp) / G.maxHp : 0, pct = Math.max(0, Math.round(G.hp / PLAYER.HP * 100));
   stat(0, 92, y0, String(G.vapes), 'VAPES');
-  stat(92, 78, y0, Math.round(frac * 100) + '%', 'HEALTH');
+  stat(92, 78, y0, pct + '%', 'HEALTH');
   stat(214, 68, y0, '£' + G.cash, 'CASH');
   box(282, y0 + 12, 78, 52); box(284, y0 + 14, 74, 48, FG, 1);
   text('LV ' + G.level, 321, y0 + 20, 3, FG, 0.5);
