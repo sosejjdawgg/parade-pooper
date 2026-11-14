@@ -12,6 +12,9 @@ export const VIEW = {
 
 export const COLORS = { BG: '#000000', FG: '#ffffff', GINGER: '#ff5a1f', ENEMY: '#ff1a2e', VAPE: '#a9d6f5' };   // ENEMY = thin outline on hostiles
 
+// Bezel-style side art: the key art split down the middle, one half on each bank.
+export const SIDE_ART = { SRC: 'art/side.jpg', GAP: 8, FOLLOW: 0.06 };   // GAP = black strip between art and water; FOLLOW = how fast the halves slide to hug the canal
+
 export const WORLD = { PX_PER_M: 20 };
 
 export const PLAYER = {

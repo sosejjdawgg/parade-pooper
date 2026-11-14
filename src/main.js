@@ -1,7 +1,7 @@
 // Boot, main loop and every menu screen (immediate-mode UI).
-import { VIEW, COLORS, SHOP, FLAVOUR, MUSIC, LEGAL } from './config.js';
+import { VIEW, COLORS, SHOP, FLAVOUR, MUSIC, LEGAL, SIDE_ART } from './config.js';
 import { preloadMusic, musicFrame, musicState, openerFinished } from './music.js';
-import { ctx, view, resize, rect, box, text, textO, textW, wrap, draw, buildSprites, SPR, face } from './gfx.js';
+import { ctx, view, resize, rect, box, text, textO, textW, wrap, draw, buildSprites, SPR, face, loadSideArt } from './gfx.js';
 import { G, newRun, update, idle, nudge, choose, playerY, enemies, clouds, vapes } from './game.js';
 import { drawWorld, drawHud, dither, PAUSE_RECT } from './render.js';
 import { save, loadSave, writeSave, resetSave, shopLvl, sfx, input, initInput, requestTilt, getAC } from './platform.js';
@@ -125,8 +125,8 @@ function shopScreen() {
 
 function settingsScreen() {
   shade();
-  const y = Math.round(view.H / 2 - 170);
-  panel(20, y, W - 40, 340);
+  const y = Math.round(view.H / 2 - 195);
+  panel(20, y, W - 40, 390);
   text('SETTINGS', W / 2, y + 20, 5, FG, 0.5);
   if (button(40, y + 64, W - 80, 40, 'SOUND: ' + (save.sound ? 'ON' : 'OFF'), { scale: 3 })) { save.sound = !save.sound; writeSave(); }
   if (button(40, y + 114, W - 80, 40, 'TILT STEER: ' + (save.tilt ? 'ON' : 'OFF'), { scale: 3 })) {
@@ -137,8 +137,9 @@ function settingsScreen() {
   if (button(40, y + 164, W - 80, 40, armed ? 'TAP AGAIN TO WIPE' : 'RESET PROGRESS', { scale: 2, inv: armed })) {
     if (armed) { resetSave(); resetArm = 0; say('PROGRESS RESET'); } else resetArm = G.t;
   }
-  if (button(40, y + 214, W - 80, 40, 'ABOUT AND LEGAL', { scale: 2 })) G.mode = 'legal';
-  if (button(40, y + 276, W - 80, 44, 'BACK', { scale: 3, inv: true })) G.mode = 'title';
+  if (button(40, y + 214, W - 80, 40, 'SIDE ART: ' + (save.sideArt ? 'ON' : 'OFF'), { scale: 3 })) { save.sideArt = !save.sideArt; writeSave(); }
+  if (button(40, y + 264, W - 80, 40, 'ABOUT AND LEGAL', { scale: 2 })) G.mode = 'legal';
+  if (button(40, y + 326, W - 80, 44, 'BACK', { scale: 3, inv: true })) G.mode = 'title';
 }
 
 function legalScreen() {
@@ -208,6 +209,7 @@ function frame(ts) {
 
 function boot() {
   loadSave(); resize(); buildSprites(); initInput(); preloadMusic();
+  loadSideArt(window.__ART || SIDE_ART.SRC);
   window.addEventListener('resize', resize);
   window.addEventListener('orientationchange', resize);
   document.addEventListener('visibilitychange', () => { if (document.hidden && G.mode === 'play' && !G.dead && !G.bot) G.mode = 'pause';

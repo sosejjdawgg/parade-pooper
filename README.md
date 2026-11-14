@@ -26,6 +26,7 @@ For link previews on social media, change `og:image` in `index.html` to the abso
 | `src/main.js` | Main loop and menu screens (title, level-up, game over, shop, settings) |
 | `src/gfx.js` | Canvas scaling, 3x5 pixel font, procedurally built sprites |
 | `src/platform.js` | Save data (localStorage), synthesised sound, touch / keyboard / tilt input |
+| `art/side.jpg` | Key art shown as bezel-style side panels: left half on the left bank, right half on the right (toggle in Settings; tuning in `SIDE_ART` in config) |
 | `marketing/` | itch.io kit: page copy (`itch-page.md`), cover / banner / social images, screenshots, upload zip. Regenerate images with `node tools/marketing.cjs` |
 | `tools/` | Headless Playwright scripts: `balance.cjs` (invulnerable bot logs the power curve), `screens.cjs` (screenshots, `og.png`, `icon.png`), `shots.cjs` (smoke test) |
 

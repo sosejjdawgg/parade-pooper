@@ -259,6 +259,20 @@ export function face(tier, mode) {
   return faces[key] = c;
 }
 
+// ---- side art (arcade-bezel style) ------------------------------------------
+const side = { img: null, cache: {} };
+export function loadSideArt(url) { const i = new Image(); i.onload = () => { side.img = i; }; i.src = url; }
+/** the two halves, pre-scaled so the art is `h` logical pixels tall. null until the image has loaded */
+export function sideArt(h) {
+  if (!side.img) return null;
+  if (!side.cache[h]) {
+    const sc = h / side.img.height, hw = Math.ceil(side.img.width / 2 * sc);
+    const half = (sx) => { const [c, g] = mk(hw, h); g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high'; g.drawImage(side.img, sx, 0, side.img.width / 2, side.img.height, 0, 0, hw, h); return c; };
+    side.cache[h] = { L: half(0), R: half(side.img.width / 2) };
+  }
+  return side.cache[h];
+}
+
 export const SPR = {};
 export function buildSprites() {
   SPR.kayak = [makeKayak(0), makeKayak(1)];

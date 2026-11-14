@@ -3,7 +3,7 @@ import { canvas, view } from './gfx.js';
 
 // ---- save -------------------------------------------------------------------
 const KEY = 'vapekayak.v1';
-const fresh = () => ({ cash: 0, best: 0, bestDist: 0, runs: 0, shop: {}, sound: true, tilt: false });
+const fresh = () => ({ cash: 0, best: 0, bestDist: 0, runs: 0, shop: {}, sound: true, tilt: false, sideArt: true });
 export const save = fresh();
 export function loadSave() { try { Object.assign(save, JSON.parse(localStorage.getItem(KEY) || localStorage.getItem('vapecanoe.v1') || '{}')); }   // falls back to the pre-rename save
   catch { /* private mode */ } }

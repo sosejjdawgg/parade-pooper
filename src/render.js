@@ -1,10 +1,11 @@
 // Draws the world and the in-run HUD. Three colours only: black, white, ginger.
-import { VIEW, COLORS, VAPING, JUICE } from './config.js';
-import { ctx, view, rect, box, text, textO, textW, draw, drawDisc, face, SPR, hash } from './gfx.js';
+import { VIEW, COLORS, VAPING, JUICE, SIDE_ART } from './config.js';
+import { ctx, view, rect, box, text, textO, textW, draw, drawDisc, face, sideArt, SPR, hash } from './gfx.js';
 import { G, vapes, enemies, hazards, clouds, parts, floaters, orbs, biomeAt, leftAt, rightAt, playerY, metres } from './game.js';
 import { save } from './platform.js';
 
 const { BG, FG } = COLORS, W = VIEW.W;
+export const BAR_H = 64;
 let PY = 0, D = 0, checker = null;
 const sy = (wy) => PY - Math.round(wy - D);
 
@@ -30,16 +31,38 @@ function bankGlyph(bi, x, y, j) {
   else if (bi === 1) { rect(x + 1, y + 2, 1, 1); rect(x + 5, y + 5, 1, 1); }
   else { rect(x + 1, y + 3, 4, 1); rect(x + 2, y + 2, 2, 1); rect(x + 3, y + 4, 2, 1); }
 }
+let anchorL = null, anchorR = null, hudShown = true;
 function drawBanks(lo, hi) {
+  const j0 = Math.floor(lo / 8) - 1, j1 = Math.floor(hi / 8) + 1, gap = SIDE_ART.GAP;
+  const artH = view.H - (hudShown ? BAR_H : 0), art = save.sideArt ? sideArt(artH) : null;
+  if (art) {
+    // each half is rigid and slides sideways to hug the innermost point of its bank
+    let tl = 0, tr = W;
+    for (let j = j0; j <= j1; j++) { const wy = j * 8; tl = Math.max(tl, Math.round(leftAt(wy) / 4) * 4); tr = Math.min(tr, Math.round(rightAt(wy) / 4) * 4); }
+    tl -= gap + 2; tr += gap + 2;
+    anchorL = anchorL === null ? tl : anchorL + (tl - anchorL) * SIDE_ART.FOLLOW;
+    anchorR = anchorR === null ? tr : anchorR + (tr - anchorR) * SIDE_ART.FOLLOW;
+  }
   let lp = null, rp = null;
-  for (let j = Math.floor(lo / 8) - 1; j <= Math.floor(hi / 8) + 1; j++) {
+  for (let j = j0; j <= j1; j++) {
     const wy = j * 8, y = sy(wy + 8);
     const l = Math.round(leftAt(wy) / 4) * 4, r = Math.round(rightAt(wy) / 4) * 4;
     rect(0, y, l, 8, BG); rect(r, y, W - r, 8, BG);
+    if (art) {
+      const y0 = Math.max(0, y), y1 = Math.min(artH, y + 8), hw = art.L.width, aL = Math.round(anchorL), aR = Math.round(anchorR);
+      if (y1 > y0) {
+        const x1 = Math.min(l - 2 - gap, aL), sx = Math.max(0, hw - aL), dx = sx - (hw - aL);
+        if (x1 > dx) ctx.drawImage(art.L, sx, y0, x1 - dx, y1 - y0, dx, y0, x1 - dx, y1 - y0);
+        const x0 = Math.max(r + 2 + gap, aR), w = Math.min(W - x0, hw - (x0 - aR));
+        if (w > 0) ctx.drawImage(art.R, x0 - aR, y0, w, y1 - y0, x0, y0, w, y1 - y0);
+      }
+    }
+    ctx.fillStyle = FG;
     rect(l - 2, y, 2, 8); rect(r, y, 2, 8);
     if (lp !== null && lp !== l) rect(Math.min(l, lp) - 2, y + 7, Math.abs(l - lp) + 2, 2);
     if (rp !== null && rp !== r) rect(Math.min(r, rp), y + 7, Math.abs(r - rp) + 2, 2);
     lp = l; rp = r;
+    if (art) continue;                       // the art replaces the bank texture and props
     const b = biomeAt(wy), bi = Math.min(2, Math.floor(b) + (hash(j * 53) < b % 1 ? 1 : 0));
     ctx.fillStyle = FG;
     for (let k = 1; k <= 4; k++) {
@@ -154,6 +177,7 @@ export function drawWorld(mode = 'full') {
   if (G.shake > 0.3) ctx.translate(Math.round((Math.random() - 0.5) * G.shake * 2), Math.round((Math.random() - 0.5) * G.shake * 2));
   ctx.fillStyle = FG; drawWater(lo, hi);
   const full = mode === 'full';
+  hudShown = full;
   if (full) { drawHazards(false); drawClouds(); }
   drawBanks(lo, hi);
   if (full) {
@@ -172,7 +196,6 @@ export function drawWorld(mode = 'full') {
   if (G.flash > 0) dither(0, 0, W, view.H);
 }
 
-export const BAR_H = 64;
 function fit(str, w, max) { let sc = max; while (sc > 1 && textW(str, sc) > w - 6) sc--; return sc; }
 function stat(x, w, y0, value, label) {
   box(x, y0 + 12, w, 52); box(x + 2, y0 + 14, w - 4, 48, FG, 1);

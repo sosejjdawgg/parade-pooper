@@ -12,13 +12,14 @@ for (const m of mods) {
   imports['vc/' + m] = 'data:text/javascript;base64,' + Buffer.from(src).toString('base64');
 }
 const icon = 'data:image/png;base64,' + fs.readFileSync(path.join(root, 'icon.png')).toString('base64');
+const art = 'data:image/jpeg;base64,' + fs.readFileSync(path.join(root, 'art', 'side.jpg')).toString('base64');
 const music = {};
 for (const k of itch ? ['ufo', 'arab'] : ['river', 'ufo', 'arab']) music[k] = 'data:audio/mpeg;base64,' + fs.readFileSync(path.join(root, 'music', k + '.mp3')).toString('base64');
 let html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
 html = html.replace(/<link rel="manifest"[^>]*>\n/, '').replace(/href="icon\.png"/g, `href="${icon}"`)
   .replace(/<meta (property="og:image[^>]*|name="twitter:[^>]*)>\n/g, '')
   .replace('<script type="module" src="src/main.js"></script>',
-    () => `<script>window.__MUSIC=${JSON.stringify(music)};window.__NO_OPENER=${itch}</script>\n<script type="importmap">${JSON.stringify({ imports })}</script>\n<script type="module">import 'vc/main';</script>`);
+    () => `<script>window.__MUSIC=${JSON.stringify(music)};window.__NO_OPENER=${itch};window.__ART=${JSON.stringify(art)}</script>\n<script type="importmap">${JSON.stringify({ imports })}</script>\n<script type="module">import 'vc/main';</script>`);
 if (!itch) {
   fs.writeFileSync(path.join(root, 'vape-kayak.html'), html);
   console.log('vape-kayak.html', (html.length / 1024).toFixed(1) + ' KB');
