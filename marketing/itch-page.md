@@ -114,3 +114,57 @@ Scene ideas that match beats in the game:
 4. **Jungle** — vines, a crocodile's eyes above the waterline, the vape glowing pale blue in the gloom.
 5. **Game over** — soaked, hair plastered down, holding the vape above the water like a trophy.
 6. **Cup of tea** — a calm moment mid-canal, teacup in one hand, vape in the other.
+
+## SEO and short text
+
+**Tagline (itch "short description", 97 characters)**
+
+> Free browser game: paddle a kayak, collect vapes, melt the horde. Pixel-art parody. Plays on mobile.
+
+**Meta description (154 characters)**
+
+> Angela Rayner's: Vape Kayak is a free pixel-art browser game. A one-thumb endless runner that becomes a bullet heaven. Play on phone or desktop. A parody.
+
+**Brief description (58 words)**
+
+> Angela Rayner's: Vape Kayak is a free, non-commercial parody game you play in your browser. Steer a kayak down procedurally generated canals with one thumb, collect spinning vapes to level up, and turn a small puff of vapour into screen-filling clouds that melt hordes of swans and paparazzi. 1-bit pixel art, no download, works on mobile.
+
+**Search keywords**
+
+free browser game, mobile browser game, endless runner, bullet heaven, survivors-like, roguelite, pixel art, 1-bit, one-button game, political satire game, parody game, Angela Rayner game, vape game, kayak game, HTML5 game, no download
+
+**Hashtags**
+
+#indiegame #pixelart #browsergame #bulletheaven #endlessrunner #satire #parody #html5 #itchio #gamedev
+
+**Cover image alt text**
+
+> Pixel-art illustration of a woman with long ginger hair exhaling a large cloud of vapour and holding a pale blue vape, in front of a black-and-white river scene, with the title "Angela Rayner's: Vape Kayak".
+
+**One-line bio (for a profile or link-in-bio)**
+
+> Maker of Angela Rayner's: Vape Kayak, a free pixel-art parody game. Play it in your browser.
+
+**Call to action**
+
+> Play free in your browser. No download, no sign-up, one thumb.
+
+**Press blurb (third person)**
+
+> Angela Rayner's: Vape Kayak is a free satirical browser game by (your name). It begins as a one-thumb endless runner and escalates into a bullet-heaven power fantasy across three canal biomes. It is a non-commercial parody with no ads, purchases or data collection, and is not affiliated with any politician or party.
+
+**Content note**
+
+> Contains cartoon depictions of vaping and comic political satire of a public figure. Not intended for children. Does not promote vaping.
+
+**Short disclaimer (footers, video descriptions)**
+
+> A free, non-commercial parody. Not affiliated with or endorsed by any politician, party or company.
+
+**FAQ**
+
+- *Is it free?* Yes. No price, no ads, no donations.
+- *Does it work on my phone?* Yes, in any modern mobile browser, in portrait.
+- *Do I need to install anything?* No.
+- *Is my progress saved?* Yes, in your browser on that device only.
+- *Is this official?* No. It is a parody and is not connected to anyone it depicts.
