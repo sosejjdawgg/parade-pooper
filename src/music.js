@@ -5,7 +5,7 @@ import { save, getAC } from './platform.js';
 
 let ac = null, bus = null, filter = null;
 const raw = {}, buffers = {}, decoding = {};
-let cur = null, curGain = null, curSrc = null, openerDone = false;
+let cur = null, curGain = null, curSrc = null, openerDone = false, started = false;
 /** true once the opening track has played all the way through (or could not be loaded) */
 export const openerFinished = () => openerDone;
 
@@ -28,7 +28,8 @@ function decodePending() {
 function fadeOut() {
   if (!curGain) return;
   const t = ac.currentTime, g = curGain, s = curSrc;
-  g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value, t); g.gain.linearRampToValueAtTime(0, t + MUSIC.XFADE);
+  const now = g.gain.value;
+  g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(now, t); g.gain.linearRampToValueAtTime(0, t + MUSIC.XFADE);
   if (s) s.stop(t + MUSIC.XFADE + 0.05);
   setTimeout(() => g.disconnect(), (MUSIC.XFADE + 0.2) * 1000);
   curGain = curSrc = null;
@@ -38,7 +39,10 @@ function start(track) {
   cur = track;
   if (!track) return;
   const t = ac.currentTime, g = ac.createGain();
-  g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(1, t + (track === 'menu' ? 0.3 : MUSIC.XFADE * 0.5));
+  // ease in on a curve (slow start, then swell) so music never jumps in
+  const dur = started ? MUSIC.FADE_IN : MUSIC.FADE_IN_FIRST, curve = new Float32Array(24);
+  for (let i = 0; i < 24; i++) curve[i] = Math.pow(i / 23, 2.2);
+  g.gain.setValueAtTime(0, t); g.gain.setValueCurveAtTime(curve, t, dur); started = true;
   g.connect(filter); curGain = g;
   if (track === 'menu') { chip.gain = g; chip.next = t + 0.1; chip.step = 0; return; }
   const def = MUSIC.TRACKS[track], s = ac.createBufferSource();

@@ -21,8 +21,13 @@ Settings deletes them. The platform hosting the game (for example itch.io) has i
 
 - Game code and in-game pixel art: original to this project.
 - Key art (marketing images): supplied by the project owner.
-- Music in the public build: "Riding a UFO" and "Arabian Dancer", supplied as royalty-free chiptune tracks.
-  Credit the original author and follow their licence terms on the game page.
+- Music in the public build, both by **harayu** (ののはらゆう) and used under the Creative Commons Attribution 3.0 licence
+  (CC-BY 3.0, https://creativecommons.org/licenses/by/3.0/). Both were trimmed and looped for this game:
+  - "Riding a UFO" by harayu — https://www.youtube.com/watch?v=f5C_WYv4i04
+  - "Arabian Dancer" by harayu — https://www.youtube.com/watch?v=NuNPp0UcoOg
+- Main-menu chiptune: original to this project.
+- Private build only: "River [8 Bit Tribute to Eminem feat. Ed Sheeran]" by 8 Bit Universe. Not licensed for redistribution;
+  8 Bit Universe ask anyone wanting to use their recordings to contact them first.
 - The public (itch.io) build does **not** include `music/river.mp3`. That file is an 8-bit cover of a commercial song and is
   kept for private play only. Calling a game a non-commercial parody does not grant permission to redistribute someone
   else's music: the parody is of a politician, not of the song.

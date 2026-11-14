@@ -148,8 +148,9 @@ function legalScreen() {
   let y = 58;
   LEGAL.forEach((block, i) => {
     if (i % 2 === 0) { text(block, 24, y, 3, GINGER); y += 21; return; }
-    wrap(block, 39).forEach((l) => { text(l, 24, y, 2); y += 13; });
-    y += 9;
+    if (LEGAL[i - 1] === 'MUSIC' && !window.__NO_OPENER) block += ' OPENING TRACK: RIVER (8 BIT TRIBUTE) BY 8 BIT UNIVERSE, PRIVATE BUILD ONLY.';
+    wrap(block, 39).forEach((l) => { text(l, 24, y, 2); y += 12; });
+    y += 7;
   });
   if (button(40, view.H - 66, W - 80, 44, 'BACK', { scale: 3, inv: true })) G.mode = 'settings';
 }

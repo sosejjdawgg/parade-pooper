@@ -74,6 +74,8 @@ This is a free, non-commercial work of parody and satire. It is not affiliated w
 
 No accounts, no tracking, no data collected: your progress is saved only in your own browser.
 
+Music: "Riding a UFO" and "Arabian Dancer" by harayu, CC-BY 3.0 (full credits below).
+
 All names, likenesses and music belong to their respective owners. Rights holders: message me here and it comes down. No kayaks were harmed.
 
 ## Credits block
@@ -81,9 +83,16 @@ All names, likenesses and music belong to their respective owners. Rights holder
 - Game design: (your name / handle)
 - Code and in-game pixel art: built with Claude Code
 - Key art: (your credit)
-- Music: "Riding a UFO" and "Arabian Dancer" — add the original author's name, link and licence line here. They were supplied as royalty-free; check whether the licence requires attribution or forbids redistribution.
+- Music: "Riding a UFO" and "Arabian Dancer" by harayu (ののはらゆう), CC-BY 3.0. The composer's terms (from the tracks' own descriptions) require the credit lines below wherever the music is used. Paste the "Music credits" block into the page body.
 - The upload zip deliberately leaves out "River" (an 8-bit cover of a commercial song). Being a non-commercial parody does not cover redistributing someone else's music, so the public build opens on the menu chiptune instead.
 - The full legal notice is `LEGAL.md` in the repo and `LEGAL.txt` inside the zip; the same wording is in the game under Settings > About and Legal.
+
+**Music credits** (required by the licence — keep these on the page)
+
+- "Riding a UFO" by harayu — https://www.youtube.com/watch?v=f5C_WYv4i04 — Creative Commons licence (CC-BY 3.0)
+- "Arabian Dancer" by harayu — https://www.youtube.com/watch?v=NuNPp0UcoOg — Creative Commons licence (CC-BY 3.0)
+- Licence text: https://creativecommons.org/licenses/by/3.0/ — both tracks were trimmed and looped for the game.
+- Main-menu chiptune: original to this game.
 
 ## Launch posts
 

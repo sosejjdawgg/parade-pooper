@@ -50,7 +50,7 @@ Free, non-commercial parody: no sales, ads or donations, no data collected. Full
 - `music/river.mp3` plays once, starting on the main menu and carrying on into the run. It is an 8-bit cover of a commercial song
   ("River", 8 Bit Universe tribute) supplied by the project owner. **It is not royalty-free: clear the rights or swap it out before publishing.**
 - When it finishes, the biome tracks take over: `music/ufo.mp3` ("Riding a UFO") on the British canal and in the jungle,
-  `music/arab.mp3` ("Arabian Dancer") in the desert, crossfading when the scenery changes. Both were supplied as royalty-free; check their attribution terms.
+  `music/arab.mp3` ("Arabian Dancer") in the desert, crossfading when the scenery changes. Both are by harayu, CC-BY 3.0: the credit lines in `LEGAL.md` must stay wherever the game is published.
 - The files are trimmed (leading silence and fade-outs removed) and loop at sample-matched points set in `MUSIC.TRACKS` in `src/config.js`.
 - The main-menu tune is synthesised live in `src/music.js` (no audio file).
 - Music is low-passed ("muffled") whenever a menu, the shop, pause or the level-up screen is showing.

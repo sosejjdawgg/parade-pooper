@@ -236,6 +236,8 @@ export const LEGAL = [
   'THIS GAME IS FREE AND NON-COMMERCIAL. NO SALES, NO ADS, NO DONATIONS, NO PROFIT.',
   'PRIVACY',
   'NO ACCOUNTS, NO TRACKING, NO DATA COLLECTED. YOUR PROGRESS IS SAVED ONLY ON THIS DEVICE.',
+  'MUSIC',
+  'RIDING A UFO AND ARABIAN DANCER BY HARAYU, USED UNDER CREATIVE COMMONS CC-BY 3.0. TRIMMED AND LOOPED FOR THIS GAME. LINKS ARE ON THE GAME PAGE.',
   'RIGHTS',
   'NAMES, LIKENESSES AND MUSIC BELONG TO THEIR OWNERS AND ARE USED WITHOUT ANY CLAIM OF OWNERSHIP. RIGHTS HOLDERS: GET IN TOUCH VIA THE GAME PAGE AND IT WILL BE REMOVED.',
 ];
@@ -247,6 +249,8 @@ export const MUSIC = {
   MUFFLE_HZ: 550,          // low-pass cutoff while a menu is up
   MUFFLE_GAIN: 0.75,       // and slightly quieter
   XFADE: 2.5,              // seconds to crossfade between tracks
+  FADE_IN_FIRST: 5,        // the very first music of a session eases in this slowly
+  FADE_IN: 3,              // every later track start
   OPENER: 'river',         // plays once from the main menu into the run; then the biome tracks take over
   BIOME_TRACKS: ['ufo', 'arab', 'ufo'],   // canal, desert, jungle: the track changes when the scenery does
   MENU_BPM: 124,
