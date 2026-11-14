@@ -1,6 +1,6 @@
 // Draws the world and the in-run HUD. Three colours only: black, white, ginger.
 import { VIEW, COLORS } from './config.js';
-import { ctx, view, rect, box, text, textO, draw, drawDisc, SPR, hash } from './gfx.js';
+import { ctx, view, rect, box, text, textO, textW, draw, drawDisc, face, SPR, hash } from './gfx.js';
 import { G, vapes, enemies, hazards, clouds, parts, floaters, orbs, biomeAt, leftAt, rightAt, playerY, metres } from './game.js';
 import { save } from './platform.js';
 
@@ -169,25 +169,40 @@ export function drawWorld(mode = 'full') {
   if (G.flash > 0) dither(0, 0, W, view.H);
 }
 
+export const BAR_H = 64;
+function fit(str, w, max) { let sc = max; while (sc > 1 && textW(str, sc) > w - 6) sc--; return sc; }
+function stat(x, w, y0, value, label) {
+  box(x, y0 + 12, w, 52); box(x + 2, y0 + 14, w - 4, 48, FG, 1);
+  const sc = fit(value, w - 6, 4);
+  text(value, x + w / 2, y0 + 19 + (20 - sc * 5) / 2, sc, FG, 0.5);
+  text(label, x + w / 2, y0 + 47, 2, FG, 0.5);
+}
+/** Status bar across the bottom: everything about the player lives down here. */
 export function drawHud() {
-  const H = view.H;
-  // XP bar
-  rect(0, 0, W, 50, BG); rect(0, 50, W, 1); box(3, 3, W - 6, 7);
-  rect(5, 5, Math.round((W - 10) * Math.min(1, G.xp / G.xpNeed)), 3);
-  // vape count, large, centre
-  const n = String(G.vapes), tw = n.length * 16 - 4;
-  draw(SPR.bigVape[((G.t * 8) | 0) & 15], W / 2 - tw / 2 - 14, 27);
-  textO(n, W / 2 + 8, 17, 4, FG, 0.5);
-  textO('LV ' + G.level, W / 2, 41, 1, FG, 0.5);
-  // cash + hearts left
-  textO('£' + G.cash, 6, 17, 2);
-  for (let i = 0; i < G.maxHp; i++) ctx.drawImage(i < G.hp ? SPR.heart : SPR.heartEmpty, 6 + i * 9, 32);
-  // distance + pause right
-  textO(metres() + 'M', W - 6, 17, 2, FG, 1);
-  rect(W - 21, 31, 15, 15, BG); box(W - 21, 31, 15, 15); rect(W - 16, 35, 2, 7); rect(W - 12, 35, 2, 7);
-  if (G.bannerT > 0 && !(G.bannerT < 0.8 && ((G.t * 12) & 1))) textO(G.banner, W / 2, H * 0.26, 3, FG, 0.5);
+  const H = view.H, y0 = H - BAR_H;
+  rect(0, y0, W, BAR_H, BG); rect(0, y0, W, 2);
+  // XP strip
+  box(3, y0 + 4, W - 6, 7); rect(5, y0 + 6, Math.round((W - 10) * Math.min(1, G.xp / G.xpNeed)), 3);
+  const frac = G.maxHp ? Math.max(0, G.hp) / G.maxHp : 0;
+  stat(0, 92, y0, String(G.vapes), 'VAPES');
+  stat(92, 78, y0, Math.round(frac * 100) + '%', 'HEALTH');
+  stat(214, 68, y0, '£' + G.cash, 'CASH');
+  box(282, y0 + 12, 78, 52); box(284, y0 + 14, 74, 48, FG, 1);
+  text('LV ' + G.level, 321, y0 + 20, 3, FG, 0.5);
+  text(metres() + 'M', 321, y0 + 42, fit(metres() + 'M', 72, 3), FG, 0.5);
+  // the face
+  box(170, y0 + 12, 44, 52);
+  const tier = frac > 0.8 ? 0 : frac > 0.6 ? 1 : frac > 0.4 ? 2 : frac > 0.2 ? 3 : 4;
+  const look = hash((G.t / 1.1) | 0);
+  const mode = G.dead || G.hp <= 0 ? 'dead' : G.hurtT > 0 ? 'ouch' : G.grinT > 0 ? 'grin' : look < 0.25 ? 'l' : look < 0.5 ? 'r' : 'c';
+  const jolt = G.hurtT > 0.35 ? Math.round(Math.sin(G.t * 60) * 2) : 0;
+  ctx.drawImage(face(tier, mode), 174 + jolt, y0 + 17);
+  if (G.hurtT > 0.5) { ctx.globalCompositeOperation = 'difference'; rect(172, y0 + 14, 40, 48); ctx.globalCompositeOperation = 'source-over'; }
+  // pause button stays up top, out of the thumbs' way
+  rect(W - 21, 6, 15, 15, BG); box(W - 21, 6, 15, 15); rect(W - 16, 10, 2, 7); rect(W - 12, 10, 2, 7);
+  if (G.bannerT > 0 && !(G.bannerT < 0.8 && ((G.t * 12) & 1))) textO(G.banner, W / 2, H * 0.2, 3, FG, 0.5);
   if (save.runs < 2 && G.t < 6 && !G.dead && ((G.t * 3) & 1)) {
     textO('< TAP', 28, PY + 70, 2); textO('TAP >', W - 28, PY + 70, 2, FG, 1);
   }
 }
-export const PAUSE_RECT = { x: W - 30, y: 24, w: 30, h: 30 };
+export const PAUSE_RECT = { x: W - 32, y: 0, w: 32, h: 30 };

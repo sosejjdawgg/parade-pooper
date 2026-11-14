@@ -195,6 +195,56 @@ export function disc(r, style) {
 export function drawDisc(x, y, r, style) { const c = disc(r, style); ctx.drawImage(c, Math.round(x) - (c.width >> 1), Math.round(y) - (c.height >> 1)); }
 export function draw(s, x, y) { ctx.drawImage(s, Math.round(x - s.width / 2), Math.round(y - s.height / 2)); }
 
+// ---- status-bar portrait: 36x44, drawn by code so every expression shares one head ----
+const faces = {};
+/** tier 0 (fine) .. 4 (wrecked). mode: 'c' | 'l' | 'r' (gaze), 'ouch', 'grin', 'dead' */
+export function face(tier, mode) {
+  const key = tier + mode;
+  if (faces[key]) return faces[key];
+  const [c, g] = mk(36, 44);
+  const P = (x, y, w = 1, h = 1, col = BG) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+  // hair mass
+  const top = [[10, 25], [7, 28], [5, 30], [4, 31], [3, 32]];
+  for (let y = 0; y < 44; y++) {
+    let [a, b] = top[y] || [2, 33];
+    if (y >= 5) { a += hash(y * 7) < 0.4 ? 1 : 0; b -= hash(y * 13) < 0.4 ? 1 : 0; if (y > 30) { a -= 1; b += 1; } }
+    P(a, y, b - a + 1, 1, GINGER);
+  }
+  for (const x of [5, 8, 28, 31]) for (let y = 6; y < 44; y++) if (hash(x * 31 + (y >> 2)) < 0.75) P(x + (((y + x) >> 3) & 1), y);   // strands
+  for (const x of [13, 18, 23]) P(x, 2, 1, 6);
+  // face, neck, top
+  P(10, 11, 16, 15, FG); P(11, 26, 14, 2, FG); P(12, 28, 12, 2, FG); P(14, 30, 8, 1, FG); P(15, 31, 6, 1, FG);
+  P(15, 32, 6, 4, FG); P(14, 32, 1, 4); P(21, 32, 1, 4);
+  P(9, 36, 18, 8); for (let i = 0; i < 4; i++) { P(13 + i, 36 + i * 2, 1, 2, FG); P(22 - i, 36 + i * 2, 1, 2, FG); }
+  for (let x = 10; x < 26; x++) { if (x % 3) P(x, 11, 1, 1, GINGER); if (x % 3 === 1) P(x, 12, 1, 2, GINGER); if (x % 6 === 4) P(x, 14, 1, 1, GINGER); }   // fringe
+  P(25, 16, 1, 9); P(24, 24, 1, 3);                                                 // cheek shadow
+  // features
+  const dead = mode === 'dead', ouch = mode === 'ouch', grin = mode === 'grin';
+  const gaze = mode === 'l' ? 0 : mode === 'r' ? 2 : 1, browY = ouch ? 15 : 16;
+  for (const ex of [12, 20]) {
+    const left = ex === 12;
+    if (dead) { for (let i = 0; i < 4; i++) { P(ex + i, 18 + i); P(ex + 3 - i, 18 + i); } continue; }
+    if (tier >= 3 && !ouch) P(left ? ex + 0 : ex, browY + (left ? 0 : 0), 4, 1); else P(ex, browY, 4, 1);
+    if (tier >= 3 && !ouch) P(left ? ex + 3 : ex, browY + 1, 1, 1);                 // furrowed
+    if (tier >= 4 && !left && !ouch) { P(ex - 1, 20, 6, 1); continue; }             // swollen shut
+    P(ex - 1, 18, 6, 1); P(ex - 1, 19, 1, 2); P(ex + 4, 19, 1, 2); P(ex, 21, 4, 1);
+    P(ex + gaze, 19, 2, 2);
+  }
+  P(18, 22, 1, 2); P(17, 24, 2, 1);                                                 // nose
+  if (ouch) { P(16, 26, 5, 4); P(17, 27, 3, 2, FG); P(17, 28, 3, 1); }
+  else if (grin) { P(13, 26, 1, 1); P(22, 26, 1, 1); P(14, 27, 8, 1); P(15, 29, 6, 1); P(14, 28, 1, 1); P(21, 28, 1, 1); }
+  else if (tier >= 3 && !dead) { P(14, 26, 8, 3); for (let x = 15; x < 21; x += 2) P(x, 27, 1, 1, FG); }   // gritted teeth
+  else if (dead) P(15, 28, 6, 1);
+  else { P(15, 27, 6, 1); P(16, 28, 4, 1); }
+  // damage
+  if (tier >= 1) { P(22, 23); P(23, 24); P(24, 25); P(11, 22); P(12, 23); }
+  if (tier >= 2) { for (let y = 21; y < 24; y++) for (let x = 19; x < 25; x++) if ((x + y) & 1) P(x, y); P(13, 14, 1, 3); P(14, 16); }
+  if (tier >= 3) { for (let y = 22; y < 29; y++) for (let x = 10; x < 15; x++) if (((x + y) & 1) && hash(x * 9 + y) < 0.8) P(x, y); P(20, 13); P(21, 14); P(22, 15); }
+  if (tier >= 4 || dead) { for (let y = 15; y < 31; y++) for (let x = 10; x < 26; x++) if ((x & 1) === 0 && (y & 1) === 0 && hash(x * 5 + y * 3) < 0.7) P(x, y); P(16, 30, 1, 3); P(19, 29, 1, 2); }
+  if (tier >= 2) for (let i = 0; i < tier * 5; i++) { const y = 2 + ((hash(i * 17) * 40) | 0), l = hash(i * 29) < 0.5; P(l ? (hash(i) * 3) | 0 : 33 + ((hash(i) * 3) | 0), y, 1, 1, GINGER); P(l ? 3 + ((hash(i * 3) * 5) | 0) : 28 + ((hash(i * 3) * 5) | 0), y, 2, 1); }
+  return faces[key] = c;
+}
+
 export const SPR = {};
 export function buildSprites() {
   SPR.canoe = [makeCanoe(0), makeCanoe(1)];

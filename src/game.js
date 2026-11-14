@@ -62,7 +62,7 @@ export function newRun() {
     weapons: { cloud: 1 + shopLvl('starter') }, passives: {}, evo: {},
     cd: { cloud: 0.5, trail: 0, nova: 1.5 }, orbA: 0, orbTick: 0, cloudId: 0,
     genY: 240, chunkN: 0, spawnT: 0, shake: 0, flash: 0, hitstop: 0, dead: false, deadT: 0,
-    banner: BIOMES.NAMES[0], bannerT: 2.5, biomeIdx: 0, pending: 0, choices: null, cause: '', result: null, puffT: 0,
+    banner: BIOMES.NAMES[0], bannerT: 2.5, biomeIdx: 0, pending: 0, choices: null, cause: '', result: null, puffT: 0, hurtT: 0, grinT: 0,
   });
   G.ph = [rnd(6.28), rnd(6.28), rnd(6.28)];
   G.px = centreAt(0);
@@ -251,7 +251,7 @@ export function nudge(dir) {
 function hurt(n, cause) {
   if (G.inv > 0 || G.dead) return;
   if (G.god) { G.hits = (G.hits || 0) + 1; G.inv = 0.5; return; }
-  G.hp -= n; G.inv = PLAYER.INVULN_HIT; G.shake = JUICE.SHAKE_HIT; G.flash = 0.12; sfx.hurt();
+  G.hp -= n; G.hurtT = 0.7; G.inv = PLAYER.INVULN_HIT; G.shake = JUICE.SHAKE_HIT; G.flash = 0.12; sfx.hurt();
   burst(G.px, G.dist, 14, 120);
   if (G.hp <= 0) die(cause);
 }
@@ -283,7 +283,7 @@ function collect(v) {
   addFloater('+' + n, v.x, v.wy + 10, big ? 2 : 1);
   burst(v.x, v.wy, big ? 14 : 6, big ? 110 : 80, 0.35);
   addPart(v.x, v.wy, 0, G.speed + 60, 0.28, 0, big ? 2 : 1);          // the spin-burst ghost
-  if (big) sfx.big(); else sfx.vape(G.combo);
+  if (big) { sfx.big(); G.grinT = Math.max(G.grinT, 0.5); } else sfx.vape(G.combo);
   if (shopLvl('engine')) {
     const t = shopLvl('turbo');
     G.burst = Math.min(ENGINE.BURST_CAP[t], G.burst + ENGINE.BURST_ADD[t] * (big ? 2 : 1));
@@ -335,7 +335,7 @@ export function choose(i) {
   else if (c.kind === 'evo') { G.evo[c.id] = true; G.flash = 0.2; G.shake = 8; }
   else if (c.kind === 'cash') G.cash += LEVELUP.FILLER_CASH;
   else if (c.kind === 'heal') G.hp = G.maxHp;
-  calcStats(); sfx.pick();
+  calcStats(); sfx.pick(); G.grinT = c.kind === 'evo' ? 3 : 1.2;
   G.inv = Math.max(G.inv, PLAYER.INVULN_LEVELUP);
   G.pending--;
   if (G.pending > 0) G.choices = rollChoices(); else { G.choices = null; G.mode = 'play'; }
@@ -548,6 +548,8 @@ export function update(dt) {
     G.px = clamp(G.px, l, r); G.pvx = 0;
   }
   if (G.inv > 0) G.inv -= dt;
+  if (G.hurtT > 0) G.hurtT -= dt;
+  if (G.grinT > 0) G.grinT -= dt;
   if (G.comboT > 0) G.comboT -= dt;
   G.paddleT += dt * G.speed / 100; if (G.paddleT > 0.45) { G.paddleT = 0; G.paddle ^= 1; }
   G.puffT -= dt;

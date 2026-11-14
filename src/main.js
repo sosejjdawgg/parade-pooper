@@ -1,6 +1,6 @@
 // Boot, main loop and every menu screen (immediate-mode UI).
 import { VIEW, COLORS, SHOP } from './config.js';
-import { ctx, view, resize, rect, box, text, textO, textW, wrap, draw, buildSprites, SPR } from './gfx.js';
+import { ctx, view, resize, rect, box, text, textO, textW, wrap, draw, buildSprites, SPR, face } from './gfx.js';
 import { G, newRun, update, idle, nudge, choose, playerY, enemies, clouds, vapes } from './game.js';
 import { drawWorld, drawHud, dither, PAUSE_RECT } from './render.js';
 import { save, loadSave, writeSave, resetSave, shopLvl, sfx, input, initInput, requestTilt } from './platform.js';
@@ -184,7 +184,7 @@ function frame(ts) {
   else if (G.mode === 'shop') shopScreen();
   else if (G.mode === 'settings') settingsScreen();
   else if (G.mode === 'pause') pauseScreen();
-  if (toastT > 0) { toastT -= dt; const tw = textW(toast, 2) + 20; rect(W / 2 - tw / 2, view.H - 44, tw, 22, FG); text(toast, W / 2, view.H - 38, 2, BG, 0.5); }
+  if (toastT > 0) { toastT -= dt; const tw = textW(toast, 2) + 20; rect(W / 2 - tw / 2, view.H - 96, tw, 22, FG); text(toast, W / 2, view.H - 90, 2, BG, 0.5); }
 
   input.taps.length = 0; input.pause = false;
 }
@@ -200,7 +200,7 @@ function boot() {
   });
   newRun(); G.mode = 'title'; G.banner = ''; G.inv = 0;
   if (params.get('bot')) { newRun(); G.bot = true; G.god = !!params.get('god'); G.hits = G.crashes = 0; }
-  window.__vc = { G, save, newRun, enemies, clouds, vapes, SPR };
+  window.__vc = { G, save, newRun, enemies, clouds, vapes, SPR, face };
   requestAnimationFrame(frame);
 }
 boot();
