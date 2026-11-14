@@ -1,0 +1,199 @@
+// ============================================================================
+//  VAPE CANOE — every balance number lives in this file.
+//  Units: pixels (logical 360-wide screen), seconds, px/s unless noted.
+// ============================================================================
+
+export const VIEW = {
+  W: 360,            // logical width (fixed)
+  H_MIN: 640,        // 9:16
+  H_MAX: 800,        // taller phones get more river instead of black bars
+  PLAYER_Y: 0.68,    // canoe sits this far down the screen
+};
+
+export const COLORS = { BG: '#000000', FG: '#ffffff', GINGER: '#ff5a1f' };
+
+export const WORLD = { PX_PER_M: 20 };
+
+export const PLAYER = {
+  SPEED_START: 105,       // scroll speed at 0 m
+  SPEED_MAX: 190,         // scroll speed at SPEED_RAMP_M
+  SPEED_RAMP_M: 2600,
+  NUDGE: 250,             // lateral impulse per tap
+  NUDGE_FRICTION: 7,      // higher = shorter, sharper nudge
+  HOLD_REPEAT: 0.15,      // holding a side repeats the nudge
+  TILT_SPEED: 230,        // max lateral speed from tilt
+  TILT_FULL_DEG: 22,      // tilt angle for full speed
+  HIT_W: 4, HIT_H: 12,    // half-size of the (forgiving) hitbox
+  HEARTS: 3,
+  INVULN_HIT: 1.3,
+  INVULN_LEVELUP: 1.2,
+  PICKUP_R: 13,
+  MAGNET_R: 34,
+  MAGNET_PULL: 320,
+};
+
+export const ENGINE = {      // Vape Engine (meta unlock)
+  SPEED_MULT: 1.1,
+  BURST_ADD: [26, 34, 42, 52],   // per vape, indexed by turbo level
+  BURST_CAP: [90, 120, 150, 190],
+  BURST_DECAY: 1.5,              // exponential decay rate
+  SHAKE: 1.5,
+};
+
+export const XP = {
+  need: (lvl) => Math.round(5 + 3 * lvl + 0.4 * lvl * lvl),
+  VAPE: 1, BIG_VAPE: 5,
+};
+
+export const PICKUPS = {
+  BIG_MULT: 5,
+  BIG_CHANCE: 0.05,          // chance a pattern vape is upgraded to a big one
+  SPIN_BASE: 5, SPIN_BIG: 2.5,
+  SPIN_ACCEL: 2.2,           // rad/s gained per second on screen
+  CASH_VALUE: 5,
+  CASH_CHUNK_CHANCE: 0.3,    // chance a chunk hides a cash bag
+  DENSITY_PER_M: 0.00012,    // extra vapes in patterns per metre travelled
+};
+
+export const BIOMES = {
+  NAMES: ['BRITISH CANAL', 'DESERT CANAL', 'JUNGLE CANAL'],
+  DESERT_AT: 650,            // metres where the blend into desert starts
+  JUNGLE_AT: 1700,
+  BLEND: 220,                // metres a transition takes
+  WIDTH: [186, 262, 172],    // canal width per biome
+  MEANDER: 52,               // max sideways wander of the canal centre
+  CHUNK_GAP: [150, 130, 105],// clear water between chunks
+  // chunk pattern weights per biome [canal, desert, jungle]
+  CHUNKS: {
+    snake:    [5, 3, 3],
+    lanes:    [3, 2, 1],
+    cluster:  [1, 5, 2],
+    barge:    [3, 2, 1],
+    bridge:   [2, 1, 0.5],
+    lock:     [1.5, 0.5, 0],
+    debris:   [2, 1, 1],
+    vortex:   [0.6, 1.5, 4],
+    sandbars: [0, 4, 0],
+    vines:    [0, 0, 5],
+  },
+};
+
+export const HAZARDS = {
+  VORTEX_R: 64, VORTEX_PULL: 300, VORTEX_CORE: 9,
+  VORTEX_JUNGLE_MULT: 1.6,
+  SANDBAR_SLOW: 0.45, VINE_SLOW: 0.55, VINE_STEER: 0.35,
+  SLOW_RECOVER: 1.2,           // how fast speed returns after a snag
+  BARGE_MOVE_CHANCE_PER_KM: 0.3,
+  BARGE_VX: 18,
+  FAKE_REVEAL: 120,            // heat-haze fakes vanish this close
+};
+
+// mode: drift = floats down, steering at you. chase = hunts you once close.
+export const ENEMIES = {
+  swan:    { hp: 7,  r: 6, speed: 22, steer: 18, mode: 'drift',  xp: 1, drop: 0.4 },
+  pap:     { hp: 12, r: 6, speed: 50, steer: 0,  mode: 'chase',  xp: 2, drop: 0.5 },
+  tumble:  { hp: 9,  r: 6, speed: 30, steer: 70, mode: 'bounce', xp: 1, drop: 0.4 },
+  piranha: { hp: 11, r: 5, speed: 68, steer: 0,  mode: 'chase',  xp: 2, drop: 0.45 },
+  mozzie:  { hp: 3,  r: 3, speed: 88, steer: 0,  mode: 'chase',  xp: 1, drop: 0.25 },
+  croc:    { hp: 60, r: 9, speed: 26, steer: 30, mode: 'drift',  xp: 8, drop: 1, big: true },
+};
+
+export const SPAWN = {
+  START_M: 50,                       // no enemies before this
+  RATE: [0.55, 1.5, 3.2],             // enemies/sec per biome at biome start
+  RATE_GROWTH_PER_KM: 0.7,           // multiplicative growth: rate *= 1 + km * this
+  MAX_ALIVE: 150,
+  HP_GROWTH_PER_KM: 0.45,            // enemy hp *= 1 + km * this
+  PACK_CHANCE: [0.05, 0.15, 0.45],   // chance a spawn is a pack
+  PACK_SIZE: [3, 5, 9],
+  BEHIND_CHANCE: [0, 0.1, 0.25],     // chasers that come from behind
+  CHASE_RANGE: 240,
+  TABLE: [                           // weights per biome
+    { swan: 5, pap: 2 },
+    { swan: 1, pap: 4, tumble: 4, croc: 0.4 },
+    { pap: 2, piranha: 5, mozzie: 6, croc: 0.8 },
+  ],
+};
+
+// ---- In-run weapons. Each array entry is one level. -------------------------
+export const WEAPONS = {
+  cloud: {
+    name: 'VAPE CLOUD', maxLvl: 6, tick: 0.2, speed: 95,
+    levels: [
+      { dirs: 1, dmg: 4,  cd: 1.05, size: 13, life: 0.5, prox: 95 },
+      { dirs: 1, dmg: 6,  cd: 0.9,  size: 15, life: 0.55, prox: 115 },
+      { dirs: 3, dmg: 6,  cd: 0.85, size: 16, life: 0.6 },
+      { dirs: 3, dmg: 8,  cd: 0.75, size: 18, life: 0.65 },
+      { dirs: 4, dmg: 10, cd: 0.7,  size: 20, life: 0.7 },
+      { dirs: 6, dmg: 12, cd: 0.6,  size: 22, life: 0.75 },
+    ],
+    evo: { dirs: 8, dmg: 20, cd: 0.36, size: 30, life: 0.95 },
+    desc: ['', 'MORE DAMAGE, FASTER', 'THREE DIRECTIONS, ALWAYS ON', 'BIGGER, STRONGER', 'FOUR DIRECTIONS', 'SIX DIRECTIONS'],
+  },
+  trail: {
+    name: 'SLIPSTREAM', maxLvl: 5, tick: 0.25, every: 0.1,
+    levels: [
+      { dmg: 3, r: 11, life: 1.2 }, { dmg: 4, r: 13, life: 1.5 }, { dmg: 6, r: 15, life: 1.8 },
+      { dmg: 8, r: 17, life: 2.2 }, { dmg: 10, r: 20, life: 2.6 },
+    ],
+    evo: { dmg: 18, r: 34, life: 4 },
+    desc: ['A TOXIC FOG TRAIL BEHIND YOU', 'THICKER TRAIL', 'STRONGER TRAIL', 'LONGER TRAIL', 'MUCH THICKER TRAIL'],
+  },
+  nova: {
+    name: 'FOG BANK', maxLvl: 5, expand: 300,
+    levels: [
+      { dmg: 12, cd: 6, r: 85 }, { dmg: 18, cd: 5.4, r: 105 }, { dmg: 24, cd: 4.8, r: 125 },
+      { dmg: 32, cd: 4.2, r: 150 }, { dmg: 42, cd: 3.6, r: 175 },
+    ],
+    evo: { dmg: 95, cd: 2.8, r: 440 },
+    desc: ['A BLAST OF FOG CLEARS THE AREA', 'BIGGER BLAST', 'FASTER, STRONGER', 'BIGGER BLAST', 'HUGE BLAST'],
+  },
+  storm: {
+    name: 'VAPE STORM', maxLvl: 5, tick: 0.2, spin: 3.2,
+    levels: [
+      { n: 2, dmg: 4, r: 9, orbit: 36 }, { n: 3, dmg: 5, r: 10, orbit: 40 }, { n: 3, dmg: 7, r: 11, orbit: 46 },
+      { n: 4, dmg: 8, r: 12, orbit: 52 }, { n: 5, dmg: 10, r: 13, orbit: 58 },
+    ],
+    evo: { n: 7, dmg: 17, r: 16, orbit: 66, outer: 6 },
+    desc: ['CLOUDS ORBIT THE CANOE', 'THIRD CLOUD', 'WIDER, STRONGER', 'FOURTH CLOUD', 'FIFTH CLOUD'],
+  },
+};
+
+// ---- In-run passives. Value is per level. -----------------------------------
+export const PASSIVES = {
+  lungs:  { name: 'BIG LUNGS',   maxLvl: 5, per: 0.12, desc: '+12% CLOUD SIZE' },
+  salts:  { name: 'NIC SALTS',   maxLvl: 5, per: 0.15, desc: '+15% DAMAGE' },
+  chain:  { name: 'CHAIN VAPER', maxLvl: 5, per: 0.08, desc: '-8% COOLDOWNS' },
+  linger: { name: 'MENTHOL',     maxLvl: 5, per: 0.15, desc: '+15% CLOUD DURATION' },
+  magnet: { name: 'DUTY FREE',   maxLvl: 5, per: 0.3,  desc: '+30% PICKUP RANGE' },
+  paddle: { name: 'BIG PADDLE',  maxLvl: 3, per: 0.12, desc: '+12% STEERING' },
+  hivis:  { name: 'HI-VIS VEST', maxLvl: 3, per: 1,    desc: '+1 MAX HEART AND A FULL HEAL' },
+};
+
+// weapon at max level + this passive (any level) => evolution offered
+export const EVOLUTIONS = {
+  cloud: { needs: 'lungs',  name: 'PEA SOUPER',     desc: 'EIGHT DIRECTIONS. NON-STOP. ENORMOUS.' },
+  storm: { needs: 'chain',  name: 'HURRICANE ANGE', desc: 'A DOUBLE RING OF ANGRY WEATHER.' },
+  nova:  { needs: 'salts',  name: 'MUSHROOM CLOUD', desc: 'CLEARS THE WHOLE SCREEN.' },
+  trail: { needs: 'linger', name: 'CHEMTRAIL',      desc: 'A VAST, LINGERING WAKE OF FOG.' },
+};
+
+export const LEVELUP = { OWNED_WEIGHT: 3, NEW_WEIGHT: 1, EVO_WEIGHT: 8, FILLER_CASH: 10 };
+
+// ---- Between-run shop. costs[] length = max level. --------------------------
+export const SHOP = [
+  { id: 'engine',  name: 'VAPE ENGINE',   costs: [40], desc: 'EVERY VAPE = SPEED BURST.', flavour: 'THE DESERT ISLAND ESSENTIAL.' },
+  { id: 'turbo',   name: 'ENGINE TUNING', costs: [70, 140, 240], desc: 'BIGGER, LONGER SPEED BURSTS.', needs: 'engine' },
+  { id: 'starter', name: 'WARM-UP PUFF',  costs: [80, 220], desc: 'START WITH A STRONGER CLOUD.' },
+  { id: 'xp',      name: 'FAST LEARNER',  costs: [30, 60, 100, 160, 240], desc: '+10% XP.', per: 0.1 },
+  { id: 'cash',    name: 'EXPENSES',      costs: [30, 60, 100, 160, 240], desc: '+20% CASH.', per: 0.2 },
+  { id: 'magnet',  name: 'MAGNETIC HAIR', costs: [25, 50, 90, 140, 200], desc: '+15% PICKUP RANGE.', per: 0.15 },
+  { id: 'heart',   name: 'THICK SKIN',    costs: [100, 260], desc: '+1 STARTING HEART.' },
+];
+
+export const REWARD = { CASH_PER_100M: 1, CASH_PER_LEVEL: 1 };
+
+export const JUICE = {
+  SHAKE_HIT: 6, SHAKE_KILL: 0.6, SHAKE_NOVA: 3, SHAKE_DEATH: 12,
+  HITSTOP_DEATH: 0.45, MAX_FLOATERS: 48, MAX_PARTICLES: 500,
+};
