@@ -105,7 +105,7 @@ function drawClouds() {
         ctx.fillRect(Math.round(c.x + Math.cos(a) * c.r) - 3, Math.round(y + Math.sin(a) * c.r) - 3, 6, 6);
         if (k & 1) ctx.fillRect(Math.round(c.x + Math.cos(a + 0.1) * c.r * 0.86) - 1, Math.round(y + Math.sin(a + 0.1) * c.r * 0.86) - 1, 3, 3);
       }
-      if (c.r < 150) drawDisc(c.x, y, c.r - 6, 2);
+      if (c.r < 150) drawDisc(c.x, y, c.r - 6, t < 0.6 ? 1 : 2);        // billows out as a thick cloud, then thins
       continue;
     }
     if (y < -c.r || y > view.H + c.r) continue;

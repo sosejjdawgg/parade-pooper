@@ -153,13 +153,13 @@ export const WEAPONS = {
     desc: ['HURTS ENEMIES', 'THICKER TRAIL', 'STRONGER TRAIL', 'LONGER TRAIL', 'MUCH THICKER TRAIL'],
   },
   nova: {
-    name: 'FOG BANK', maxLvl: 5, expand: 300,
+    name: 'BIG VAPE CLOUDS', maxLvl: 5, expand: 300,
     levels: [
       { dmg: 12, cd: 6, r: 85 }, { dmg: 18, cd: 5.4, r: 105 }, { dmg: 24, cd: 4.8, r: 125 },
       { dmg: 32, cd: 4.2, r: 150 }, { dmg: 42, cd: 3.6, r: 175 },
     ],
     evo: { dmg: 95, cd: 2.8, r: 440 },
-    desc: ['A BLAST OF FOG CLEARS THE AREA', 'BIGGER BLAST', 'FASTER, STRONGER', 'BIGGER BLAST', 'HUGE BLAST'],
+    desc: ['A BIG VAPE CLOUD BILLOWS OUT AND CLEARS THE AREA', 'BIGGER CLOUD', 'FASTER, STRONGER', 'BIGGER CLOUD', 'HUGE CLOUD'],
   },
   storm: {
     name: 'VAPE STORM', maxLvl: 5, tick: 0.2, spin: 3.2,

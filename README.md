@@ -37,7 +37,7 @@ Debug URL flags: `?bot=1` autoplay, `&god=1` no death, `&fast=8` time multiplier
 - Kayak sits 68% down the screen; the world scrolls toward it. Tap left/right for a sharp nudge, hold to keep nudging, optional tilt.
 - Three biomes blend by distance: British canal (0 m), desert (650 m), jungle (1700 m).
 - Hearts absorb enemies, debris, sandbars and vortex cores. Barges, bridge piers and lock gates sink you outright.
-- Weapons: Vape Cloud, Vapetrail (trail), Fog Bank (area blast), Vape Storm (orbiters). Each evolves at max level if you hold its partner passive.
+- Weapons: Vape Cloud, Vapetrail (trail), Big Vape Clouds (area blast), Vape Storm (orbiters). Each evolves at max level if you hold its partner passive.
 - Cash is banked on death and spent in the shop; the Vape Engine (speed burst per vape) is the first unlock.
 
 ## Legal
