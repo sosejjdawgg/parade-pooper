@@ -108,7 +108,7 @@ function introScreen() {
   rect(250, y + 149, 34, 10); rect(304, y + 149, 30, 10); rect(281, y + 146, 6, 16); rect(301, y + 146, 6, 16); text('LOCK GATE', 292, y + 174, 1, FG, 0.5);
   rect(24, y + 185, W - 48, 1);
   text('THESE HURT OR SLOW YOU', 24, y + 192, 2);
-  big(SPR.trolley, 42, y + 224); big(SPR.barrel, 76, y + 224); big(SPR.cone, 104, y + 224);
+  draw(SPR.trolley, 44, y + 224); big(SPR.barrel, 80, y + 224); big(SPR.cone, 108, y + 224);
   draw(SPR.sandbar[0], 158, y + 224);
   ctx.fillStyle = FG; for (let arm = 0; arm < 3; arm++) for (let k = 0; k < 8; k++) { const a = -t * 4 + arm * 2.094 + k * 0.5, r = 2 + k * 2; ctx.fillRect(Math.round(214 + Math.cos(a) * r), Math.round(y + 224 + Math.sin(a) * r * 0.9), 2, 2); }
   rect(244, y + 211, 3, 26, COLORS.ENEMY); for (let i = 0; i < 3; i++) rect(250 + (i % 2) * 4, y + 214 + i * 8, 5, 1, COLORS.ENEMY);

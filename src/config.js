@@ -106,6 +106,7 @@ export const BANKS = {
 };
 
 export const HAZARDS = {
+  DEBRIS: { trolley: [12, 9], barrel: [6, 5], cone: [6, 5] },   // collision half-sizes [w, h] per kind
   VORTEX_R: 64, VORTEX_PULL: 300, VORTEX_CORE: 9,
   VORTEX_JUNGLE_MULT: 1.6,
   SANDBAR_SLOW: 0.45, VINE_SLOW: 0.55, VINE_STEER: 0.35,

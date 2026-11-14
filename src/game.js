@@ -102,6 +102,7 @@ function addHazard(type, x, wy, hw, hh, extra) {
   if (extra) Object.assign(h, extra);
   return h;
 }
+function addDebris(x, wy) { const kind = pick(['trolley', 'barrel', 'cone']), [hw, hh] = HAZARDS.DEBRIS[kind]; addHazard('debris', x, wy, hw, hh, { kind }); }
 export function addPart(x, wy, vx, vwy, life, size = 2, spr = 0) {
   const p = parts.spawn(); if (!p) return;
   p.x = x; p.wy = wy; p.vx = vx; p.vwy = vwy; p.age = 0; p.life = life; p.size = size; p.spr = spr;
@@ -179,7 +180,7 @@ const CHUNKS = {
   },
   debris(y, dens) {
     const n = 4 + ((Math.random() * 4) | 0);
-    for (let i = 0; i < n; i++) { const wy = y + 20 + i * 44 + rnd(-8, 8); addHazard('debris', laneX(wy, rnd(), 10), wy, 6, 5, { kind: pick(['trolley', 'barrel', 'cone']) }); }
+    for (let i = 0; i < n; i++) { const wy = y + 20 + i * 44 + rnd(-8, 8); addDebris(laneX(wy, rnd(), 16), wy); }
     for (let i = 0; i < 6 * dens; i++) { const wy = y + rnd(n * 44); addVape(laneX(wy, rnd()), wy); }
     return n * 44 + 20;
   },
@@ -232,7 +233,7 @@ function genChunk() {
   if (dangerAt(G.genY)) {          // late game: trouble hugs the sides
     const span = len + lerp3(BIOMES.CHUNK_GAP, b);
     if (Math.random() < BANKS.SIDE_DEBRIS_CHANCE) for (let i = 0, n = 1 + ((Math.random() * 2) | 0); i < n; i++) {
-      const wy = G.genY + rnd(span); addHazard('debris', laneX(wy, pick([0, 1]), 14), wy, 6, 5, { kind: pick(['trolley', 'barrel', 'cone']) });
+      const wy = G.genY + rnd(span); addDebris(laneX(wy, pick([0, 1]), 18), wy);
     }
     if (Math.random() < BANKS.SIDE_BARGE_CHANCE) { const wy = G.genY + len + lerp3(BIOMES.CHUNK_GAP, b) * 0.5; addHazard('barge', laneX(wy, pick([0, 1]), 17), wy, 13, 32, { len: 70 }); }
   }

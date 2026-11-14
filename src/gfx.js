@@ -87,11 +87,33 @@ function outlined(src, col = BG) {
   const w = src.width, h = src.height;
   const d = src.getContext('2d').getImageData(0, 0, w, h).data;
   const [c, g] = mk(w + 2, h + 2);
-  g.fillStyle = col;
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3]) g.fillRect(x, y, 3, 3);
+  if (col === BG) {                       // chunky black backing behind every pixel
+    g.fillStyle = col;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3]) g.fillRect(x, y, 3, 3);
+    g.drawImage(src, 1, 1);
+    return c;
+  }
+  // coloured outline: a thin stroke on the OUTSIDE of the silhouette only. Holes inside the shape go black,
+  // so eyes, gaps and other details stay readable.
+  const W2 = w + 2, H2 = h + 2, solid = new Uint8Array(W2 * H2), outside = new Uint8Array(W2 * H2);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3]) solid[(y + 1) * W2 + x + 1] = 1;
+  const stack = [0]; outside[0] = 1;
+  while (stack.length) {
+    const i = stack.pop(), x = i % W2, y = (i / W2) | 0;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const nx = x + dx, ny = y + dy; if (nx < 0 || ny < 0 || nx >= W2 || ny >= H2) continue;
+      const j = ny * W2 + nx; if (!solid[j] && !outside[j]) { outside[j] = 1; stack.push(j); }
+    }
+  }
+  for (let y = 0; y < H2; y++) for (let x = 0; x < W2; x++) {
+    const i = y * W2 + x; if (solid[i]) continue;
+    if (!outside[i]) { g.fillStyle = BG; g.fillRect(x, y, 1, 1); continue; }
+    if ((x > 0 && solid[i - 1]) || (x < W2 - 1 && solid[i + 1]) || (y > 0 && solid[i - W2]) || (y < H2 - 1 && solid[i + W2])) { g.fillStyle = col; g.fillRect(x, y, 1, 1); }
+  }
   g.drawImage(src, 1, 1);
   return c;
 }
+function doubled(src) { const [c, g] = mk(src.width * 2, src.height * 2); g.drawImage(src, 0, 0, c.width, c.height); return c; }
 /** '#' white, 'o' ginger, 'x' black, anything else transparent */
 function art(rows, outline = true) {
   const [c, g] = mk(Math.max(...rows.map(r => r.length)), rows.length);
@@ -298,8 +320,8 @@ export function buildSprites() {
   SPR.croc = art([
     '...####...', '...#..#...', '...####...', '...####...', '..#x##x#..', '..######..', '.########.', '##########', '.########.',
     '.########.', '##########', '.########.', '..######..', '...####...', '...###....', '....##....', '....#.....'], ENEMY);
-  SPR.trolley = art([
-    '#...........', '.##########.', '..#.#.#.#.#.', '..#########.', '..#.#.#.#.#.', '..########..', '...#.....#..', '..##....##..']);
+  SPR.trolley = doubled(art([
+    '#...........', '.##########.', '..#.#.#.#.#.', '..#########.', '..#.#.#.#.#.', '..########..', '...#.....#..', '..##....##..']));        // a shopping trolley is a lot bigger than a swan
   SPR.barrel = art(['.######.', '########', '#......#', '########', '########', '#......#', '########', '.######.']);
   SPR.cone = art(['...##...', '...##...', '..####..', '..#..#..', '.######.', '.#....#.', '########']);
   SPR.cactus = art(['..##..', '..##.#', '#.##.#', '#.####', '####..', '..##..', '..##..', '..##..'], false);
