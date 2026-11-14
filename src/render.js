@@ -1,5 +1,5 @@
 // Draws the world and the in-run HUD. Three colours only: black, white, ginger.
-import { VIEW, COLORS, VAPING } from './config.js';
+import { VIEW, COLORS, VAPING, JUICE } from './config.js';
 import { ctx, view, rect, box, text, textO, textW, draw, drawDisc, face, SPR, hash } from './gfx.js';
 import { G, vapes, enemies, hazards, clouds, parts, floaters, orbs, biomeAt, leftAt, rightAt, playerY, metres } from './game.js';
 import { save } from './platform.js';
@@ -164,8 +164,8 @@ export function drawWorld(mode = 'full') {
   if (full) drawHazards(true);
   drawFx();
   if (full && G.burst > 22) {
-    const n = Math.min(16, G.burst / 7), k = (G.t * 24) | 0;
-    for (let i = 0; i < n; i++) rect(hash(i * 13 + k * 7) * W, hash(i * 29 + k * 3) * view.H, 1, 20 + G.burst / 4);
+    const n = Math.min(16, G.burst / 7) * JUICE.SPEED_FX, k = (G.t * 24) | 0;
+    for (let i = 0; i < n; i++) rect(hash(i * 13 + k * 7) * W, hash(i * 29 + k * 3) * view.H, 1, (20 + G.burst / 4) * JUICE.SPEED_FX);
   }
   ctx.restore();
   if (G.flash > 0) dither(0, 0, W, view.H);

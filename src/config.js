@@ -37,7 +37,7 @@ export const ENGINE = {      // Vape Engine (meta unlock)
   BURST_ADD: [26, 34, 42, 52],   // per vape, indexed by turbo level
   BURST_CAP: [90, 120, 150, 190],
   BURST_DECAY: 1.5,              // exponential decay rate
-  SHAKE: 1.5,
+  SHAKE: 0.75,
 };
 
 // cosmetic: every so often she takes a drag and the cloud drifts off behind
@@ -241,6 +241,7 @@ export const MUSIC = {
 };
 
 export const JUICE = {
+  SPEED_FX: 0.5,           // 0..1: how many / how long the speed lines are (1 = original)
   SHAKE_HIT: 6, SHAKE_KILL: 0.6, SHAKE_NOVA: 3, SHAKE_DEATH: 12,
   HITSTOP_DEATH: 0.45, MAX_FLOATERS: 48, MAX_PARTICLES: 500,
 };
