@@ -60,7 +60,7 @@ export function newRun() {
     t: 0, dist: 0, speed: PLAYER.SPEED_START, burst: 0, slow: 1, snag: 0, pvx: 0, holdT: 0, paddle: 0, paddleT: 0,
     hp: 0, maxHp: 0, inv: 1, vapes: 0, cash: 0, xp: 0, level: 1, xpNeed: XP.need(1), kills: 0, combo: 0, comboT: 0,
     weapons: { cloud: 1 + shopLvl('starter') }, passives: {}, evo: {},
-    cd: { cloud: 0.5, trail: 0, nova: 1.5 }, orbA: 0, orbTick: 0, cloudId: 0,
+    cd: { cloud: 0.5, trail: 0, nova: 1.5, rings: 0.5 }, orbA: 0, orbTick: 0, cloudId: 0,
     genY: 240, chunkN: 0, spawnT: 0, shake: 0, flash: 0, hitstop: 0, dead: false, deadT: 0,
     banner: BIOMES.NAMES[0], bannerT: 2.5, biomeIdx: 0, pending: 0, choices: null, cause: '', result: null, puffT: 0, vapeT: 2.5, dragT: 0, hurtT: 0, grinT: 0,
   });
@@ -73,7 +73,7 @@ export function newRun() {
 const plvl = (id) => G.passives[id] || 0;
 function calcStats() {
   S.area = 1 + plvl('lungs') * PASSIVES.lungs.per;
-  S.dmg = 1 + plvl('salts') * PASSIVES.salts.per;
+  S.dmg = 1;
   S.cd = Math.pow(1 - PASSIVES.chain.per, plvl('chain'));
   S.dur = 1 + plvl('linger') * PASSIVES.linger.per;
   S.magnet = (1 + plvl('magnet') * PASSIVES.magnet.per) * (1 + shopLvl('magnet') * 0.15);
@@ -123,7 +123,8 @@ function addEnemy(type, x, wy, behind) {
   e.type = type; e.wy = wy; e.x = clamp(x, leftAt(wy) + d.r + 2, rightAt(wy) - d.r - 2);
   e.hp = e.maxHp = d.hp * (1 + G.dist / WORLD.PX_PER_M / 1000 * SPAWN.HP_GROWTH_PER_KM);
   e.r = d.r; e.chasing = !!behind; e.vx = (Math.random() < 0.5 ? -1 : 1) * d.steer; e.seed = rnd(100);
-  e.ox = rnd(-9, 9); e.oy = rnd(-12, 12); e.novaId = -1; e.flash = 0;
+  e.ox = rnd(-9, 9); e.oy = rnd(-12, 12); e.novaId = -1; e.flash = 0; e.chaseT = 0; e.gaveUp = false;
+  e.ang = Math.atan2(G.dist - wy, G.px - e.x);
 }
 
 // ---- procedural chunks ----------------------------------------------------------
@@ -366,6 +367,14 @@ function updateWeapons(dt) {
       cd.cloud = p.cd * S.cd; sfx.puff();
     }
   }
+  if (G.passives.rings) {
+    cd.rings -= dt;
+    if (cd.rings <= 0) {
+      const R = PASSIVES.rings, p = R.levels[G.passives.rings - 1]; cd.rings = p.cd * S.cd;
+      addCloud('ring', G.px, G.dist + 18, 0, R.speed, 6, p.r * S.area, p.life * S.dur, p.dmg, 0);
+      sfx.puff();
+    }
+  }
   if (G.weapons.trail) {
     cd.trail -= dt;
     if (cd.trail <= 0) {
@@ -408,14 +417,17 @@ function updateClouds(dt) {
       c.x += c.vx * dt; c.wy += (c.vwy + G.speed) * dt;
       c.r = c.r0 + (c.r1 - c.r0) * (1 - (1 - t) * (1 - t));
     } else if (c.kind === 'trail') c.r = c.r0 + (c.r1 - c.r0) * Math.min(1, t * 4);
+    else if (c.kind === 'ring') { c.wy += (c.vwy + G.speed) * dt; c.r = c.r0 + (c.r1 - c.r0) * Math.sqrt(t); }
     else { c.x = G.px; c.wy = G.dist; c.r = c.r0 + (c.r1 - c.r0) * t; }
-    const nova = c.kind === 'nova';
+    const ring = c.kind === 'ring', nova = c.kind === 'nova' || ring;      // these hit each enemy once
     if (!nova) { c.tickT -= dt; if (c.tickT > 0) continue; c.tickT += c.tick; }
     for (let j = 0; j < enemies.n; j++) {
       const e = enemies.items[j];
       if (nova && e.novaId === c.id) continue;
       const dx = e.x - c.x, dy = e.wy - c.wy, rr = c.r + e.r;
-      if (dx * dx + dy * dy < rr * rr) { if (nova) e.novaId = c.id; damageEnemy(e, c.dmg); }
+      const d2 = dx * dx + dy * dy;
+      if (ring) { const band = PASSIVES.rings.band + e.r, dd = Math.sqrt(d2) - c.r; if (dd > band || dd < -band) continue; }
+      if (d2 < rr * rr + (ring ? 1e6 : 0)) { if (nova) e.novaId = c.id; damageEnemy(e, c.dmg); }
     }
   }
 }
@@ -428,10 +440,16 @@ function updateEnemies(dt) {
     const dx = G.px + e.ox - e.x, dwy = G.dist + e.oy - e.wy, dist = Math.hypot(dx, dwy) || 1;
     if (e.flash > 0) e.flash -= dt;
     if (d.mode === 'chase') {
-      if (!e.chasing && dist < SPAWN.CHASE_RANGE) e.chasing = true;
+      if (!e.chasing && !e.gaveUp && dist < SPAWN.CHASE_RANGE) { e.chasing = true; e.ang = Math.atan2(dwy, dx); }
       if (e.chasing) {
-        e.x += dx / dist * d.speed * dt; e.wy += (G.speed + dwy / dist * d.speed) * dt;
+        // steer with a limited turn rate: they commit to a line, so a side-step makes them overshoot
+        let diff = Math.atan2(dwy, dx) - e.ang;
+        diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+        e.ang += clamp(diff, -d.turn * dt, d.turn * dt);
+        e.x += Math.cos(e.ang) * d.speed * dt; e.wy += (G.speed + Math.sin(e.ang) * d.speed) * dt;
         if (e.type === 'mozzie') e.x += Math.sin(G.t * 9 + e.seed) * 40 * dt;
+        e.chaseT += dt;
+        if (e.chaseT > d.stamina) { e.chasing = false; e.gaveUp = true; }      // knackered: drifts away downstream
       }
     } else if (d.mode === 'bounce') {
       e.wy -= d.speed * dt; e.x += e.vx * dt;
@@ -522,7 +540,7 @@ export function idle(dt) {
 export function update(dt) {
   if (G.hitstop > 0) { G.hitstop -= dt; return; }
   G.t += dt;
-  if (G.dead) { G.deadT += dt; updateFx(dt); if (G.deadT > 1.1) G.mode = 'dead'; return; }
+  if (G.dead) { G.deadT += dt; G.hurtT = 0; updateFx(dt); if (G.deadT > 1.1) G.mode = 'dead'; return; }
 
   // speed
   const m = G.dist / WORLD.PX_PER_M;

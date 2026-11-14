@@ -92,13 +92,15 @@ export const HAZARDS = {
 };
 
 // mode: drift = floats down, steering at you. chase = hunts you once close.
+// turn = how sharply a chaser can change heading (rad/s): low = easy to side-step.
+// stamina = seconds of chasing before it gives up and drifts off.
 export const ENEMIES = {
-  swan:    { hp: 7,  r: 6, speed: 22, steer: 18, mode: 'drift',  xp: 1, drop: 0.4 },
-  pap:     { hp: 12, r: 6, speed: 50, steer: 0,  mode: 'chase',  xp: 2, drop: 0.5 },
+  swan:    { hp: 7,  r: 6, speed: 22, steer: 9,  mode: 'drift',  xp: 1, drop: 0.4 },
+  pap:     { hp: 12, r: 6, speed: 46, steer: 0,  mode: 'chase',  xp: 2, drop: 0.5, turn: 0.9, stamina: 5 },
   tumble:  { hp: 9,  r: 6, speed: 30, steer: 70, mode: 'bounce', xp: 1, drop: 0.4 },
-  piranha: { hp: 11, r: 5, speed: 68, steer: 0,  mode: 'chase',  xp: 2, drop: 0.45 },
-  mozzie:  { hp: 3,  r: 3, speed: 88, steer: 0,  mode: 'chase',  xp: 1, drop: 0.25 },
-  croc:    { hp: 60, r: 9, speed: 26, steer: 30, mode: 'drift',  xp: 8, drop: 1, big: true },
+  piranha: { hp: 11, r: 5, speed: 66, steer: 0,  mode: 'chase',  xp: 2, drop: 0.45, turn: 1.3, stamina: 6 },
+  mozzie:  { hp: 3,  r: 3, speed: 84, steer: 0,  mode: 'chase',  xp: 1, drop: 0.25, turn: 2.0, stamina: 7 },
+  croc:    { hp: 60, r: 9, speed: 26, steer: 14, mode: 'drift',  xp: 8, drop: 1, big: true },
 };
 
 export const SPAWN = {
@@ -164,10 +166,12 @@ export const WEAPONS = {
 
 // ---- In-run passives. Value is per level. -----------------------------------
 export const PASSIVES = {
-  lungs:  { name: 'BIG LUNGS',   maxLvl: 5, per: 0.12, desc: '+12% CLOUD SIZE' },
-  salts:  { name: 'NIC SALTS',   maxLvl: 5, per: 0.15, desc: '+15% DAMAGE' },
+  lungs:  { name: 'BIGGER VAPE BATTERY', maxLvl: 5, per: 0.12, desc: '+12% CLOUD SIZE' },
+  rings:  { name: 'VAPE RINGS',  maxLvl: 5, desc: 'BLOWS LARGE GROWING HOOPS THAT CUT THROUGH ENEMIES', speed: 60, band: 7,
+            levels: [{ dmg: 10, cd: 3.2, r: 42, life: 1.4 }, { dmg: 14, cd: 2.9, r: 52, life: 1.5 }, { dmg: 18, cd: 2.6, r: 62, life: 1.6 },
+                     { dmg: 24, cd: 2.3, r: 74, life: 1.7 }, { dmg: 30, cd: 2.0, r: 88, life: 1.8 }] },
   chain:  { name: 'CHAIN VAPER', maxLvl: 5, per: 0.08, desc: '-8% COOLDOWNS' },
-  linger: { name: 'MENTHOL',     maxLvl: 5, per: 0.15, desc: '+15% CLOUD DURATION' },
+  linger: { name: 'THICKER CLOUDS',     maxLvl: 5, per: 0.15, desc: '+15% CLOUD DURATION' },
   magnet: { name: 'DUTY FREE',   maxLvl: 5, per: 0.3,  desc: '+30% PICKUP RANGE' },
   paddle: { name: 'BIG PADDLE',  maxLvl: 3, per: 0.12, desc: '+12% STEERING' },
   hivis:  { name: 'HI-VIS VEST', maxLvl: 3, per: 1,    desc: '+1 MAX HEART AND A FULL HEAL' },
@@ -177,7 +181,7 @@ export const PASSIVES = {
 export const EVOLUTIONS = {
   cloud: { needs: 'lungs',  name: 'PEA SOUPER',     desc: 'EIGHT DIRECTIONS. NON-STOP. ENORMOUS.' },
   storm: { needs: 'chain',  name: 'HURRICANE ANGE', desc: 'A DOUBLE RING OF ANGRY WEATHER.' },
-  nova:  { needs: 'salts',  name: 'MUSHROOM CLOUD', desc: 'CLEARS THE WHOLE SCREEN.' },
+  nova:  { needs: 'rings',  name: 'MUSHROOM CLOUD', desc: 'CLEARS THE WHOLE SCREEN.' },
   trail: { needs: 'linger', name: 'CHEMTRAIL',      desc: 'A VAST, LINGERING WAKE OF FOG.' },
 };
 

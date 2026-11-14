@@ -109,6 +109,7 @@ function drawClouds() {
       continue;
     }
     if (y < -c.r || y > view.H + c.r) continue;
+    if (c.kind === 'ring') { if (t < 0.85 || ((G.t * 20) & 1)) { drawDisc(c.x, y, c.r, 3); drawDisc(c.x, y, c.r - 2, 3); if (c.r > 12) drawDisc(c.x, y, c.r - 5, 3); } continue; }
     drawDisc(c.x, y, c.r, c.kind === 'puff' ? (t < 0.1 ? 0 : t < 0.7 ? 1 : 2) : (t < 0.65 ? 1 : 2));
   }
 }
@@ -126,6 +127,7 @@ function drawEnemies() {
     const e = enemies.items[i], y = sy(e.wy);
     if (y < -24 || y > view.H + 24) continue;
     const s = SPR[e.type], bob = e.type === 'mozzie' ? 0 : Math.round(Math.sin(G.t * 6 + e.seed) * 1);
+    drawDisc(e.x, y, e.r + 5 + (((G.t * 5 + e.seed) | 0) & 1), 3);                 // pulsing threat ring: enemy, not a vape
     if (e.flash > 0) drawDisc(e.x, y, e.r + 2, 0); else draw(s, e.x, y + bob);
   }
 }
@@ -198,7 +200,7 @@ export function drawHud() {
   const mode = G.dead || G.hp <= 0 ? 'dead' : G.hurtT > 0 ? 'ouch' : G.dragT > VAPING.EXHALE ? 'drag' : G.dragT > 0 ? 'puff' : G.grinT > 0 ? 'grin' : look < 0.25 ? 'l' : look < 0.5 ? 'r' : 'c';
   const jolt = G.hurtT > 0.35 ? Math.round(Math.sin(G.t * 60) * 2) : 0;
   ctx.drawImage(face(tier, mode), 174 + jolt, y0 + 17);
-  if (G.hurtT > 0.5) { ctx.globalCompositeOperation = 'difference'; rect(172, y0 + 14, 40, 48); ctx.globalCompositeOperation = 'source-over'; }
+  if (G.hurtT > 0.45 && ((G.t * 20) & 1)) box(171, y0 + 13, 42, 50, FG, 3);          // hit flash, palette-safe
   // pause button stays up top, out of the thumbs' way
   rect(W - 28, 6, 22, 22, BG); box(W - 28, 6, 22, 22, FG, 2); rect(W - 21, 12, 3, 10); rect(W - 16, 12, 3, 10);
   if (G.bannerT > 0 && !(G.bannerT < 0.8 && ((G.t * 12) & 1))) textO(G.banner, W / 2, H * 0.2, 3, FG, 0.5);
