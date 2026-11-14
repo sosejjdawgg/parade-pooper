@@ -14,7 +14,8 @@ export const COLORS = { BG: '#000000', FG: '#ffffff', GINGER: '#ff5a1f', ENEMY: 
 
 // Bezel-style border: a static strip of the key art down each side of the screen. The image is split down the
 // middle of the face and the split sits at the screen edges, as if the picture wrapped round behind the game.
-export const SIDE_ART = { SRC: 'art/side.jpg', BORDER: 36, GAP: 5, LAND_MIN: 14 };   // BORDER = strip width incl. GAP (black strip on its inner side); LAND_MIN = least bank left showing
+export const SIDE_ART = { SRC: 'art/side.jpg', BORDER: 36, GAP: 4, LINE: 2, LAND_MIN: 14,
+  VIGNETTE: 0.85, VIGNETTE_ENDS: 0.3, VIGNETTE_SIDE: 0.55 };   // LINE = white inner border; VIGNETTE = darkness at top/bottom (0..1), ENDS = how far it reaches (fraction of height), SIDE = shading across the strip   // BORDER = strip width incl. GAP (black strip on its inner side); LAND_MIN = least bank left showing
 
 export const WORLD = { PX_PER_M: 20 };
 
