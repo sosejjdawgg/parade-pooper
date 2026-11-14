@@ -1,5 +1,5 @@
 // Boot, main loop and every menu screen (immediate-mode UI).
-import { VIEW, COLORS, SHOP } from './config.js';
+import { VIEW, COLORS, SHOP, FLAVOUR } from './config.js';
 import { ctx, view, resize, rect, box, text, textO, textW, wrap, draw, buildSprites, SPR, face } from './gfx.js';
 import { G, newRun, update, idle, nudge, choose, playerY, enemies, clouds, vapes } from './game.js';
 import { drawWorld, drawHud, dither, PAUSE_RECT } from './render.js';
@@ -43,7 +43,8 @@ function titleScreen() {
   if (button(W / 2 + 4, by + 54, 86, 30, 'SETTINGS')) G.mode = 'settings';
   textO('TAP LEFT / RIGHT TO STEER', W / 2, H * 0.79, 2, FG, 0.5);
   textO('COLLECT VAPES. GET POWERFUL.', W / 2, H * 0.79 + 16, 2, FG, 0.5);
-  if (save.best) textO('BEST ' + save.best + ' VAPES   ' + save.bestDist + 'M   £' + save.cash, W / 2, H * 0.88, 2, FG, 0.5);
+  if (save.best) textO('BEST ' + save.best + ' VAPES   ' + save.bestDist + 'M   £' + save.cash, W / 2, H * 0.9, 2, FG, 0.5);
+  textO('NO STAMP DUTY PAYABLE ON CANOES.', W / 2, H * 0.79 + 34, 2, FG, 0.5);
   textO('A PARODY. NOT AFFILIATED WITH ANYONE.', W / 2, H - 12, 1, FG, 0.5);
 }
 
@@ -64,28 +65,25 @@ function levelUpScreen() {
   }
 }
 
-const CAUSE = {
-  barge: 'RAMMED A BARGE', pier: 'HIT A LOW BRIDGE', gate: 'HIT A LOCK GATE', vortex: 'DOWN THE PLUGHOLE', debris: 'SUNK BY FLY-TIPPING',
-  sandbar: 'RAN AGROUND', swan: 'ASSAULTED BY A SWAN', pap: 'PAPPED', tumble: 'TUMBLEWEEDED', piranha: 'NIBBLED', mozzie: 'BITTEN TO BITS', croc: 'SNAPPED UP',
-};
 function deadScreen() {
   shade();
-  const r = G.result, y = Math.round(view.H / 2 - 220);
-  panel(20, y, W - 40, 440);
-  text('SUNK!', W / 2, y + 22, 8, FG, 0.5);
-  text(CAUSE[G.cause] || '', W / 2, y + 72, 2, FG, 0.5);
+  const r = G.result, y = Math.round(view.H / 2 - 245);
+  panel(20, y, W - 40, 490);
+  text(r.title, W / 2, y + 22, Math.min(8, Math.floor(300 / (r.title.length * 4))), FG, 0.5);
+  text(FLAVOUR.CAUSES[G.cause] || '', W / 2, y + 72, 2, FG, 0.5);
   draw(SPR.bigVape[((G.t * 10) | 0) & 15], W / 2, y + 108);
   text(r.vapes, W / 2, y + 126, 8, FG, 0.5);
   text(r.newBest ? 'NEW BEST!' : 'VAPES', W / 2, y + 172, 2, r.newBest && ((G.t * 4) & 1) ? BG : FG, 0.5);
-  const rows = [['DISTANCE', r.m + 'M'], ['LEVEL', r.level], ['MELTED', r.kills], ['CASH BANKED', '+£' + r.cash]];
+  const rows = [['DISTANCE', r.m + 'M'], ['LEVEL', r.level], ['MELTED', r.kills], ['TAX ADVICE TAKEN', 'NONE'], ['CASH BANKED', '+£' + r.cash]];
   rows.forEach(([a, b], i) => { text(a, 44, y + 202 + i * 18, 2); text(b, W - 44, y + 202 + i * 18, 2, FG, 1); });
-  rect(44, y + 276, W - 88, 1);
-  text('WALLET £' + save.cash, W / 2, y + 284, 2, FG, 0.5);
-  if (button(40, y + 308, W - 80, 44, 'GO AGAIN', { scale: 4, inv: true })) { newRun(); return; }
+  rect(44, y + 294, W - 88, 1);
+  text('WALLET £' + save.cash, W / 2, y + 302, 2, FG, 0.5);
+  if (button(40, y + 324, W - 80, 44, 'GO AGAIN', { scale: 4, inv: true })) { newRun(); return; }
   const canBuy = SHOP.some((it) => canAfford(it)) && ((G.t * 3) & 1);
-  if (button(40, y + 362, 134, 34, canBuy ? 'SHOP !' : 'SHOP', { inv: canBuy })) { backTo = 'dead'; G.mode = 'shop'; }
-  if (button(186, y + 362, 134, 34, 'SHARE')) share();
-  text('A PARODY. NO CANOES WERE HARMED.', W / 2, y + 412, 1, FG, 0.5);
+  if (button(40, y + 378, 134, 34, canBuy ? 'SHOP !' : 'SHOP', { inv: canBuy })) { backTo = 'dead'; G.mode = 'shop'; }
+  if (button(186, y + 378, 134, 34, 'SHARE')) share();
+  wrap('TIP: ' + r.tip, 36).forEach((l, k) => text(l, W / 2, y + 426 + k * 13, 2, FG, 0.5));
+  text('A PARODY. NO CANOES WERE HARMED.', W / 2, y + 472, 1, FG, 0.5);
 }
 function canAfford(it) {
   const lvl = shopLvl(it.id);

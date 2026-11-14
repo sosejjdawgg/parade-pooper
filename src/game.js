@@ -1,7 +1,7 @@
 // Simulation: canal, chunks, pickups, enemies, weapons, level-ups. No drawing here.
 import {
   VIEW, WORLD, PLAYER, ENGINE, XP, PICKUPS, BIOMES, HAZARDS, ENEMIES, SPAWN,
-  WEAPONS, PASSIVES, EVOLUTIONS, LEVELUP, REWARD, JUICE,
+  WEAPONS, PASSIVES, EVOLUTIONS, LEVELUP, REWARD, JUICE, VAPING, FLAVOUR,
 } from './config.js';
 import { view } from './gfx.js';
 import { save, shopLvl, writeSave, sfx, input } from './platform.js';
@@ -62,7 +62,7 @@ export function newRun() {
     weapons: { cloud: 1 + shopLvl('starter') }, passives: {}, evo: {},
     cd: { cloud: 0.5, trail: 0, nova: 1.5 }, orbA: 0, orbTick: 0, cloudId: 0,
     genY: 240, chunkN: 0, spawnT: 0, shake: 0, flash: 0, hitstop: 0, dead: false, deadT: 0,
-    banner: BIOMES.NAMES[0], bannerT: 2.5, biomeIdx: 0, pending: 0, choices: null, cause: '', result: null, puffT: 0, hurtT: 0, grinT: 0,
+    banner: BIOMES.NAMES[0], bannerT: 2.5, biomeIdx: 0, pending: 0, choices: null, cause: '', result: null, puffT: 0, vapeT: 2.5, dragT: 0, hurtT: 0, grinT: 0,
   });
   G.ph = [rnd(6.28), rnd(6.28), rnd(6.28)];
   G.px = centreAt(0);
@@ -263,7 +263,7 @@ function die(cause) {
   for (let i = 0; i < 70; i++) { const a = rnd(6.28), s = rnd(20, 260); addPart(G.px + rnd(-6, 6), G.dist + rnd(-14, 14), Math.cos(a) * s, Math.sin(a) * s, rnd(0.4, 1.3), pick([2, 2, 3, 4])); }
   const m = metres(), bonus = Math.floor(m / 100) * REWARD.CASH_PER_100M + (G.level - 1) * REWARD.CASH_PER_LEVEL;
   const total = G.cash + Math.round(bonus * S.cash);
-  G.result = { vapes: G.vapes, m, level: G.level, kills: G.kills, cash: total, newBest: G.vapes > save.best };
+  G.result = { title: pick(FLAVOUR.DEATH_TITLES), tip: pick(FLAVOUR.TIPS), vapes: G.vapes, m, level: G.level, kills: G.kills, cash: total, newBest: G.vapes > save.best };
   save.cash += total; save.runs++; save.best = Math.max(save.best, G.vapes); save.bestDist = Math.max(save.bestDist, m);
   writeSave();
 }
@@ -324,7 +324,7 @@ function rollChoices() {
     for (; i < c.length - 1; i++) { r -= c[i].w; if (r <= 0) break; }
     out.push(c.splice(i, 1)[0]);
   }
-  if (out.length < 3) out.push({ kind: 'cash', title: 'BROWN ENVELOPE', desc: '+£' + LEVELUP.FILLER_CASH + ' CASH', tag: '' });
+  if (out.length < 3) out.push({ kind: 'cash', title: 'GIFT FROM A LORD', desc: '+£' + LEVELUP.FILLER_CASH + '. FULLY DECLARED, OBVIOUSLY.', tag: '' });
   if (out.length < 3) out.push({ kind: 'heal', title: 'CUP OF TEA', desc: 'RESTORE ALL HEARTS', tag: '' });
   return out;
 }
@@ -552,8 +552,13 @@ export function update(dt) {
   if (G.grinT > 0) G.grinT -= dt;
   if (G.comboT > 0) G.comboT -= dt;
   G.paddleT += dt * G.speed / 100; if (G.paddleT > 0.45) { G.paddleT = 0; G.paddle ^= 1; }
-  G.puffT -= dt;
-  if (G.puffT <= 0) { G.puffT = 0.35; addPart(G.px + 4, G.dist + 6, rnd(-6, 12), G.speed - rnd(15, 40), 0.7, 2); }
+  // the occasional drag: hold, then a cloud that drifts away behind her
+  G.vapeT -= dt;
+  if (G.vapeT <= 0 && G.dragT <= 0) { G.dragT = VAPING.DRAG + VAPING.EXHALE; G.vapeT = rnd(VAPING.EVERY[0], VAPING.EVERY[1]); }
+  if (G.dragT > 0) {
+    G.dragT -= dt; G.puffT -= dt;
+    if (G.dragT < VAPING.EXHALE && G.puffT <= 0) { G.puffT = VAPING.PUFF_EVERY; addPart(G.px + 4 + rnd(-3, 3), G.dist + 2, rnd(-16, 16), G.speed * rnd(0.3, 0.6), rnd(1.4, 2.3), rnd(4, 8), 3); }
+  }
 
   // world
   while (G.genY < G.dist + playerY() + 60) genChunk();

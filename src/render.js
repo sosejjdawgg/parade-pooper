@@ -1,5 +1,5 @@
 // Draws the world and the in-run HUD. Three colours only: black, white, ginger.
-import { VIEW, COLORS } from './config.js';
+import { VIEW, COLORS, VAPING } from './config.js';
 import { ctx, view, rect, box, text, textO, textW, draw, drawDisc, face, SPR, hash } from './gfx.js';
 import { G, vapes, enemies, hazards, clouds, parts, floaters, orbs, biomeAt, leftAt, rightAt, playerY, metres } from './game.js';
 import { save } from './platform.js';
@@ -48,8 +48,8 @@ function drawBanks(lo, hi) {
     }
     const dh = hash(j * 271);
     if (dh < 0.045) {
-      const s = bi === 0 ? (dh < 0.02 ? SPR.lamp : SPR.bollard) : bi === 1 ? SPR.cactus : SPR.palm;
-      if (dh * 1000 % 2 < 1) { if (l > 34) ctx.drawImage(s, l - 22, y); } else if (r < W - 34) ctx.drawImage(s, r + 13, y);
+      const s = bi === 0 ? (dh < 0.011 ? SPR.signs[(dh * 9973 | 0) % SPR.signs.length] : dh < 0.025 ? SPR.lamp : SPR.bollard) : bi === 1 ? SPR.cactus : SPR.palm;
+      if (dh * 1000 % 2 < 1) { if (l > s.width + 20) ctx.drawImage(s, l - s.width - 10, y); } else if (r < W - s.width - 20) ctx.drawImage(s, r + 11, y);
     }
   }
 }
@@ -132,7 +132,8 @@ function drawEnemies() {
 function drawFx() {
   for (let i = 0; i < parts.n; i++) {
     const p = parts.items[i], y = sy(p.wy);
-    if (p.spr) { const fr = p.spr === 2 ? SPR.bigVape : SPR.vape; draw(fr[((p.age * 70) | 0) & 15], p.x, y); }
+    if (p.spr === 3) { const t = p.age / p.life, r = p.size * (1 + t * 1.8); if (t < 0.55) drawDisc(p.x, y, r, 3); drawDisc(p.x, y, r - 1, 2); }
+    else if (p.spr) { const fr = p.spr === 2 ? SPR.bigVape : SPR.vape; draw(fr[((p.age * 70) | 0) & 15], p.x, y); }
     else rect(p.x, y, p.size, p.size);
   }
   for (let i = 0; i < floaters.n; i++) {
@@ -194,7 +195,7 @@ export function drawHud() {
   box(170, y0 + 12, 44, 52);
   const tier = frac > 0.8 ? 0 : frac > 0.6 ? 1 : frac > 0.4 ? 2 : frac > 0.2 ? 3 : 4;
   const look = hash((G.t / 1.1) | 0);
-  const mode = G.dead || G.hp <= 0 ? 'dead' : G.hurtT > 0 ? 'ouch' : G.grinT > 0 ? 'grin' : look < 0.25 ? 'l' : look < 0.5 ? 'r' : 'c';
+  const mode = G.dead || G.hp <= 0 ? 'dead' : G.hurtT > 0 ? 'ouch' : G.dragT > VAPING.EXHALE ? 'drag' : G.dragT > 0 ? 'puff' : G.grinT > 0 ? 'grin' : look < 0.25 ? 'l' : look < 0.5 ? 'r' : 'c';
   const jolt = G.hurtT > 0.35 ? Math.round(Math.sin(G.t * 60) * 2) : 0;
   ctx.drawImage(face(tier, mode), 174 + jolt, y0 + 17);
   if (G.hurtT > 0.5) { ctx.globalCompositeOperation = 'difference'; rect(172, y0 + 14, 40, 48); ctx.globalCompositeOperation = 'source-over'; }

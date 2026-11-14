@@ -40,8 +40,11 @@ export const ENGINE = {      // Vape Engine (meta unlock)
   SHAKE: 1.5,
 };
 
+// cosmetic: every so often she takes a drag and the cloud drifts off behind
+export const VAPING = { EVERY: [3.5, 7], DRAG: 0.6, EXHALE: 1.0, PUFF_EVERY: 0.11 };
+
 export const XP = {
-  need: (lvl) => Math.round(5 + 3 * lvl + 0.4 * lvl * lvl),
+  need: (lvl) => Math.round(10 + 8 * lvl + 0.6 * lvl * lvl),   // vapes-worth of XP to clear level `lvl`
   VAPE: 1, BIG_VAPE: 5,
 };
 
@@ -100,7 +103,7 @@ export const ENEMIES = {
 
 export const SPAWN = {
   START_M: 50,                       // no enemies before this
-  RATE: [0.55, 1.5, 3.2],             // enemies/sec per biome at biome start
+  RATE: [0.55, 1.2, 3.2],             // enemies/sec per biome at biome start
   RATE_GROWTH_PER_KM: 0.7,           // multiplicative growth: rate *= 1 + km * this
   MAX_ALIVE: 150,
   HP_GROWTH_PER_KM: 0.45,            // enemy hp *= 1 + km * this
@@ -183,13 +186,35 @@ export const LEVELUP = { OWNED_WEIGHT: 3, NEW_WEIGHT: 1, EVO_WEIGHT: 8, FILLER_C
 // ---- Between-run shop. costs[] length = max level. --------------------------
 export const SHOP = [
   { id: 'engine',  name: 'VAPE ENGINE',   costs: [40], desc: 'EVERY VAPE = SPEED BURST.', flavour: 'THE DESERT ISLAND ESSENTIAL.' },
-  { id: 'turbo',   name: 'ENGINE TUNING', costs: [70, 140, 240], desc: 'BIGGER, LONGER SPEED BURSTS.', needs: 'engine' },
-  { id: 'starter', name: 'WARM-UP PUFF',  costs: [80, 220], desc: 'START WITH A STRONGER CLOUD.' },
-  { id: 'xp',      name: 'FAST LEARNER',  costs: [30, 60, 100, 160, 240], desc: '+10% XP.', per: 0.1 },
-  { id: 'cash',    name: 'EXPENSES',      costs: [30, 60, 100, 160, 240], desc: '+20% CASH.', per: 0.2 },
-  { id: 'magnet',  name: 'MAGNETIC HAIR', costs: [25, 50, 90, 140, 200], desc: '+15% PICKUP RANGE.', per: 0.15 },
-  { id: 'heart',   name: 'THICK SKIN',    costs: [100, 260], desc: '+1 STARTING HEART.' },
+  { id: 'turbo',   name: 'ENGINE TUNING', costs: [70, 140, 240], desc: 'BIGGER, LONGER SPEED BURSTS.', needs: 'engine', flavour: 'DEPUTY NO MORE. FULL STEAM AHEAD.' },
+  { id: 'starter', name: 'WARM-UP PUFF',  costs: [80, 220], desc: 'START WITH A STRONGER CLOUD.', flavour: 'A CHEEKY ONE BEFORE CONFERENCE.' },
+  { id: 'xp',      name: 'FAST LEARNER',  costs: [30, 60, 100, 160, 240], desc: '+10% XP.', per: 0.1, flavour: 'LEFT SCHOOL AT 16. LEARNT ANYWAY.' },
+  { id: 'cash',    name: 'EXPENSES',      costs: [30, 60, 100, 160, 240], desc: '+20% CASH.', per: 0.2, flavour: 'AIRPODS SOLD SEPARATELY.' },
+  { id: 'magnet',  name: 'MAGNETIC HAIR', costs: [25, 50, 90, 140, 200], desc: '+15% PICKUP RANGE.', per: 0.15, flavour: 'ATTRACTS VAPES AND HEADLINES.' },
+  { id: 'heart',   name: 'THICK SKIN',    costs: [100, 260], desc: '+1 STARTING HEART.', flavour: 'FOR WHEN THE SUNDAY PAPERS CALL.' },
 ];
+
+// ---- flavour text (satire: sly nods to things on the public record) ---------
+export const FLAVOUR = {
+  DEATH_TITLES: ['SUNK!', 'SUNK!', 'RESIGNED!', 'RESHUFFLED!'],
+  TIPS: [
+    'ALWAYS CHECK WHICH HOME IS YOUR MAIN HOME.',
+    'STAMP DUTY CANNOT BE DODGED. BARGES CAN.',
+    'SPECIALIST ADVICE IS CHEAPER THAN RESIGNING.',
+    'AIRPODS GO ON EXPENSES. VAPES DO NOT.',
+    'FREE CLOTHES ARE NOT A POWER-UP. DECLARE THEM.',
+    'SAVE THE DANCING FOR THE IBIZA DJ BOOTH.',
+    'THE OPERA IS THE OTHER WAY. BRING CHAMPAGNE.',
+    'DO NOT CALL THE SWANS SCUM. THEY REMEMBER.',
+    'A CANOE IS NOT A SECOND HOME. PROBABLY.',
+  ],
+  CAUSES: {
+    barge: "RAMMED SOMEONE'S SECOND HOME", pier: 'HIT A LOW BRIDGE', gate: 'HIT A LOCK GATE', vortex: 'DOWN THE PLUGHOLE',
+    debris: 'SUNK BY FLY-TIPPING', sandbar: 'RAN AGROUND', swan: 'A SWAN TOOK IT PERSONALLY', pap: 'PAPPED MID-PUFF',
+    tumble: 'TUMBLEWEEDED', piranha: 'NIBBLED BY THE BACKBENCHES', mozzie: 'BITTEN TO BITS', croc: 'SNAPPED UP',
+  },
+  BANK_SIGNS: ['SOLD', 'TO LET'],
+};
 
 export const REWARD = { CASH_PER_100M: 1, CASH_PER_LEVEL: 1 };
 

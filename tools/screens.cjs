@@ -21,7 +21,7 @@ const root = path.resolve(__dirname, '..'), out = process.argv[2] || '.';
   await pg.mouse.click(180, 200); await pg.waitForTimeout(500);
   const afterPick = await pg.evaluate(() => __vc.G.mode + ' ' + JSON.stringify(__vc.G.weapons) + JSON.stringify(__vc.G.passives));
   await pg.evaluate(() => { const G = __vc.G; G.pending = 0; G.choices = null; G.mode = 'play'; G.xp = 0; G.hp = 1; G.inv = 0; G.px = -999; });
-  await pg.evaluate(() => { const G = __vc.G; G.result = { vapes: 1234, m: 2210, level: 31, kills: 4021, cash: 88, newBest: true }; G.cause = 'swan'; G.dead = true; G.mode = 'dead'; __vc.save.cash = 131; });
+  await pg.evaluate(() => { const G = __vc.G; G.result = { title: 'RESIGNED!', tip: 'ALWAYS CHECK WHICH HOME IS YOUR MAIN HOME.', vapes: 1234, m: 2210, level: 31, kills: 4021, cash: 88, newBest: true }; G.cause = 'swan'; G.dead = true; G.mode = 'dead'; __vc.save.cash = 131; });
   await pg.waitForTimeout(500); await pg.screenshot({ path: out + '/s_dead.png' });
   await pg.mouse.click(100, 480); await pg.waitForTimeout(500);             // SHOP
   await pg.screenshot({ path: out + '/s_shop.png' });

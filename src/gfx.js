@@ -197,7 +197,7 @@ export function draw(s, x, y) { ctx.drawImage(s, Math.round(x - s.width / 2), Ma
 
 // ---- status-bar portrait: 36x44, drawn by code so every expression shares one head ----
 const faces = {};
-/** tier 0 (fine) .. 4 (wrecked). mode: 'c' | 'l' | 'r' (gaze), 'ouch', 'grin', 'dead' */
+/** tier 0 (fine) .. 4 (wrecked). mode: 'c' | 'l' | 'r' (gaze), 'ouch', 'grin', 'drag', 'puff', 'dead' */
 export function face(tier, mode) {
   const key = tier + mode;
   if (faces[key]) return faces[key];
@@ -219,7 +219,7 @@ export function face(tier, mode) {
   for (let x = 10; x < 26; x++) { if (x % 3) P(x, 11, 1, 1, GINGER); if (x % 3 === 1) P(x, 12, 1, 2, GINGER); if (x % 6 === 4) P(x, 14, 1, 1, GINGER); }   // fringe
   P(25, 16, 1, 9); P(24, 24, 1, 3);                                                 // cheek shadow
   // features
-  const dead = mode === 'dead', ouch = mode === 'ouch', grin = mode === 'grin';
+  const dead = mode === 'dead', ouch = mode === 'ouch', grin = mode === 'grin', drag = mode === 'drag', puff = mode === 'puff';
   const gaze = mode === 'l' ? 0 : mode === 'r' ? 2 : 1, browY = ouch ? 15 : 16;
   for (const ex of [12, 20]) {
     const left = ex === 12;
@@ -229,9 +229,22 @@ export function face(tier, mode) {
     if (tier >= 4 && !left && !ouch) { P(ex - 1, 20, 6, 1); continue; }             // swollen shut
     P(ex - 1, 18, 6, 1); P(ex - 1, 19, 1, 2); P(ex + 4, 19, 1, 2); P(ex, 21, 4, 1);
     P(ex + gaze, 19, 2, 2);
+    if (drag) P(ex, 19, 4, 1);                                                      // eyes half shut, savouring it
   }
   P(18, 22, 1, 2); P(17, 24, 2, 1);                                                 // nose
-  if (ouch) { P(16, 26, 5, 4); P(17, 27, 3, 2, FG); P(17, 28, 3, 1); }
+  if (drag) {                                                                        // vape to the lips
+    P(16, 27, 4, 2);
+    for (let i = 0; i < 9; i++) { P(18 + i, 26 + i, 4, 4); }
+    for (let i = 0; i < 9; i++) { P(19 + i, 27 + i, 2, 2, FG); }
+    P(25, 33, 2, 2); P(18, 26, 2, 2);
+  } else if (puff) {                                                                 // pursed lips, cloud rolling off
+    P(17, 26, 3, 3); P(18, 27, 1, 1, FG);
+    for (const [cx, cy, r] of [[24, 29, 4], [29, 25, 5], [31, 33, 5], [26, 36, 4]])
+      for (let y = cy - r; y <= cy + r; y++) for (let x = cx - r; x <= cx + r; x++) {
+        const q = (x - cx) * (x - cx) + (y - cy) * (y - cy);
+        if (q <= r * r + 1) P(x, y, 1, 1, q >= (r - 1) * (r - 1) || ((x + y) & 1) ? FG : BG);
+      }
+  } else if (ouch) { P(16, 26, 5, 4); P(17, 27, 3, 2, FG); P(17, 28, 3, 1); }
   else if (grin) { P(13, 26, 1, 1); P(22, 26, 1, 1); P(14, 27, 8, 1); P(15, 29, 6, 1); P(14, 28, 1, 1); P(21, 28, 1, 1); }
   else if (tier >= 3 && !dead) { P(14, 26, 8, 3); for (let x = 15; x < 21; x += 2) P(x, 27, 1, 1, FG); }   // gritted teeth
   else if (dead) P(15, 28, 6, 1);
@@ -276,5 +289,12 @@ export function buildSprites() {
   SPR.cactus = art(['..##..', '..##.#', '#.##.#', '#.####', '####..', '..##..', '..##..', '..##..'], false);
   SPR.palm = art(['.##..##..', '#..##..#.', '.######..', '#..##.##.', '.#.##..#.', '...#.....', '...##....', '....#....', '....##...'], false);
   SPR.lamp = art(['.###.', '#####', '.#.#.', '..#..', '..#..', '..#..', '..#..', '.###.'], false);
+  SPR.signs = ['SOLD', 'TO LET'].map((word) => {                       // estate agents love a towpath
+    const w = word.length * 4 + 3, [c, g] = mk(w, 14);
+    g.fillStyle = FG; g.fillRect(0, 0, w, 9); g.fillRect((w >> 1) - 1, 9, 2, 5);
+    g.fillStyle = BG;
+    for (let i = 0; i < word.length; i++) { const gl = GL[word[i]]; if (gl) for (let p = 0; p < 15; p++) if (gl[p] === '1') g.fillRect(2 + i * 4 + p % 3, 2 + ((p / 3) | 0), 1, 1); }
+    return c;
+  });
   SPR.bollard = art(['.##.', '####', '.##.', '.##.', '####'], false);
 }
