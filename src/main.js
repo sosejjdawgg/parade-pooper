@@ -9,7 +9,7 @@ import { save, loadSave, writeSave, resetSave, shopLvl, sfx, input, initInput, r
 const { BG, FG, GINGER } = COLORS, W = VIEW.W, STEP = 1 / 60;
 const params = new URLSearchParams(location.search);
 let FAST = +params.get('fast') || 1;
-let last = 0, acc = 0, modeT = 0, prevMode = '', backTo = 'title', toast = '', toastT = 0, resetArm = 0;
+let last = 0, acc = 0, modeT = 0, prevMode = '', backTo = 'title', toast = '', toastT = 0, resetArm = 0, introThenPlay = false;
 
 // ---- immediate-mode UI ----------------------------------------------------------
 const hit = (t, x, y, w, h) => t.x >= x && t.x < x + w && t.y >= y && t.y < y + h;
@@ -31,6 +31,9 @@ function shade() { ctx.fillStyle = BG; for (let y = 0; y < view.H; y += 2) ctx.f
 function say(msg) { toast = msg; toastT = 2; }
 
 // ---- screens ----------------------------------------------------------------------
+/** first-timers see the how-to-play screen before their first run */
+function play() { if (save.seenIntro) newRun(); else { introThenPlay = true; G.mode = 'intro'; } }
+
 function titleScreen() {
   const H = view.H, bob = Math.round(Math.sin(G.t * 2) * 3);
   textO("ANGELA RAYNER'S", W / 2, H * 0.1 + bob, 3, GINGER, 0.5);
@@ -38,15 +41,83 @@ function titleScreen() {
     text(word, W / 2 + 4, y + bob + 4, 10, BG, 0.5); textO(word, W / 2, y + bob, 10, FG, 0.5);
   }
   const by = Math.round(H * 0.43);
-  if (button(W / 2 - 90, by, 180, 44, 'PLAY', { scale: 4, inv: true })) newRun();
+  if (button(W / 2 - 90, by, 180, 44, 'PLAY', { scale: 4, inv: true })) play();
   const canBuy = !shopLvl('engine') && save.cash >= SHOP[0].costs[0] && ((G.t * 3) & 1);
   if (button(W / 2 - 90, by + 54, 86, 30, canBuy ? 'SHOP !' : 'SHOP', { inv: canBuy })) { backTo = 'title'; G.mode = 'shop'; }
   if (button(W / 2 + 4, by + 54, 86, 30, 'SETTINGS')) G.mode = 'settings';
+  if (button(W / 2 - 90, by + 92, 180, 26, 'HOW TO PLAY')) { introThenPlay = false; G.mode = 'intro'; }
   textO('TAP LEFT / RIGHT TO STEER', W / 2, H * 0.79, 2, FG, 0.5);
   textO('COLLECT VAPES. GET POWERFUL.', W / 2, H * 0.79 + 16, 2, FG, 0.5);
   if (save.best) textO('BEST ' + save.best + ' VAPES   ' + save.bestDist + 'M   £' + save.cash, W / 2, H * 0.9, 2, FG, 0.5);
   textO('NO STAMP DUTY PAYABLE ON KAYAKS.', W / 2, H * 0.79 + 34, 2, FG, 0.5);
   textO('A FREE, NON-COMMERCIAL PARODY. NOT AFFILIATED WITH ANYONE.', W / 2, H - 12, 1, FG, 0.5);
+}
+
+// ---- intro / how to play --------------------------------------------------------
+// Three steps, shown with the real in-game sprites: kayak down the river, collect vapes, avoid the dangers.
+function stepTitle(n, label, y) {
+  rect(22, y, 22, 22, FG); text(n, 33, y + 4, 3, BG, 0.5);
+  text(label, 52, y + 4, 3, FG);
+}
+function chevron(y) { for (let i = 0; i < 5; i++) rect(W / 2 - 5 + i, y + i, 10 - i * 2, 1); }
+function introScreen() {
+  shade();
+  const t = G.t, top = Math.max(2, Math.round((view.H - 636) / 2));
+  const big = (s, x, y) => ctx.drawImage(s, Math.round(x - s.width), Math.round(y - s.height), s.width * 2, s.height * 2);   // real sprite, doubled
+  rect(8, top, W - 16, 634, BG);
+  text('HOW TO PLAY', W / 2, top + 10, 5, FG, 0.5);
+
+  // 1 ---- kayak down the river
+  let y = top + 42;
+  panel(12, y, W - 24, 136); stepTitle(1, 'KAYAK DOWN THE RIVER', y + 10);
+  const sx = 24, sy0 = y + 40, sw = 150, sh = 86, kx = sx + sw / 2 + Math.sin(t * 1.5) * 34, goingLeft = Math.cos(t * 1.5) < 0;
+  ctx.save(); ctx.beginPath(); ctx.rect(sx, sy0, sw, sh); ctx.clip();
+  rect(sx, sy0, sw, sh, BG);
+  for (let i = 0; i < 9; i++) rect(sx + 22 + ((i * 53) % 104), sy0 + ((t * 60 + i * 37) % (sh + 6)) - 3, 3, 1);      // water rushing past
+  for (let row = -1; row < 13; row++) {                                                                                // stepped banks
+    const yy = sy0 + row * 8 + ((t * 60) % 8), off = ((row - Math.floor(t * 60 / 8)) % 5 + 5) % 5 < 2 ? 4 : 0;
+    rect(sx + 12 + off, yy, 2, 8); rect(sx + sw - 14 - off, yy, 2, 8);
+  }
+  for (let i = 0; i < 3; i++) { const vy = ((t * 60 + i * 40) % 120) - 12; if (vy < 52) draw(SPR.vape[((t * 9 + i * 3) | 0) & 15], sx + sw / 2 + Math.sin((t - (60 - vy) / 60) * 1.5) * 34, sy0 + vy); }
+  draw(SPR.kayak[((t * 3) | 0) & 1], kx, sy0 + 62);
+  ctx.restore(); box(sx, sy0, sw, sh);
+  text('TAP THE LEFT OR', 186, y + 42, 2); text('RIGHT HALF OF', 186, y + 55, 2); text('THE SCREEN TO', 186, y + 68, 2); text('STEER.', 186, y + 81, 2);
+  rect(186, y + 100, 70, 24, goingLeft ? FG : BG); box(186, y + 100, 70, 24); text('< LEFT', 221, y + 107, 2, goingLeft ? BG : FG, 0.5);
+  rect(262, y + 100, 74, 24, goingLeft ? BG : FG); box(262, y + 100, 74, 24); text('RIGHT >', 299, y + 107, 2, goingLeft ? FG : BG, 0.5);
+  chevron(y + 139);
+
+  // 2 ---- collect vapes
+  y += 146;
+  panel(12, y, W - 24, 130); stepTitle(2, 'COLLECT VAPES', y + 10);
+  const items = [[SPR.vape[((t * 9) | 0) & 15], '+1'], [SPR.bigVape[((t * 5) | 0) & 15], '+5'], [SPR.tea, 'HEALS'], [SPR.cash, 'CASH']];
+  items.forEach(([s, label], i) => { const x = 58 + i * 82; big(s, x, y + 56 + (i > 1 ? Math.round(Math.sin(t * 4 + i) * 2) : 0)); text(label, x, y + 80, 2, FG, 0.5); });
+  text('VAPES LEVEL YOU UP. EACH LEVEL', W / 2, y + 98, 2, FG, 0.5); text('GIVES YOU A NEW POWER.', W / 2, y + 111, 2, FG, 0.5);
+  chevron(y + 133);
+
+  // 3 ---- avoid the dangers
+  y += 140;
+  panel(12, y, W - 24, 248); stepTitle(3, 'AVOID THE DANGERS', y + 10);
+  text('ENEMIES: A TOUCH COSTS HEALTH', 24, y + 38, 2);
+  ['swan', 'pap', 'tumble', 'piranha', 'mozzie', 'croc'].forEach((k, i) => big(SPR[k], 46 + i * 54, y + 74 + Math.round(Math.sin(t * 6 + i) * 2)));
+  text('YOUR VAPE CLOUDS DESTROY THEM', 24, y + 100, 2);
+  rect(24, y + 115, W - 48, 1);
+  text('THESE SINK YOU INSTANTLY', 24, y + 122, 2);
+  ctx.save(); ctx.translate(80, y + 154); ctx.rotate(Math.PI / 2); ctx.drawImage(SPR.barge[70], -SPR.barge[70].width / 2, -SPR.barge[70].height / 2); ctx.restore();
+  text('BARGE', 80, y + 174, 1, FG, 0.5);
+  dither(150, y + 145, 70, 18); rect(150, y + 143, 70, 2); rect(150, y + 163, 70, 2); draw(SPR.pier, 185, y + 154); text('LOW BRIDGE', 185, y + 174, 1, FG, 0.5);
+  rect(250, y + 149, 34, 10); rect(304, y + 149, 30, 10); rect(281, y + 146, 6, 16); rect(301, y + 146, 6, 16); text('LOCK GATE', 292, y + 174, 1, FG, 0.5);
+  rect(24, y + 185, W - 48, 1);
+  text('THESE HURT OR SLOW YOU', 24, y + 192, 2);
+  big(SPR.trolley, 42, y + 224); big(SPR.barrel, 76, y + 224); big(SPR.cone, 104, y + 224);
+  draw(SPR.sandbar[0], 158, y + 224);
+  ctx.fillStyle = FG; for (let arm = 0; arm < 3; arm++) for (let k = 0; k < 8; k++) { const a = -t * 4 + arm * 2.094 + k * 0.5, r = 2 + k * 2; ctx.fillRect(Math.round(214 + Math.cos(a) * r), Math.round(y + 224 + Math.sin(a) * r * 0.9), 2, 2); }
+  rect(244, y + 211, 3, 26, COLORS.ENEMY); for (let i = 0; i < 3; i++) rect(250 + (i % 2) * 4, y + 214 + i * 8, 5, 1, COLORS.ENEMY);
+  text('RED BANKS', 302, y + 213, 2, FG, 0.5); text('LATER ON', 302, y + 226, 2, FG, 0.5);
+
+  if (button(40, top + 582, W - 80, 46, save.seenIntro ? 'GOT IT' : "LET'S GO", { scale: 4, inv: true })) {
+    const first = !save.seenIntro; save.seenIntro = true; writeSave();
+    if (first || introThenPlay) newRun(); else G.mode = 'title';
+  }
 }
 
 function levelUpScreen() {
@@ -182,7 +253,7 @@ function frame(ts) {
       acc += dt * FAST;
       while (acc >= STEP && G.mode === 'play') { update(STEP); acc -= STEP; }
     }
-  } else if (G.mode === 'title' || G.mode === 'shop' || G.mode === 'settings' || G.mode === 'legal') idle(dt);
+  } else if (G.mode === 'title' || G.mode === 'shop' || G.mode === 'settings' || G.mode === 'legal' || G.mode === 'intro') idle(dt);
   else G.t += dt;
 
   if (G.bot) {      // headless balance runs
@@ -190,9 +261,9 @@ function frame(ts) {
     if (G.mode === 'dead') { (window.__runs = window.__runs || []).push({ ...G.result, cause: G.cause, t: G.t, weapons: { ...G.weapons }, evo: { ...G.evo } }); newRun(); G.bot = true; }
   }
 
-  const onTitle = G.mode === 'title' || G.mode === 'settings' || G.mode === 'legal' || (G.mode === 'shop' && backTo === 'title');
+  const onTitle = G.mode === 'title' || G.mode === 'settings' || G.mode === 'legal' || G.mode === 'intro' || (G.mode === 'shop' && backTo === 'title');
   musicFrame(!openerFinished() ? MUSIC.OPENER : onTitle ? 'menu' : MUSIC.BIOME_TRACKS[G.biomeIdx || 0], G.mode !== 'play' && G.mode !== 'title');
-  const menu = G.mode === 'title' || G.mode === 'settings' || G.mode === 'legal' || (G.mode === 'shop');
+  const menu = G.mode === 'title' || G.mode === 'settings' || G.mode === 'legal' || G.mode === 'intro' || (G.mode === 'shop');
   drawWorld(menu ? 'menu' : 'full');
   if (!menu) drawHud();
   if (G.mode === 'title') titleScreen();
@@ -201,6 +272,7 @@ function frame(ts) {
   else if (G.mode === 'shop') shopScreen();
   else if (G.mode === 'settings') settingsScreen();
   else if (G.mode === 'legal') legalScreen();
+  else if (G.mode === 'intro') introScreen();
   else if (G.mode === 'pause') pauseScreen();
   if (toastT > 0) { toastT -= dt; const tw = textW(toast, 2) + 20; rect(W / 2 - tw / 2, view.H - 96, tw, 22, FG); text(toast, W / 2, view.H - 90, 2, BG, 0.5); }
 
@@ -216,7 +288,7 @@ function boot() {
     const a = getAC(); if (a) { if (document.hidden) a.suspend(); else a.resume(); } });
   window.addEventListener('keydown', (e) => {
     if (G.mode === 'levelup' && modeT > 0.3 && '123'.includes(e.key)) choose(+e.key - 1);
-    if ((e.key === 'Enter' || e.key === ' ') && modeT > 0.3 && (G.mode === 'title' || G.mode === 'dead')) newRun();
+    if ((e.key === 'Enter' || e.key === ' ') && modeT > 0.3 && (G.mode === 'title' || G.mode === 'dead')) { if (G.mode === 'title') play(); else newRun(); }
   });
   newRun(); G.mode = 'title'; G.banner = ''; G.inv = 0;
   if (params.get('bot')) { newRun(); G.bot = true; G.god = !!params.get('god'); G.hits = G.crashes = 0; }
