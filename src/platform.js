@@ -2,10 +2,11 @@
 import { canvas, view } from './gfx.js';
 
 // ---- save -------------------------------------------------------------------
-const KEY = 'vapecanoe.v1';
+const KEY = 'vapekayak.v1';
 const fresh = () => ({ cash: 0, best: 0, bestDist: 0, runs: 0, shop: {}, sound: true, tilt: false });
 export const save = fresh();
-export function loadSave() { try { Object.assign(save, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch { /* private mode */ } }
+export function loadSave() { try { Object.assign(save, JSON.parse(localStorage.getItem(KEY) || localStorage.getItem('vapecanoe.v1') || '{}')); }   // falls back to the pre-rename save
+  catch { /* private mode */ } }
 export function writeSave() { try { localStorage.setItem(KEY, JSON.stringify(save)); } catch { /* ignore */ } }
 export function resetSave() { Object.assign(save, fresh()); writeSave(); }
 export const shopLvl = (id) => save.shop[id] || 0;

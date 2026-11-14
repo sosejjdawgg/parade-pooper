@@ -1,5 +1,5 @@
 // ============================================================================
-//  VAPE CANOE — every balance number lives in this file.
+//  VAPE KAYAK — every balance number lives in this file.
 //  Units: pixels (logical 360-wide screen), seconds, px/s unless noted.
 // ============================================================================
 
@@ -7,10 +7,10 @@ export const VIEW = {
   W: 360,            // logical width (fixed)
   H_MIN: 640,        // 9:16
   H_MAX: 800,        // taller phones get more river instead of black bars
-  PLAYER_Y: 0.68,    // canoe sits this far down the screen
+  PLAYER_Y: 0.68,    // kayak sits this far down the screen
 };
 
-export const COLORS = { BG: '#000000', FG: '#ffffff', GINGER: '#ff5a1f', ENEMY: '#ff1a2e' };   // ENEMY = thin outline on hostiles
+export const COLORS = { BG: '#000000', FG: '#ffffff', GINGER: '#ff5a1f', ENEMY: '#ff1a2e', VAPE: '#a9d6f5' };   // ENEMY = thin outline on hostiles
 
 export const WORLD = { PX_PER_M: 20 };
 
@@ -168,7 +168,7 @@ export const WEAPONS = {
       { n: 4, dmg: 8, r: 12, orbit: 52 }, { n: 5, dmg: 10, r: 13, orbit: 58 },
     ],
     evo: { n: 7, dmg: 17, r: 16, orbit: 66, outer: 6 },
-    desc: ['CLOUDS ORBIT THE CANOE', 'THIRD CLOUD', 'WIDER, STRONGER', 'FOURTH CLOUD', 'FIFTH CLOUD'],
+    desc: ['CLOUDS ORBIT THE KAYAK', 'THIRD CLOUD', 'WIDER, STRONGER', 'FOURTH CLOUD', 'FIFTH CLOUD'],
   },
 };
 
@@ -218,7 +218,7 @@ export const FLAVOUR = {
     'SAVE THE DANCING FOR THE IBIZA DJ BOOTH.',
     'THE OPERA IS THE OTHER WAY. BRING CHAMPAGNE.',
     'DO NOT CALL THE SWANS SCUM. THEY REMEMBER.',
-    'A CANOE IS NOT A SECOND HOME. PROBABLY.',
+    'A KAYAK IS NOT A SECOND HOME. PROBABLY.',
   ],
   CAUSES: {
     barge: "RAMMED SOMEONE'S SECOND HOME", pier: 'HIT A LOW BRIDGE', gate: 'HIT A LOCK GATE', vortex: 'DOWN THE PLUGHOLE',

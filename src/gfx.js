@@ -1,7 +1,7 @@
 // Canvas, pixel font, sprites. Everything is hard-edged: no arcs, no fillText.
 import { VIEW, COLORS } from './config.js';
 
-const { BG, FG, GINGER, ENEMY } = COLORS;
+const { BG, FG, GINGER, ENEMY, VAPE } = COLORS;
 export const canvas = document.getElementById('game');
 export const ctx = canvas.getContext('2d', { alpha: false });
 export const view = { W: VIEW.W, H: VIEW.H_MIN };
@@ -58,13 +58,13 @@ function atlas(color) {
 }
 export function textW(str, s = 1) { return String(str).length * 4 * s - s; }
 /** align: 0 left, 0.5 centre, 1 right */
-export function text(str, x, y, s = 1, color = FG, align = 0) {
+export function text(str, x, y, s = 1, color = FG, align = 0, g = ctx) {
   str = String(str).toUpperCase();
   x = Math.round(x - textW(str, s) * align); y = Math.round(y);
   const at = atlas(color);
   for (let i = 0; i < str.length; i++) {
     const k = IDX[str[i]];
-    if (k !== undefined) ctx.drawImage(at, k * 4, 0, 3, 5, x + i * 4 * s, y, 3 * s, 5 * s);
+    if (k !== undefined) g.drawImage(at, k * 4, 0, 3, 5, x + i * 4 * s, y, 3 * s, 5 * s);
   }
 }
 /** text with a black outline so it reads over anything */
@@ -104,7 +104,7 @@ function art(rows, outline = true) {
 function hash(n) { n = Math.imul(n ^ (n >>> 15), 0x2c1b3c6d); n = Math.imul(n ^ (n >>> 12), 0x297a2d39); return ((n ^ (n >>> 15)) >>> 0) / 4294967296; }
 export { hash };
 
-function makeCanoe(frame) {
+function makeKayak(frame) {
   const [c, g] = mk(25, 40), cx = 12;
   const hw = (y) => (y < 1 || y > 38) ? -1 : Math.round(6.5 * Math.pow(Math.sin(Math.PI * (y - 1) / 37), 0.55));
   g.fillStyle = FG;
@@ -112,16 +112,17 @@ function makeCanoe(frame) {
   g.fillStyle = BG;
   for (let y = 2; y <= 37; y++) { const i = Math.min(hw(y - 1), hw(y), hw(y + 1)) - 1; if (i >= 0) g.fillRect(cx - i, y, i * 2 + 1, 1); }
   g.fillStyle = FG;
-  g.fillRect(cx - 4, 10, 9, 1); g.fillRect(cx - 4, 31, 9, 1);         // thwarts
+  g.fillRect(cx - 2, 6, 5, 1); g.fillRect(cx - 2, 34, 5, 1);           // deck lines: it's a kayak
   // paddle: shaft across the body, blade in the water on one side
   const dir = frame ? 1 : -1;
   for (let i = -10; i <= 10; i++) g.fillRect(cx + i, Math.round(22 - i * dir * 0.35), 1, 1);
   g.fillRect(cx - dir * 12 + (dir > 0 ? 0 : -1), 23, 3, 5);
+  g.fillRect(cx + dir * 11 + (dir > 0 ? -1 : 0), 15, 3, 4);            // double-bladed paddle
   g.fillRect(cx - 3, 19, 7, 5);                                         // shoulders
   g.fillStyle = GINGER;                                                 // THE hair
   g.fillRect(cx - 2, 17, 5, 6); g.fillRect(cx - 1, 16, 3, 1);
   g.fillRect(cx - 1, 23, 3, 3); g.fillRect(cx, 26, 1, 2);
-  g.fillStyle = FG; g.fillRect(cx + 3, 16, 1, 3);                       // the vape
+  g.fillStyle = VAPE; g.fillRect(cx + 3, 16, 1, 3);                     // the vape
   return outlined(c);
 }
 
@@ -133,7 +134,7 @@ function makeVapeFrames(len, wid, n = 16) {
     for (let y = 0; y < size; y++) for (let x = 0; x < size; x++) {
       const u = (x - c0) * cs + (y - c0) * sn, v = -(x - c0) * sn + (y - c0) * cs;
       if (Math.abs(u) > len / 2 || Math.abs(v) > wid / 2) continue;
-      g.fillStyle = (u > len / 2 - 3.6 && u < len / 2 - 2.2) ? BG : FG;
+      g.fillStyle = (u > len / 2 - 3.6 && u < len / 2 - 2.2) ? BG : u >= len / 2 - 2.2 ? FG : VAPE;   // pale blue body, white mouthpiece
       g.fillRect(x, y, 1, 1);
     }
     frames.push(outlined(c));
@@ -235,7 +236,7 @@ export function face(tier, mode) {
   if (drag) {                                                                        // vape to the lips
     P(16, 27, 4, 2);
     for (let i = 0; i < 9; i++) { P(18 + i, 26 + i, 4, 4); }
-    for (let i = 0; i < 9; i++) { P(19 + i, 27 + i, 2, 2, FG); }
+    for (let i = 0; i < 9; i++) { P(19 + i, 27 + i, 2, 2, i < 2 ? FG : VAPE); }
     P(25, 33, 2, 2); P(18, 26, 2, 2);
   } else if (puff) {                                                                 // pursed lips, cloud rolling off
     P(17, 26, 3, 3); P(18, 27, 1, 1, FG);
@@ -260,7 +261,7 @@ export function face(tier, mode) {
 
 export const SPR = {};
 export function buildSprites() {
-  SPR.canoe = [makeCanoe(0), makeCanoe(1)];
+  SPR.kayak = [makeKayak(0), makeKayak(1)];
   SPR.vape = makeVapeFrames(11, 3);
   SPR.bigVape = makeVapeFrames(19, 5);
   SPR.barge = { 70: makeBarge(70), 90: makeBarge(90), 110: makeBarge(110) };

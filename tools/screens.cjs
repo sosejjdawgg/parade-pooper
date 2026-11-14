@@ -33,7 +33,7 @@ const root = path.resolve(__dirname, '..'), out = process.argv[2] || '.';
   const icon = await pg.evaluate(() => {
     const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d'); g.imageSmoothingEnabled = false;
     g.fillStyle = '#000'; g.fillRect(0, 0, 512, 512);
-    const s = __vc.SPR.canoe[0], k = 10; g.drawImage(s, 256 - s.width * k / 2, 256 - s.height * k / 2, s.width * k, s.height * k);
+    const s = __vc.SPR.kayak[0], k = 10; g.drawImage(s, 256 - s.width * k / 2, 256 - s.height * k / 2, s.width * k, s.height * k);
     const v = __vc.SPR.bigVape[2]; g.drawImage(v, 30, 40, v.width * 6, v.height * 6); g.drawImage(__vc.SPR.bigVape[13], 340, 330, v.width * 6, v.height * 6);
     return c.toDataURL('image/png').split(',')[1];
   });

@@ -1,8 +1,8 @@
-# Angela Rayner's Vape Canoe
+# Angela Rayner's: Vape Kayak
 
 A portrait, one-thumb endless runner that turns into a bullet-heaven. Political satire / parody — not affiliated with anyone.
 
-Steer the canoe down a procedurally generated canal, collect spinning vapes, level up, and grow a weak puff of vapour into screen-filling weather that melts hordes of swans, paparazzi and piranhas.
+Steer the kayak down a procedurally generated canal, collect spinning vapes, level up, and grow a weak puff of vapour into screen-filling weather that melts hordes of swans, paparazzi and piranhas.
 
 ## Play / run
 
@@ -26,6 +26,7 @@ For link previews on social media, change `og:image` in `index.html` to the abso
 | `src/main.js` | Main loop and menu screens (title, level-up, game over, shop, settings) |
 | `src/gfx.js` | Canvas scaling, 3x5 pixel font, procedurally built sprites |
 | `src/platform.js` | Save data (localStorage), synthesised sound, touch / keyboard / tilt input |
+| `marketing/` | itch.io kit: page copy (`itch-page.md`), cover / banner / social images, screenshots, upload zip. Regenerate images with `node tools/marketing.cjs` |
 | `tools/` | Headless Playwright scripts: `balance.cjs` (invulnerable bot logs the power curve), `screens.cjs` (screenshots, `og.png`, `icon.png`), `shots.cjs` (smoke test) |
 
 Debug URL flags: `?bot=1` autoplay, `&god=1` no death, `&fast=8` time multiplier.
@@ -33,7 +34,7 @@ Debug URL flags: `?bot=1` autoplay, `&god=1` no death, `&fast=8` time multiplier
 ## Design notes
 
 - Logical resolution is 360 wide; height stretches from 640 up to 800 so tall phones get more river rather than black bars.
-- Canoe sits 68% down the screen; the world scrolls toward it. Tap left/right for a sharp nudge, hold to keep nudging, optional tilt.
+- Kayak sits 68% down the screen; the world scrolls toward it. Tap left/right for a sharp nudge, hold to keep nudging, optional tilt.
 - Three biomes blend by distance: British canal (0 m), desert (650 m), jungle (1700 m).
 - Hearts absorb enemies, debris, sandbars and vortex cores. Barges, bridge piers and lock gates sink you outright.
 - Weapons: Vape Cloud, Slipstream (trail), Fog Bank (area blast), Vape Storm (orbiters). Each evolves at max level if you hold its partner passive.

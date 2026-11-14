@@ -8,7 +8,7 @@ import { save, loadSave, writeSave, resetSave, shopLvl, sfx, input, initInput, r
 
 const { BG, FG, GINGER } = COLORS, W = VIEW.W, STEP = 1 / 60;
 const params = new URLSearchParams(location.search);
-const FAST = +params.get('fast') || 1;
+let FAST = +params.get('fast') || 1;
 let last = 0, acc = 0, modeT = 0, prevMode = '', backTo = 'title', toast = '', toastT = 0, resetArm = 0;
 
 // ---- immediate-mode UI ----------------------------------------------------------
@@ -34,7 +34,7 @@ function say(msg) { toast = msg; toastT = 2; }
 function titleScreen() {
   const H = view.H, bob = Math.round(Math.sin(G.t * 2) * 3);
   textO("ANGELA RAYNER'S", W / 2, H * 0.1 + bob, 3, GINGER, 0.5);
-  for (const [word, y] of [['VAPE', H * 0.1 + 28], ['CANOE', H * 0.1 + 88]]) {
+  for (const [word, y] of [['VAPE', H * 0.1 + 28], ['KAYAK', H * 0.1 + 88]]) {
     text(word, W / 2 + 4, y + bob + 4, 10, BG, 0.5); textO(word, W / 2, y + bob, 10, FG, 0.5);
   }
   const by = Math.round(H * 0.43);
@@ -45,7 +45,7 @@ function titleScreen() {
   textO('TAP LEFT / RIGHT TO STEER', W / 2, H * 0.79, 2, FG, 0.5);
   textO('COLLECT VAPES. GET POWERFUL.', W / 2, H * 0.79 + 16, 2, FG, 0.5);
   if (save.best) textO('BEST ' + save.best + ' VAPES   ' + save.bestDist + 'M   £' + save.cash, W / 2, H * 0.9, 2, FG, 0.5);
-  textO('NO STAMP DUTY PAYABLE ON CANOES.', W / 2, H * 0.79 + 34, 2, FG, 0.5);
+  textO('NO STAMP DUTY PAYABLE ON KAYAKS.', W / 2, H * 0.79 + 34, 2, FG, 0.5);
   textO('A PARODY. NOT AFFILIATED WITH ANYONE.', W / 2, H - 12, 1, FG, 0.5);
 }
 
@@ -84,7 +84,7 @@ function deadScreen() {
   if (button(40, y + 378, 134, 34, canBuy ? 'SHOP !' : 'SHOP', { inv: canBuy })) { backTo = 'dead'; G.mode = 'shop'; }
   if (button(186, y + 378, 134, 34, 'SHARE')) share();
   wrap('TIP: ' + r.tip, 36).forEach((l, k) => text(l, W / 2, y + 426 + k * 13, 2, FG, 0.5));
-  text('A PARODY. NO CANOES WERE HARMED.', W / 2, y + 472, 1, FG, 0.5);
+  text('A PARODY. NO KAYAKS WERE HARMED.', W / 2, y + 472, 1, FG, 0.5);
 }
 function canAfford(it) {
   const lvl = shopLvl(it.id);
@@ -92,9 +92,9 @@ function canAfford(it) {
 }
 async function share() {
   const r = G.result, url = location.origin + location.pathname;
-  const msg = `I collected ${r.vapes} vapes and paddled ${r.m}m in Angela Rayner's Vape Canoe. Beat that.`;
+  const msg = `I collected ${r.vapes} vapes and paddled ${r.m}m in Angela Rayner's: Vape Kayak. Beat that.`;
   try {
-    if (navigator.share) await navigator.share({ title: "Angela Rayner's Vape Canoe", text: msg, url });
+    if (navigator.share) await navigator.share({ title: "Angela Rayner's: Vape Kayak", text: msg, url });
     else { await navigator.clipboard.writeText(msg + ' ' + url); say('COPIED TO CLIPBOARD'); }
   } catch { /* user cancelled */ }
 }
@@ -202,7 +202,7 @@ function boot() {
   });
   newRun(); G.mode = 'title'; G.banner = ''; G.inv = 0;
   if (params.get('bot')) { newRun(); G.bot = true; G.god = !!params.get('god'); G.hits = G.crashes = 0; }
-  window.__vc = { musicState, G, save, newRun, enemies, clouds, vapes, SPR, face };
+  window.__vc = { text, setFast: (n) => { FAST = n; }, musicState, G, save, newRun, enemies, clouds, vapes, SPR, face };
   requestAnimationFrame(frame);
 }
 boot();

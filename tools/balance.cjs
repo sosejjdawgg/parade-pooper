@@ -11,7 +11,7 @@ const root = path.resolve(__dirname, '..');
   const base = 'http://localhost:' + srv.address().port, total = +process.argv[2] || 480, shop = process.argv[3] || '{}';
   const b = await chromium.launch(), pg = await b.newPage({ viewport: { width: 360, height: 780 } });
   pg.on('pageerror', (e) => console.log('ERR', String(e)));
-  await pg.addInitScript((shop) => localStorage.setItem('vapecanoe.v1', JSON.stringify({ shop: JSON.parse(shop), sound: false })), shop);
+  await pg.addInitScript((shop) => localStorage.setItem('vapekayak.v1', JSON.stringify({ shop: JSON.parse(shop), sound: false })), shop);
   await pg.goto(base + '/?bot=1&god=1&fast=20');
   let next = 30, lastHits = 0, lastKills = 0;
   for (;;) {

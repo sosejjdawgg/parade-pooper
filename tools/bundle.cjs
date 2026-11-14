@@ -1,4 +1,4 @@
-// Builds vape-canoe.html: the whole game in one file, no dependencies.
+// Builds vape-kayak.html: the whole game in one file, no dependencies.
 // Each module is embedded as a data: URL and wired up with an import map.
 // Usage: node tools/bundle.cjs
 const fs = require('fs'), path = require('path');
@@ -17,5 +17,5 @@ html = html.replace(/<link rel="manifest"[^>]*>\n/, '').replace(/href="icon\.png
   .replace(/<meta (property="og:image[^>]*|name="twitter:[^>]*)>\n/g, '')
   .replace('<script type="module" src="src/main.js"></script>',
     () => `<script>window.__MUSIC=${JSON.stringify(music)}</script>\n<script type="importmap">${JSON.stringify({ imports })}</script>\n<script type="module">import 'vc/main';</script>`);
-fs.writeFileSync(path.join(root, 'vape-canoe.html'), html);
-console.log('vape-canoe.html', (html.length / 1024).toFixed(1) + ' KB');
+fs.writeFileSync(path.join(root, 'vape-kayak.html'), html);
+console.log('vape-kayak.html', (html.length / 1024).toFixed(1) + ' KB');

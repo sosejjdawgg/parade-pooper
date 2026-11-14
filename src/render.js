@@ -145,7 +145,7 @@ function drawFx() {
   }
 }
 
-/** mode: 'full' = everything, 'menu' = just water, banks and an idle canoe */
+/** mode: 'full' = everything, 'menu' = just water, banks and an idle kayak */
 export function drawWorld(mode = 'full') {
   PY = playerY(); D = Math.round(G.dist);
   const lo = D - (view.H - PY), hi = D + PY;
@@ -161,7 +161,7 @@ export function drawWorld(mode = 'full') {
     for (const o of orbs) { const y = sy(o.wy); drawDisc(o.x, y, o.r, 1); drawDisc(o.x, y, o.r * 0.45, 0); }
   }
   if (full && !G.dead) { const x = Math.round(G.px); rect(x - 7, PY - 23, 15, 47, BG); rect(x - 10, PY - 18, 21, 37, BG); rect(x - 13, PY - 11, 27, 23, BG); }   // keep her readable inside the fog
-  if (!G.dead && !(full && G.inv > 0 && ((G.t * 14) & 1))) draw(SPR.canoe[G.paddle], G.px, PY);
+  if (!G.dead && !(full && G.inv > 0 && ((G.t * 14) & 1))) draw(SPR.kayak[G.paddle], G.px, PY);
   if (full) drawHazards(true);
   drawFx();
   if (full && G.burst > 22) {

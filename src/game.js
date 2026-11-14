@@ -129,7 +129,7 @@ function addEnemy(type, x, wy, behind) {
 
 // ---- procedural chunks ----------------------------------------------------------
 // Every pattern leaves a clear route: hard hazards never span more than ~half the canal,
-// bridges and locks always keep gaps far wider than the canoe.
+// bridges and locks always keep gaps far wider than the kayak.
 const CHUNKS = {
   snake(y, dens) {
     const n = Math.round(rnd(10, 16) * dens), ph = rnd(6.28), amp = rnd(0.2, 0.36);
