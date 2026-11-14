@@ -12,8 +12,9 @@ export const VIEW = {
 
 export const COLORS = { BG: '#000000', FG: '#ffffff', GINGER: '#ff5a1f', ENEMY: '#ff1a2e', VAPE: '#a9d6f5' };   // ENEMY = thin outline on hostiles
 
-// Bezel-style side art: the key art split down the middle, one half on each bank.
-export const SIDE_ART = { SRC: 'art/side.jpg', GAP: 8, FOLLOW: 0.06 };   // GAP = black strip between art and water; FOLLOW = how fast the halves slide to hug the canal
+// Bezel-style border: a static strip of the key art down each side of the screen. The image is split down the
+// middle of the face and the split sits at the screen edges, as if the picture wrapped round behind the game.
+export const SIDE_ART = { SRC: 'art/side.jpg', BORDER: 36, GAP: 5, LAND_MIN: 14 };   // BORDER = strip width incl. GAP (black strip on its inner side); LAND_MIN = least bank left showing
 
 export const WORLD = { PX_PER_M: 20 };
 
@@ -72,7 +73,7 @@ export const BIOMES = {
   DESERT_AT: 650,            // metres where the blend into desert starts
   JUNGLE_AT: 1700,
   BLEND: 220,                // metres a transition takes
-  WIDTH: [186, 262, 172],    // canal width per biome
+  WIDTH: [186, 236, 172],    // canal width per biome
   MEANDER: 52,               // max sideways wander of the canal centre
   CHUNK_GAP: [150, 130, 105],// clear water between chunks
   // chunk pattern weights per biome [canal, desert, jungle]

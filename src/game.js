@@ -1,7 +1,7 @@
 // Simulation: canal, chunks, pickups, enemies, weapons, level-ups. No drawing here.
 import {
   VIEW, WORLD, PLAYER, ENGINE, XP, PICKUPS, BIOMES, HAZARDS, ENEMIES, SPAWN,
-  WEAPONS, PASSIVES, EVOLUTIONS, LEVELUP, REWARD, JUICE, VAPING, FLAVOUR,
+  WEAPONS, PASSIVES, EVOLUTIONS, LEVELUP, REWARD, JUICE, VAPING, FLAVOUR, SIDE_ART,
 } from './config.js';
 import { view } from './gfx.js';
 import { save, shopLvl, writeSave, sfx, input } from './platform.js';
@@ -45,7 +45,7 @@ export function biomeAt(wy) {
 }
 export function widthAt(wy) { return lerp3(BIOMES.WIDTH, biomeAt(wy)) + 10 * Math.sin(wy * 0.0037 + G.ph[2]); }
 export function centreAt(wy) {
-  const amp = clamp((VIEW.W - widthAt(wy)) / 2 - 24, 0, BIOMES.MEANDER);
+  const amp = clamp((VIEW.W - widthAt(wy)) / 2 - SIDE_ART.BORDER - SIDE_ART.LAND_MIN, 0, BIOMES.MEANDER);   // never wander under the border
   return VIEW.W / 2 + amp * (0.6 * Math.sin(wy * 0.0052 + G.ph[0]) + 0.4 * Math.sin(wy * 0.0113 + G.ph[1]));
 }
 export const leftAt = (wy) => centreAt(wy) - widthAt(wy) / 2;
