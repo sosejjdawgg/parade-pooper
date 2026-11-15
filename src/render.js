@@ -1,5 +1,5 @@
 // Draws the world and the in-run HUD. Three colours only: black, white, ginger.
-import { VIEW, COLORS, VAPING, JUICE, SIDE_ART, IMMUNITY, PLAYER } from './config.js';
+import { VIEW, COLORS, BIOMES, VAPING, JUICE, SIDE_ART, IMMUNITY, PLAYER } from './config.js';
 import { ctx, view, rect, box, text, textO, textW, draw, drawDisc, face, sideArt, SPR, hash } from './gfx.js';
 import { G, vapes, enemies, hazards, clouds, parts, floaters, orbs, biomeAt, dangerAt, leftAt, rightAt, playerY, metres } from './game.js';
 import { save, shopLvl } from './platform.js';
@@ -32,22 +32,37 @@ function bankGlyph(bi, x, y, j, c) {
   else { rect(x + 1, y + 3, 4, 1, c); rect(x + 2, y + 2, 2, 1, c); rect(x + 3, y + 4, 2, 1, c); }
 }
 let hudShown = true;
+// ordered-dither fills: a 4x4 Bayer tile per (colour, density), so the land thins out pixel by pixel
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5], ditherFills = {};
+function ditherFill(color, density) {
+  const key = color + density;
+  if (ditherFills[key]) return ditherFills[key];
+  const c = document.createElement('canvas'); c.width = c.height = 4;
+  const g = c.getContext('2d'); g.fillStyle = color;
+  for (let i = 0; i < 16; i++) if (BAYER[i] / 16 < density) g.fillRect(i % 4, i >> 2, 1, 1);
+  return ditherFills[key] = ctx.createPattern(c, 'repeat');
+}
 function drawBanks(lo, hi) {
   let lp = null, rp = null;
   for (let j = Math.floor(lo / 8) - 1; j <= Math.floor(hi / 8) + 1; j++) {
     const wy = j * 8, y = sy(wy + 8);
     const l = Math.round(leftAt(wy) / 4) * 4, r = Math.round(rightAt(wy) / 4) * 4;
     rect(0, y, l, 8, BG); rect(r, y, W - r, 8, BG);
-    const hot = dangerAt(wy), c = hot ? COLORS.ENEMY : FG, t = hot ? 3 : 2;      // late game: the banks go red and bite
+    const b = biomeAt(wy), bi = Math.min(2, Math.floor(b) + (hash(j * 53) < b % 1 ? 1 : 0));
+    const [edge, land] = BIOMES.BANK_COLORS[bi];
+    for (const [off, w, dens] of BIOMES.BANK_FADE) {            // coloured land, dithering out to black
+      ctx.fillStyle = dens >= 1 ? land : ditherFill(land, dens);
+      ctx.fillRect(l - 3 - off - w, y, w, 8); ctx.fillRect(r + 3 + off, y, w, 8);
+    }
+    // late game: the bank edge flickers red and white, and bites
+    const hot = dangerAt(wy), c = hot ? (((G.t * 6) | 0) & 1 ? FG : COLORS.ENEMY) : edge, t = 3;
     rect(l - t, y, t, 8, c); rect(r, y, t, 8, c);
     if (lp !== null && lp !== l) rect(Math.min(l, lp) - t, y + 7, Math.abs(l - lp) + t, 2, c);
     if (rp !== null && rp !== r) rect(Math.min(r, rp), y + 7, Math.abs(r - rp) + t, 2, c);
     lp = l; rp = r;
-    const b = biomeAt(wy), bi = Math.min(2, Math.floor(b) + (hash(j * 53) < b % 1 ? 1 : 0));
-    ctx.fillStyle = FG;
     for (let k = 1; k <= 4; k++) {
-      if (hash(j * 977 + k * 31) < 0.55 / k) bankGlyph(bi, l - 4 - k * 8, y, j + k, c);
-      if (hash(j * 613 + k * 17) < 0.55 / k) bankGlyph(bi, r - 2 + k * 8, y, j + k, c);
+      if (hash(j * 977 + k * 31) < 0.45 / k) bankGlyph(bi, l - 4 - k * 8, y, j + k, edge);
+      if (hash(j * 613 + k * 17) < 0.45 / k) bankGlyph(bi, r - 2 + k * 8, y, j + k, edge);
     }
     const dh = hash(j * 271);
     if (dh < 0.045) {
