@@ -1,0 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Silkscreen:wght@400;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+:root{--ink:#111116;--ink2:#1c1c24;--paper:#fff8ec;--ginger:#ff7a1a;--gold:#ffc83d;--sky:#8fd3ff;--leaf:#5fd16a;--red:#ff4b3e;--mute:#9a9aa8}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Space Grotesk',sans-serif;background:var(--ink);color:#fff;-webkit-font-smoothing:antialiased}
+.px{font-family:'Silkscreen',monospace;letter-spacing:.02em}
+.phone{border-radius:28px;background:#000;padding:9px;box-shadow:0 0 0 3px #2c2c36,0 24px 50px rgba(0,0,0,.55);overflow:hidden}
+.phone img{display:block;width:100%;height:100%;object-fit:cover;object-position:top;border-radius:20px}
+.card{border-radius:16px;overflow:hidden;background:var(--ink2);box-shadow:0 0 0 3px #2c2c36}
+.tag{display:inline-block;font-family:'Silkscreen';font-size:13px;padding:5px 9px;border:2px solid currentColor;border-radius:6px}
+.dots{background-image:radial-gradient(rgba(255,255,255,.07) 1.5px,transparent 1.6px);background-size:14px 14px}

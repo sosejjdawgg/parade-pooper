@@ -1,0 +1,110 @@
+<!doctype html><meta charset=utf-8><link rel=stylesheet href=base.css>
+<style>
+@page{size:A4;margin:0}
+body{background:var(--paper);color:var(--ink)}
+.pg{width:210mm;height:297mm;padding:16mm 15mm;position:relative;overflow:hidden;page-break-after:always}
+.pg:last-child{page-break-after:auto}
+.k{font-family:'Silkscreen';font-size:11px;color:var(--ginger);letter-spacing:.08em}
+h1{font-family:'Silkscreen';font-weight:700;font-size:44px;line-height:.95;margin-top:8px}
+h2{font-family:'Silkscreen';font-weight:700;font-size:22px;margin:18px 0 9px}
+em{font-style:normal;color:var(--ginger)}
+p,li,td{font-size:12.5px;line-height:1.5;color:#333}
+.hero{background:var(--ink);color:#fff;border-radius:14px;padding:20px 22px;margin-top:16px;display:flex;gap:18px;align-items:center}
+.hero p{color:#ddd;font-size:13px}
+.hero img{width:120px;height:120px;object-fit:cover;border-radius:10px;flex:none}
+.pk{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.p{border:2px solid var(--ink);border-radius:12px;padding:14px 13px;background:#fff}
+.p.hot{background:var(--ink);color:#fff;box-shadow:0 5px 0 var(--ginger)}
+.p.hot li,.p.hot .d{color:#ddd}
+.p .n{font-family:'Silkscreen';font-size:15px}
+.p .pr{font-family:'Silkscreen';font-weight:700;font-size:30px;margin:4px 0;color:var(--ginger)}
+.p .d{font-size:11.5px;color:#555;min-height:46px}
+.p ul{list-style:none;margin-top:8px}
+.p li{font-size:11.5px;padding:3px 0 3px 16px;position:relative}
+.p li:before{content:'\2713';position:absolute;left:0;color:var(--ginger);font-weight:700}
+.p .t{margin-top:8px;font-family:'Silkscreen';font-size:11px}
+.steps{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
+.s{background:#fff;border-radius:10px;padding:11px 10px;border:2px solid #eadfcc}
+.s b{display:block;font-family:'Silkscreen';font-size:20px;color:var(--ginger)}
+.s span{font-size:11.5px;font-weight:600;display:block;margin:2px 0}
+.s p{font-size:10.5px;line-height:1.4}
+.ex{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px}
+.ex div{font-size:12px;padding:6px 10px;background:#fff;border-radius:8px;border-left:4px solid var(--ginger)}
+table{width:100%;border-collapse:collapse;margin-top:4px}
+td{padding:6px 8px;border-bottom:1px solid #e6dccb;vertical-align:top}
+td:first-child{font-weight:600;width:34%}
+.faq b{display:block;font-size:13px;margin-top:10px}
+.foot{position:absolute;left:15mm;right:15mm;bottom:10mm;display:flex;justify-content:space-between;font-family:'Silkscreen';font-size:10px;color:#999}
+.strip{display:flex;gap:6px;margin-top:10px}
+.strip img{flex:1;height:78px;object-fit:cover;border-radius:8px;min-width:0}
+</style>
+<body>
+<section class=pg>
+ <div class=k>SERVICES + PRICING GUIDE</div>
+ <h1>CUSTOM GAMES,<br><em>BUILT TO PLAY.</em></h1>
+ <div class=hero><img src="img/kayak_art.png" style="object-position:50% 12%"><div><p><b style="color:#fff">Mobile and browser games, start to finish.</b> Design, art, code, music and launch, from one developer with six games already live on itch.io. Your players just tap a link and play: no app store, no install.</p></div></div>
+
+ <h2>PACKAGES</h2>
+ <div class=pk>
+  <div class=p><div class=n>BASIC</div><div class=pr>$120</div><div class=d>A single-mechanic mini-game. Great for gifts, jokes and quick promos.</div>
+   <ul><li>One core mechanic</li><li>1 level / endless mode</li><li>Your art or simple pixel art</li><li>Score + restart</li><li>Mobile browser build</li><li>Source code</li></ul><div class=t>5 DAYS &middot; 1 REVISION</div></div>
+  <div class="p hot"><div class=n>STANDARD &#9733;</div><div class=pr>$350</div><div class=d>A complete, polished game with progression people come back to.</div>
+   <ul><li>Everything in Basic</li><li>Levels, upgrades or a shop</li><li>Custom pixel / cartoon art</li><li>Music + sound effects</li><li>Saves, menus, how-to-play</li><li>itch.io upload</li></ul><div class=t>14 DAYS &middot; 3 REVISIONS</div></div>
+  <div class=p><div class=n>PREMIUM</div><div class=pr>$800</div><div class=d>A launch-ready game with marketing and extra platforms.</div>
+   <ul><li>Everything in Standard</li><li>Bigger scope: modes, bosses</li><li>Original chiptune theme</li><li>Store page + cover art kit</li><li>Vertical video trailer</li><li>Extra platform port</li></ul><div class=t>28 DAYS &middot; 5 REVISIONS</div></div>
+ </div>
+
+ <h2>HOW IT WORKS</h2>
+ <div class=steps>
+  <div class=s><b>1</b><span>Chat</span><p>You tell me the idea. I reply with a plan, scope and price.</p></div>
+  <div class=s><b>2</b><span>Prototype</span><p>A playable link early on, so you feel it before it's pretty.</p></div>
+  <div class=s><b>3</b><span>Build</span><p>Art, levels, sound. Regular playable updates.</p></div>
+  <div class=s><b>4</b><span>Polish</span><p>Your revisions, balance and juice. Tested on phones.</p></div>
+  <div class=s><b>5</b><span>Launch</span><p>Files, source and store page. Ready to share.</p></div>
+ </div>
+
+ <h2>GAMES I CAN MAKE FOR YOU</h2>
+ <div class=ex>
+  <div>Branded mini-games for campaigns and events</div>
+  <div>Personalised gift games starring your friend</div>
+  <div>Arcade, runner and survivor-like games</div>
+  <div>Physics and puzzle games</div>
+  <div>Quiz and trivia games for fans or classrooms</div>
+  <div>Virtual pets and idle games</div>
+  <div>Parody and satire (non-commercial)</div>
+  <div>Retro-style PICO-8 and handheld versions</div>
+ </div>
+  <div class=foot><span>solidsosej.itch.io</span><span>01 / 02</span></div>
+</section>
+
+<section class=pg>
+ <div class=k>BEFORE WE START</div>
+ <h1 style="font-size:36px">WHAT I NEED<br><em>FROM YOU</em></h1>
+ <table>
+  <tr><td>The idea</td><td>One or two sentences is plenty. "A game where my dog fights squirrels" is a great brief.</td></tr>
+  <tr><td>Who it's for</td><td>Friends, customers, students, fans? It shapes difficulty and tone.</td></tr>
+  <tr><td>Characters and branding</td><td>Photos, logos, colours or a reference game you like the feel of.</td></tr>
+  <tr><td>Where it will live</td><td>A link to share, your website, itch.io, or a handheld device.</td></tr>
+  <tr><td>Deadline</td><td>Birthday, launch day or event date, so we plan backwards from it.</td></tr>
+ </table>
+
+ <h2>WHAT YOU RECEIVE</h2>
+ <table>
+  <tr><td>Playable game</td><td>Runs in any modern phone or desktop browser. Touch, tilt, keyboard and gamepad where it fits.</td></tr>
+  <tr><td>Files</td><td>Web build, optional single-file HTML (one file you can send to anyone) and itch.io-ready zip.</td></tr>
+  <tr><td>Source code</td><td>Clean, commented source with all the tuning values in one place, so it's easy to tweak later.</td></tr>
+  <tr><td>Extras (by package)</td><td>Store page text, cover art, screenshots, a vertical trailer, music and ports to PICO-8 or handheld consoles.</td></tr>
+ </table>
+
+ <h2>FAQ</h2>
+ <div class=faq>
+  <b>Can I see your work first?</b><p>Yes. All six portfolio games are free to play at solidsosej.itch.io.</p>
+  <b>Will it work on iPhone and Android?</b><p>Yes. Games are built mobile-first and tested on both, in Safari and Chrome.</p>
+  <b>Do I own the game?</b><p>You get the source code and full rights to the custom work made for you. Third-party music or assets keep their own licences, which I'll always list.</p>
+  <b>Can you put it on the App Store?</b><p>I build web games that play from a link. App-store packaging can be quoted separately.</p>
+  <b>Can you make a game about a real person or brand?</b><p>Personal gifts, your own brand and clearly-labelled non-commercial parody are fine. I won't make content that harasses anyone or misleads people about who made it.</p>
+  <b>What if my idea is bigger than Premium?</b><p>Message me first and I'll send a custom offer with milestones.</p>
+ </div>
+ <div class=foot><span>Prices are a guide. Message me for a custom quote.</span><span>02 / 02</span></div>
+</section>
+</body>

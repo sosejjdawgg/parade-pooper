@@ -1,0 +1,169 @@
+<!doctype html><meta charset=utf-8><link rel=stylesheet href=base.css>
+<style>
+@page{size:1280px 720px;margin:0}
+.pg{width:1280px;height:720px;position:relative;overflow:hidden;page-break-after:always;padding:60px 70px}
+.pg:last-child{page-break-after:auto}
+h1{font-family:'Silkscreen';font-weight:700;font-size:96px;line-height:.95}
+h2{font-family:'Silkscreen';font-weight:700;font-size:58px;line-height:1}
+em{font-style:normal;color:var(--ginger)}
+.k{font-family:'Silkscreen';font-size:16px;color:var(--gold);letter-spacing:.06em}
+p{font-size:21px;line-height:1.45;color:#dcdad4}
+ul.f{list-style:none;margin-top:22px}
+ul.f li{font-size:19px;line-height:1.35;padding:7px 0 7px 30px;position:relative;color:#eceae4}
+ul.f li:before{content:'';position:absolute;left:4px;top:15px;width:11px;height:11px;background:var(--acc,var(--ginger))}
+.left{width:520px}
+.shots{position:absolute;right:60px;top:60px;bottom:60px;width:560px;display:flex;gap:18px;align-items:center;justify-content:flex-end}
+.shots .phone{width:250px;height:540px;flex:none}
+.shots .card img{display:block;width:100%;height:100%;object-fit:cover}
+.tags{margin-top:22px;display:flex;gap:8px;flex-wrap:wrap}
+.tags span{font-family:'Silkscreen';font-size:14px;padding:6px 10px;border-radius:6px;background:#26262f}
+.url{position:absolute;left:70px;bottom:46px;font-family:'Silkscreen';font-size:15px;color:var(--mute)}
+.num{position:absolute;right:70px;bottom:40px;font-family:'Silkscreen';font-size:15px;color:#555}
+.stat{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;margin-top:44px}
+.stat div{background:#1f1f28;border-radius:14px;padding:22px}
+.stat b{display:block;font-family:'Silkscreen';font-size:46px;color:var(--gold)}
+.stat span{font-size:17px;color:#cfcdc7}
+</style>
+<body>
+
+<section class="pg dots">
+ <div class=k>GAME DEVELOPMENT PORTFOLIO</div>
+ <h1 style="margin-top:24px;font-size:62px">GAMES<br>PEOPLE<br><em>ACTUALLY<br>PLAY.</em></h1>
+ <p style="margin-top:28px;width:520px">Six original games, designed, drawn, coded, scored and launched. Every one of them plays in a phone browser right now. No download.</p>
+ <div class=shots style="gap:14px">
+  <div class=phone style="width:200px;height:430px;transform:rotate(-5deg) translateY(30px)"><img src="img/gallop_play.png"></div>
+  <div class=phone style="width:220px;height:470px"><img src="img/kayak_play.png"></div>
+  <div class=phone style="width:200px;height:430px;transform:rotate(5deg) translateY(30px)"><img src="img/kick_player.jpg"></div>
+ </div>
+ <div class=url>solidsosej.itch.io</div>
+</section>
+
+<section class="pg dots">
+ <div class=k>WHAT I DO</div>
+ <h2 style="margin-top:18px">ONE DEVELOPER.<br><em>THE WHOLE GAME.</em></h2>
+ <p style="margin-top:22px;width:900px">From a one-line idea to a launched game with a store page and a trailer. I handle design, art, code, audio and release, so you deal with one person and get one consistent vision.</p>
+ <div class=stat>
+  <div><b>6</b><span>original games live and playable on itch.io</span></div>
+  <div><b>6</b><span>genres: survivor-like, pet sim, physics, puzzle, trivia, jumper</span></div>
+  <div><b>4</b><span>platforms: phone, desktop browser, PICO-8, retro handhelds</span></div>
+  <div><b>60</b><span>fps target on mid-range phones, with touch and tilt controls</span></div>
+ </div>
+ <div class=url>solidsosej.itch.io</div><div class=num>02</div>
+</section>
+
+<section class="pg dots" style="--acc:var(--ginger)">
+ <div class=left>
+  <div class=k>SURVIVOR-LIKE RUNNER &middot; PARODY</div>
+  <h2 style="margin-top:14px">VAPE KAYAK</h2>
+  <p style="margin-top:16px">A one-thumb endless runner that grows into bullet-heaven chaos. Steer down procedural canals, collect vapes to level up and turn a small puff into screen-filling clouds.</p>
+  <ul class=f>
+   <li>3 biomes, 4 weapons with evolutions, passives and a meta-upgrade shop</li>
+   <li>1-bit pixel art with a reactive, health-based HUD portrait</li>
+   <li>Original chiptune menu theme, seamless music loops and crossfades</li>
+   <li>Shipped as browser, single-file HTML, PICO-8 cart and a handheld console port, plus a vertical video trailer</li>
+  </ul>
+  <div class=tags><span>HTML5 canvas</span><span>Procedural</span><span>Mobile-first</span><span>Ports</span></div>
+ </div>
+ <div class=shots><div class=phone><img src="img/kayak_play.png"></div><div class=phone><img src="img/kayak_howto.png"></div></div>
+ <div class=url>solidsosej.itch.io/angela-rayner-vape-kayak</div><div class=num>03</div>
+</section>
+
+<section class="pg dots" style="--acc:var(--red)">
+ <div class=left>
+  <div class=k>VIRTUAL PET + WAVE SURVIVAL</div>
+  <h2 style="margin-top:14px">BONES</h2>
+  <p style="margin-top:16px">Raise a rottweiler pup, then take him to the park and bark it into line. Two games in one, with a third hidden inside.</p>
+  <ul class=f>
+   <li>Pet care loop: feed, walk, play and check in on the DOGCAM</li>
+   <li>DOGPARK wave survival: birds, cats, nut-throwing squirrels and a boss fight</li>
+   <li>Recruit allies, upgrades between waves and an unlockable night mode</li>
+   <li>Bonus SHEEP HERDING mode and eleven switchable UI themes</li>
+  </ul>
+  <div class=tags><span>Virtual pet</span><span>Boss battle</span><span>Themes</span></div>
+ </div>
+ <div class=shots style="flex-direction:column;justify-content:center;width:600px">
+  <div class=card style="width:600px;height:250px"><img src="img/bones_cover.png" style="object-position:50% 0%"></div>
+  <div class=card style="width:600px;height:250px"><img src="img/bones_themes.jpg"></div>
+ </div>
+ <div class=url>solidsosej.itch.io/bones-mans-best-friend</div><div class=num>04</div>
+</section>
+
+<section class="pg dots" style="--acc:var(--sky)">
+ <div class=left>
+  <div class=k>PHYSICS PUZZLE</div>
+  <h2 style="margin-top:14px">SOCKS!</h2>
+  <p style="margin-top:16px">Squishy sock physics. Grab a sock, fling it into the drawer of the same colour and keep the pile under the red line.</p>
+  <ul class=f>
+   <li>Five-level campaign with 25 stars to win</li>
+   <li>Power bubbles: Freeze, Magnet, Pair Pulse and Soft Lock</li>
+   <li>Unlockable cosmetics, a Quick Game mode and a rotating Daily Pile</li>
+   <li>Bright cartoon art, ready-made store banners</li>
+  </ul>
+  <div class=tags><span>Soft-body physics</span><span>Campaign</span><span>Daily challenge</span></div>
+ </div>
+ <div class=shots style="flex-direction:column;justify-content:center;width:600px">
+  <div class=card style="width:600px;height:250px"><img src="img/socks_flick.png"></div>
+  <div class=card style="width:600px;height:250px"><img src="img/socks_power.png"></div>
+ </div>
+ <div class=url>solidsosej.itch.io/socks</div><div class=num>05</div>
+</section>
+
+<section class="pg dots" style="--acc:var(--leaf)">
+ <div class=left>
+  <div class=k>PHYSICS COMEDY</div>
+  <h2 style="margin-top:14px">GALLOP</h2>
+  <p style="margin-top:16px">A very awkward horse. Four coloured buttons, one per leg, and a big heavy head that tips him over. Learning to walk is the game.</p>
+  <ul class=f>
+   <li>Ragdoll physics tuned to be hard but funny</li>
+   <li>Colour-coded controls that teach themselves</li>
+   <li>Signposted course with timing and fail states</li>
+   <li>Built for touch first, playable on desktop too</li>
+  </ul>
+  <div class=tags><span>Physics</span><span>Multi-touch</span><span>Comedy</span></div>
+ </div>
+ <div class=shots><div class=phone><img src="img/gallop_play.png"></div><div class=card style="width:280px;height:540px"><img src="img/gallop_cover.png"></div></div>
+ <div class=url>solidsosej.itch.io/gallop</div><div class=num>06</div>
+</section>
+
+<section class="pg dots" style="--acc:var(--gold)">
+ <div class=left>
+  <div class=k>FOOTBALL TRIVIA + FIXTURES</div>
+  <h2 style="margin-top:14px">KICK-OFF</h2>
+  <p style="margin-top:16px">A football fan's pocket app: trivia rounds, a player creator, unlockable club legends and live news and fixtures pulled from the web.</p>
+  <ul class=f>
+   <li>Quiz rounds with multiple-choice questions and scoring</li>
+   <li>Custom player creator: team, build, skin, kit and shoes</li>
+   <li>Club-by-club unlock progression</li>
+   <li>Live data feed for news, fixtures and transfers</li>
+  </ul>
+  <div class=tags><span>Trivia</span><span>Live data</span><span>Retro UI</span></div>
+ </div>
+ <div class=shots><div class=phone><img src="img/kick_player.jpg"></div><div class=card style="width:280px;height:540px"><img src="img/kick_clubs.jpg" style="object-position:50% 0"></div></div>
+ <div class=url>solidsosej.itch.io/penalty-trivia-kickup</div><div class=num>07</div>
+</section>
+
+<section class="pg dots" style="--acc:var(--sky)">
+ <div class=left>
+  <div class=k>ENDLESS JUMPER</div>
+  <h2 style="margin-top:14px">DOODLE JOHNP</h2>
+  <p style="margin-top:16px">A classic vertical bounce-and-climb, built around a custom character. A quick, replayable score chaser and the kind of game that makes a great birthday gift or brand promo.</p>
+  <ul class=f>
+   <li>Bounce-and-climb platforming with a running score</li>
+   <li>Your face, friend, mascot or product as the hero</li>
+   <li>Instant play from a link: ideal for sharing</li>
+  </ul>
+  <div class=tags><span>Endless</span><span>Custom character</span><span>Shareable</span></div>
+ </div>
+ <div class=shots><div class=card style="width:470px;height:540px"><img src="img/doodle_play.jpg"></div></div>
+ <div class=url>solidsosej.itch.io/doodle-johnp</div><div class=num>08</div>
+</section>
+
+<section class="pg dots">
+ <div class=k>YOUR TURN</div>
+ <h1 style="margin-top:24px">WHAT SHALL<br>WE <em>MAKE?</em></h1>
+ <p style="margin-top:30px;width:720px">A game for your brand, your friend's birthday, your class, your band or your own big idea. Message me with a sentence about it and I'll reply with how I'd build it, what it costs and how long it takes.</p>
+ <div class=tags style="margin-top:30px"><span>Branded mini-games</span><span>Personalised gift games</span><span>Prototypes</span><span>Parody + satire</span><span>Retro ports</span></div>
+ <div class=shots style="width:380px"><div class=phone style="width:250px"><img src="img/kayak_art.png"></div></div>
+ <div class=url>Play the portfolio free: solidsosej.itch.io</div>
+</section>
+</body>
