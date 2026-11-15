@@ -41,8 +41,8 @@ Message me before ordering, and I'll reply with how I'd build it.
 | | BASIC | STANDARD | PREMIUM |
 |---|---|---|---|
 | Name | Mini-game | Full game | Launch-ready |
-| Description | One-mechanic mini-game for gifts, jokes or promos. Mobile browser build + source. | Complete polished game with levels/upgrades, custom art, music & SFX, menus and saves. | Bigger game with extra modes, original theme tune, store page art kit, trailer and an extra platform port. |
-| Price (suggested) | $120 | $350 | $800 |
+| Description | One-mechanic mini-game like Doodle JohnP or Gallop. Mobile browser build + source. | Complete game like Socks! or Kick-Off: levels/upgrades, custom art, music & SFX, menus and saves. | Launch-ready game like Vape Kayak or Bones: extra modes, original theme tune, store art kit, trailer and an extra platform port. |
+| Price | £120 | £320 | £600 |
 | Delivery | 5 days | 14 days | 28 days |
 | Revisions | 1 | 3 | 5 |
 | Source code | ✓ | ✓ | ✓ |
@@ -53,11 +53,11 @@ Message me before ordering, and I'll reply with how I'd build it.
 | Trailer + store art | - | - | ✓ |
 
 ## Gig extras (optional add-ons)
-- Extra fast delivery: +$60 (Basic), +$120 (Standard)
-- Single-file HTML version (one file you can send anyone): $25
-- Vertical video trailer for TikTok / Shorts / Reels: $60
-- PICO-8 or handheld console port: $150+
-- Extra character or level pack: $40
+- Extra fast delivery: +£50 (Basic), +£100 (Standard)
+- Single-file HTML version (one file you can send anyone): £20
+- Vertical video trailer for TikTok / Shorts / Reels: £50
+- PICO-8 or handheld console port: from £120
+- Extra character or level pack: £30
 
 ## FAQ (paste each pair)
 **Can I see your work first?**
@@ -101,6 +101,7 @@ Yes. Message me and I'll send a custom offer split into milestones.
 Indie game developer making fun, polished mobile and browser games. I design, draw, code, score and launch every game myself, from pixel-art arcade survivors to cartoon physics puzzles, virtual pets and football trivia. Six of my games are live on itch.io and free to play. I love turning a one-line idea, an in-joke or a brand into something people actually want to play and share. Message me with your idea and I'll tell you how I'd make it.
 
 ## Notes before publishing
-- Prices are suggestions for a new seller: start lower to win your first reviews, then raise them.
+- Each package names the portfolio games it matches, so buyers can play exactly the quality they are paying for.
+- Fiverr may ask you to enter prices in US dollars and convert them for buyers. If so, enter the dollar amount that matches £120 / £320 / £600 at the current exchange rate.
 - Fiverr doesn't allow external links or contact details in gig images or text. The itch.io address appears in the PDF portfolio. If Fiverr flags it, remove the URL lines (the games' names still work as proof).
 - Check you're happy with Vape Kayak (political parody) and the club names in KICK-OFF appearing in a commercial listing. If not, the hero image and portfolio work without them.
