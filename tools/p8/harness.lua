@@ -271,6 +271,24 @@ if script == "shots" then
   C.hurt, C.die = hurt0, die0 C.inv = 0 C.hp = 1 C.hurt("swan") for _ = 1, 120 do step() end dump("10_over")
   press(3) press(4) wait(20) dump("11_shop")
   print("sfx played:", #sfxlog, "music calls:", table.concat(musiclog, ","))
+elseif script == "gif" then
+  -- frame sequences for promo GIFs (every 2nd frame = 30fps)
+  local function rec(name, n, input) for f = 1, n do step(input) if f % 2 == 0 then dump(string.format("%s_%04d", name, f / 2)) end end end
+  wait(30) rec("a_title", 240)
+  press(4) wait(10) press(4) wait(30)
+  if C.mode ~= "play" then C.new_run() end
+  local hurt0, die0 = C.hurt, C.die
+  C.hurt, C.die = function() end, function() end
+  for _ = 1, 60 * 6 do step(bot) end
+  rec("b_canal", 360, function() bot() if C.mode == "lvl" then C.choose(1) end end)
+  C.dist = 900 for _ = 1, 60 * 6 do step(bot) if C.mode == "lvl" then C.choose(1) end end
+  C.lv.storm, C.lv.rings, C.lv.nova, C.lv.cloud, C.lv.extra, C.lv.bat = 3, 2, 3, 6, 2, 2 C.stats()
+  rec("c_desert", 300, function() bot() if C.mode == "lvl" then C.choose(1) end end)
+  C.dist = 2100 C.ev.cloud = true C.lv.storm = 5 C.stats()
+  for _ = 1, 60 * 8 do step(bot) if C.mode == "lvl" then C.choose(1) end end
+  rec("d_jungle", 360, function() bot() if C.mode == "lvl" then C.choose(1) end end)
+  C.pend = 1 step() rec("e_levelup", 120)
+  C.choose(1)
 elseif script:sub(1, 4) == "soak" then
   local secs = tonumber(script:sub(6)) or 300
   wait(30) press(4) wait(40) press(4) wait(20)

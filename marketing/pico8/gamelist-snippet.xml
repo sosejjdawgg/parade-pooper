@@ -1,0 +1,11 @@
+<!-- EmulationStation box art: copy boxart-512.png to EASYROMS/pico-8/images/vape-kayak.png,
+     then add this <game> entry inside <gameList> in EASYROMS/pico-8/gamelist.xml
+     (create the file with <?xml version="1.0"?><gameList></gameList> if it doesn't exist). -->
+<game>
+  <path>./vape-kayak.p8</path>
+  <name>Angela Rayner's: Vape Kayak</name>
+  <desc>Paddle a kayak down an endless canal, collect spinning vapes and level up until your clouds melt whole hordes. A free, non-commercial parody. Not affiliated with anyone.</desc>
+  <image>./images/vape-kayak.png</image>
+  <genre>Action / Endless runner</genre>
+  <players>1</players>
+</game>
