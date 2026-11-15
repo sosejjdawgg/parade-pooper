@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<gameList>
+  <game>
+    <path>./Vape Kayak.sh</path>
+    <name>Angela Rayner's: Vape Kayak</name>
+    <desc>A free, non-commercial political parody. Paddle Angie's kayak down the canal, hoover up vapes, blow clouds at everything and survive the bullet-heaven chaos.</desc>
+    <image>./vapekayak/screenshot.png</image>
+    <genre>Action</genre>
+    <players>1</players>
+  </game>
+</gameList>

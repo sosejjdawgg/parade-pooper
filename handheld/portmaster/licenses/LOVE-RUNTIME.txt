@@ -1,0 +1,2 @@
+This port runs on LÖVE 11.5 (https://love2d.org), zlib licence, which is supplied by PortMaster and is not
+included in this package.

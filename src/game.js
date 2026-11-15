@@ -316,7 +316,8 @@ function damageEnemy(e, dmg) {
   if (e.hp > 0) return;
   const d = ENEMIES[e.type];
   e.dead = true; G.kills++;
-  if (e.puffs) { const s = G.puffStats[e.type] || (G.puffStats[e.type] = [0, 0]); s[0] += e.puffs; s[1]++; }   // balance telemetry: puffs per kill gainXp(d.xp);
+  if (e.puffs) { const s = G.puffStats[e.type] || (G.puffStats[e.type] = [0, 0]); s[0] += e.puffs; s[1]++; }   // balance telemetry: puffs per kill
+  gainXp(d.xp);
   burst(e.x, e.wy, d.big ? 16 : 6, d.big ? 120 : 80, 0.35, d.big ? 3 : 2);
   G.shake = Math.max(G.shake, JUICE.SHAKE_KILL); sfx.kill();
   if (d.tea && G.hp < G.maxHp && Math.random() < d.tea) addPickup('tea', e.x, e.wy);

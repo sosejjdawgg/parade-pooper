@@ -1,0 +1,32 @@
+{
+    "version": 2,
+    "name": "vapekayak.zip",
+    "items": [
+        "Vape Kayak.sh",
+        "vapekayak"
+    ],
+    "items_opt": [],
+    "attr": {
+        "title": "Angela Rayner's: Vape Kayak",
+        "porter": [
+            "parade-pooper"
+        ],
+        "desc": "A free, non-commercial political parody. Paddle Angie's kayak down the canal, hoover up vapes, blow clouds at everything and survive the bullet-heaven chaos. Like-for-like port of the browser game.",
+        "inst": "Ready to run. Just copy to ports and play.",
+        "genres": [
+            "action",
+            "arcade"
+        ],
+        "image": {},
+        "rtr": true,
+        "exp": false,
+        "runtime": [],
+        "store": [],
+        "availability": "full",
+        "reqs": [],
+        "arch": [
+            "aarch64",
+            "x86_64"
+        ]
+    }
+}
