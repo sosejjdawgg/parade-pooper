@@ -364,7 +364,9 @@ function upd_clouds()
   local t,k=c.age/c.life,c.k
   if t>=1 then c.dead=true else
    if k==1 then c.vx,c.vy=c.vx*.973,c.vy*.973 end
-   if k==3 then c.x,c.y=px,py else c.x,c.y=c.x+c.vx,c.y+c.vy+(k==4 and 0 or sh) end
+   -- puffs and rings keep pace with the kayak (as in the browser game);
+   -- the trail and smoke stay in the water and fall behind
+   if k==3 then c.x,c.y=px,py else c.x,c.y=c.x+c.vx,c.y+c.vy+(k%3==1 and 0 or sh) end
    c.r=c.r0+(c.r1-c.r0)*(k==1 and 1-(1-t)^2 or k==2 and min(1,t*4) or k==4 and sqrt(t) or t)
    -- the trail ticks 4x a second; the rest hit each enemy once
    if k<5 and (k!=2 or fr%15==0) then
