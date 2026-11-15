@@ -95,6 +95,10 @@ export const BIOMES = {
 };
 
 // Shield from the shop: recharge time in seconds per level. Big enemies (crocs) ignore it.
+// Ramming: while boosting, the very tip of the kayak destroys any enemy it hits, at the cost of some boost.
+// The rest of the kayak stays vulnerable. (Boost comes from the Vape Engine.)
+export const RAM = { MIN_BURST: 30, TIP_Y: 17, TIP_W: 3, TIP_H: 4, BOOST_KEEP: 0.5, BOOST_KEEP_BIG: 0.2 };
+
 export const IMMUNITY = { COOLDOWN: [10, 8, 5, 3, 2], RADIUS: 21 };
 
 // Late game: the banks turn red and hurt on contact, and extra hazards hug the sides.

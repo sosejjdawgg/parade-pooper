@@ -1,5 +1,5 @@
 // Draws the world and the in-run HUD. Three colours only: black, white, ginger.
-import { VIEW, COLORS, VAPING, JUICE, SIDE_ART, IMMUNITY, PLAYER } from './config.js';
+import { VIEW, COLORS, VAPING, JUICE, SIDE_ART, IMMUNITY, PLAYER, RAM } from './config.js';
 import { ctx, view, rect, box, text, textO, textW, draw, drawDisc, face, sideArt, SPR, hash } from './gfx.js';
 import { G, vapes, enemies, hazards, clouds, parts, floaters, orbs, biomeAt, dangerAt, leftAt, rightAt, playerY, metres } from './game.js';
 import { save, shopLvl } from './platform.js';
@@ -197,6 +197,10 @@ export function drawWorld(mode = 'full') {
     const R = IMMUNITY.RADIUS, cd = IMMUNITY.COOLDOWN[shopLvl('immunity') - 1];
     if (G.shieldT <= 0) drawDisc(G.px, PY, R + (((G.t * 4) | 0) & 1), 3);
     else { const n = Math.floor((1 - G.shieldT / cd) * 16); ctx.fillStyle = FG; for (let i = 0; i < n; i++) { const a = i / 16 * 6.283 - 1.571; ctx.fillRect(Math.round(G.px + Math.cos(a) * R), Math.round(PY + Math.sin(a) * R), 2, 2); } }
+  }
+  if (full && !G.dead && G.burst >= RAM.MIN_BURST) {        // armed ram: a flickering spike of light off the bow
+    const x = Math.round(G.px), y = PY - 21, f = ((G.t * 20) | 0) & 1;
+    rect(x - 1, y - 2 - f, 3, 3); rect(x, y - 5 - f, 1, 3); rect(x - 3, y + 1, 1, 1); rect(x + 3, y + 1, 1, 1);
   }
   if (full) drawHazards(true);
   drawFx();

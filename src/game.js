@@ -1,7 +1,7 @@
 // Simulation: canal, chunks, pickups, enemies, weapons, level-ups. No drawing here.
 import {
   VIEW, WORLD, PLAYER, ENGINE, XP, PICKUPS, BIOMES, HAZARDS, ENEMIES, SPAWN,
-  WEAPONS, PASSIVES, EVOLUTIONS, LEVELUP, REWARD, JUICE, VAPING, FLAVOUR, SIDE_ART, IMMUNITY, BANKS,
+  WEAPONS, PASSIVES, EVOLUTIONS, LEVELUP, REWARD, JUICE, VAPING, FLAVOUR, SIDE_ART, IMMUNITY, BANKS, RAM,
 } from './config.js';
 import { view } from './gfx.js';
 import { save, shopLvl, writeSave, sfx, input } from './platform.js';
@@ -479,6 +479,13 @@ function updateEnemies(dt) {
     const l = leftAt(e.wy) + e.r + 2, r = rightAt(e.wy) - e.r - 2;
     if (e.x < l) { e.x = l; if (e.vx < 0) e.vx = -e.vx; } else if (e.x > r) { e.x = r; if (e.vx > 0) e.vx = -e.vx; }
     if (e.wy < below) { e.dead = true; continue; }
+    if (G.burst >= RAM.MIN_BURST && Math.abs(e.x - G.px) < e.r + RAM.TIP_W && Math.abs(e.wy - (G.dist + RAM.TIP_Y)) < e.r + RAM.TIP_H) {
+      // boosting: the tip of the kayak rams it. Obliterated, but it knocks the boost down
+      G.burst *= d.big ? RAM.BOOST_KEEP_BIG : RAM.BOOST_KEEP;
+      damageEnemy(e, 1e6); burst(e.x, e.wy, 16, 160, 0.45, 3); addFloater('RAMMED!', e.x, e.wy + 12, 1);
+      G.shake = Math.max(G.shake, 4); G.hitstop = Math.max(G.hitstop, 0.04); sfx.kill();
+      continue;
+    }
     if (Math.abs(e.x - G.px) < e.r + PLAYER.HIT_W && Math.abs(e.wy - G.dist) < e.r + PLAYER.HIT_H && G.inv <= 0) {
       if (shopLvl('immunity') && G.shieldT <= 0 && !d.big) {            // political immunity: it dies, you don't
         G.shieldT = IMMUNITY.COOLDOWN[shopLvl('immunity') - 1];
