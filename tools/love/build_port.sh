@@ -23,7 +23,7 @@ done
 
 cp "$PM/Vape Kayak.sh" "$STAGE/"
 cp "$PM/port.json" "$PM/README.md" "$PM/gameinfo.xml" "$STAGE/vapekayak/"
-cp -r "$PM/licenses" "$STAGE/vapekayak/"
+cp -r "$PM/licenses" "$PM/runtime" "$STAGE/vapekayak/"; chmod +x "$STAGE/vapekayak/runtime/love.aarch64"
 if [ -f "$PM/screenshot.png" ]; then cp "$PM/screenshot.png" "$STAGE/vapekayak/"; fi
 # PortMaster scripts must have LF endings and be executable
 sed -i 's/\r$//' "$STAGE/Vape Kayak.sh"; chmod +x "$STAGE/Vape Kayak.sh"

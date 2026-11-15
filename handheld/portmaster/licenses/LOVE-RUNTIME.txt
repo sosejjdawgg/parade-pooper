@@ -1,2 +1,9 @@
-This port runs on LÖVE 11.5 (https://love2d.org), zlib licence, which is supplied by PortMaster and is not
-included in this package.
+This port runs on LÖVE 11.5 (https://love2d.org, zlib licence).
+
+PortMaster's own LÖVE 11.5 runtime is used when it is installed. For older PortMaster
+versions without it, a copy of the same aarch64 runtime from PortMaster-GUI
+(https://github.com/PortsMaster/PortMaster-GUI, runtimes/love_11.5) is included in runtime/:
+  liblove-11.5.so      LÖVE        zlib licence
+  libluajit-5.1.so.2   LuaJIT      MIT licence
+  libmodplug.so.1      libmodplug  public domain
+  libogg.so.0          libogg      BSD 3-clause licence

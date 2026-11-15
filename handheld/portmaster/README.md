@@ -31,3 +31,8 @@ phone tilt is replaced by the stick.
 ## Legal
 A free, non-commercial parody with no affiliation to anyone it depicts. Music: "Riding a UFO" and "Arabian Dancer" by
 harayu, CC-BY 3.0. See `licenses/` and the in-game About and Legal screen.
+
+## If it opens and closes straight away
+Open `ports/vapekayak/log.txt` on the SD card (put the card in a computer). It says which LÖVE runtime was used
+and why the game stopped. Updating PortMaster (Ports > PortMaster) usually fixes launch problems. A copy of the
+LÖVE runtime is included in `runtime/` for older PortMaster versions that don't have one.
