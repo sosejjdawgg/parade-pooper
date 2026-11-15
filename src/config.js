@@ -72,7 +72,8 @@ export const BIOMES = {
   // riverbanks: [bright edge, land colour] per biome. The land fades to black towards the screen edges
   // through ordered dither. FADE rows are [distance from the edge, band width, pixel density].
   BANK_COLORS: [['#4dff6a', '#1f9a3c'], ['#ffe04a', '#c9871c'], ['#ff5a3c', '#b0161f']],
-  BANK_FADE: [[0, 9, 1], [9, 11, 0.75], [20, 13, 0.5], [33, 15, 0.25], [48, 18, 0.125], [66, 20, 0.0625]],
+  BANK_FADE: [[0, 12, 1], [12, 24, 0.5], [36, 36, 0.25]],   // like the PICO-8 cart: solid, chequered, sparse
+  BANK_DITHER_PX: 3,         // size of one dither square (a PICO-8 pixel is about 3 of ours)
   DESERT_AT: 650,            // metres where the blend into desert starts
   JUNGLE_AT: 1700,
   BLEND: 220,                // metres a transition takes

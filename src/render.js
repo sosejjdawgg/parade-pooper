@@ -37,9 +37,9 @@ const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5], ditherFill
 function ditherFill(color, density) {
   const key = color + density;
   if (ditherFills[key]) return ditherFills[key];
-  const c = document.createElement('canvas'); c.width = c.height = 4;
+  const px = BIOMES.BANK_DITHER_PX, c = document.createElement('canvas'); c.width = c.height = 4 * px;
   const g = c.getContext('2d'); g.fillStyle = color;
-  for (let i = 0; i < 16; i++) if (BAYER[i] / 16 < density) g.fillRect(i % 4, i >> 2, 1, 1);
+  for (let i = 0; i < 16; i++) if (BAYER[i] / 16 < density) g.fillRect((i % 4) * px, (i >> 2) * px, px, px);
   return ditherFills[key] = ctx.createPattern(c, 'repeat');
 }
 function drawBanks(lo, hi) {
