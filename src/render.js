@@ -1,6 +1,6 @@
 // Draws the world and the in-run HUD. Three colours only: black, white, ginger.
-import { VIEW, COLORS, BIOMES, VAPING, JUICE, SIDE_ART, IMMUNITY, PLAYER } from './config.js';
-import { ctx, view, rect, box, text, textO, textW, draw, drawDisc, face, sideArt, SPR, hash } from './gfx.js';
+import { VIEW, COLORS, BIOMES, VAPING, JUICE, IMMUNITY, PLAYER } from './config.js';
+import { ctx, view, rect, box, text, textO, textW, draw, drawDisc, face, SPR, hash } from './gfx.js';
 import { G, vapes, enemies, hazards, clouds, parts, floaters, orbs, biomeAt, dangerAt, leftAt, rightAt, playerY, metres } from './game.js';
 import { save, shopLvl } from './platform.js';
 
@@ -72,32 +72,6 @@ function drawBanks(lo, hi) {
   }
 }
 /** static bezel: the face is split down the middle and the split sits at the screen edges */
-const borders = {};
-function borderStrip(h) {            // one pre-shaded strip per height: art + vignette, so it sits back into the screen
-  if (borders[h]) return borders[h];
-  const art = sideArt(h); if (!art) return null;
-  const bw = SIDE_ART.BORDER - SIDE_ART.GAP - SIDE_ART.LINE, hw = art.L.width;
-  const make = (src, sx, outerAtLeft) => {
-    const c = document.createElement('canvas'); c.width = bw; c.height = h;
-    const g = c.getContext('2d'); g.drawImage(src, sx, 0, bw, h, 0, 0, bw, h);
-    const ends = g.createLinearGradient(0, 0, 0, h), e = SIDE_ART.VIGNETTE_ENDS, v = SIDE_ART.VIGNETTE;
-    ends.addColorStop(0, `rgba(0,0,0,${v})`); ends.addColorStop(e, 'rgba(0,0,0,0)'); ends.addColorStop(1 - e, 'rgba(0,0,0,0)'); ends.addColorStop(1, `rgba(0,0,0,${v})`);
-    g.fillStyle = ends; g.fillRect(0, 0, bw, h);
-    const side = g.createLinearGradient(0, 0, bw, 0), s0 = SIDE_ART.VIGNETTE_SIDE;      // darker at the screen edge and against the white line
-    side.addColorStop(0, `rgba(0,0,0,${outerAtLeft ? s0 : s0 * 0.8})`); side.addColorStop(0.5, 'rgba(0,0,0,0)'); side.addColorStop(1, `rgba(0,0,0,${outerAtLeft ? s0 * 0.8 : s0})`);
-    g.fillStyle = side; g.fillRect(0, 0, bw, h);
-    return c;
-  };
-  return borders[h] = { L: make(art.R, 0, true), R: make(art.L, hw - bw, false), bw };
-}
-/** static bezel: the face is split down the middle and the split sits at the screen edges */
-function drawBorder() {
-  const B = SIDE_ART.BORDER, h = view.H - (hudShown ? BAR_H : 0), strip = save.sideArt ? borderStrip(h) : null;
-  if (!strip) return;
-  rect(0, 0, B, h, BG); rect(W - B, 0, B, h, BG);
-  ctx.drawImage(strip.L, 0, 0); ctx.drawImage(strip.R, W - strip.bw, 0);
-  rect(strip.bw, 0, SIDE_ART.LINE, h); rect(W - strip.bw - SIDE_ART.LINE, 0, SIDE_ART.LINE, h);     // white inner border
-}
 function drawHazards(top) {
   for (let i = 0; i < hazards.n; i++) {
     const h = hazards.items[i], y = sy(h.wy);
@@ -220,7 +194,6 @@ export function drawWorld(mode = 'full') {
     for (let i = 0; i < n; i++) rect(hash(i * 13 + k * 7) * W, hash(i * 29 + k * 3) * view.H, 1, (20 + G.burst / 4) * JUICE.SPEED_FX);
   }
   ctx.restore();
-  drawBorder();
   if (G.flash > 0) dither(0, 0, W, view.H);
 }
 

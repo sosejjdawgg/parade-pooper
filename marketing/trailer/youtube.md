@@ -13,7 +13,7 @@
 
 > Paddle. Vape. Melt the horde. 💨💥
 >
-> Help Angie collect the vapes, level up, and turn one little puff into total vape cloud chaos. One thumb, free, plays in your browser. Can you beat 4,646 vapes?
+> Help Angie collect the vapes, level up, and turn one little puff into total vape cloud chaos. One thumb, free, plays in your browser. Can you beat 4,649 vapes?
 >
 > ▶ PLAY FREE: (your itch.io link)
 >

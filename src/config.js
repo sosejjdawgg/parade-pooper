@@ -12,11 +12,6 @@ export const VIEW = {
 
 export const COLORS = { BG: '#000000', FG: '#ffffff', GINGER: '#ff5a1f', ENEMY: '#ff1a2e', VAPE: '#a9d6f5' };   // ENEMY = thin outline on hostiles
 
-// Bezel-style border: a static strip of the key art down each side of the screen. The image is split down the
-// middle of the face and the split sits at the screen edges, as if the picture wrapped round behind the game.
-export const SIDE_ART = { SRC: 'art/side.jpg', BORDER: 36, GAP: 4, LINE: 2, LAND_MIN: 14,
-  VIGNETTE: 0.85, VIGNETTE_ENDS: 0.3, VIGNETTE_SIDE: 0.55 };   // LINE = white inner border; VIGNETTE = darkness at top/bottom (0..1), ENDS = how far it reaches (fraction of height), SIDE = shading across the strip   // BORDER = strip width incl. GAP (black strip on its inner side); LAND_MIN = least bank left showing
-
 export const WORLD = { PX_PER_M: 20 };
 
 export const PLAYER = {
@@ -73,6 +68,7 @@ export const PICKUPS = {
 
 export const BIOMES = {
   NAMES: ['BRITISH CANAL', 'DESERT CANAL', 'VOLCANO CANAL'],
+  EDGE_MARGIN: 50,           // the water never comes closer than this to the screen edge, so some bank always shows
   // riverbanks: [bright edge, land colour] per biome. The land fades to black towards the screen edges
   // through ordered dither. FADE rows are [distance from the edge, band width, pixel density].
   BANK_COLORS: [['#4dff6a', '#1f9a3c'], ['#ffe04a', '#c9871c'], ['#ff5a3c', '#b0161f']],
