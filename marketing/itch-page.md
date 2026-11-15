@@ -55,7 +55,7 @@ Every vape is experience. Every level is a choice. A polite little puff of vapou
 **What's in the kayak**
 
 - **One-thumb controls.** Tap left or right. That's it. Attacks fire themselves.
-- **From vulnerable to unstoppable.** Four cloud weapons, six passives and four evolutions, including the Pea Souper and Hurricane Ange.
+- **From vulnerable to unstoppable.** Four cloud weapons, eight passives (including Vape Rings and +1 Cloud) and four evolutions, including the Pea Souper and Hurricane Ange.
 - **Three canals.** British towpaths, a desert of sandbars and heat-haze mirages, and a jungle that is mostly teeth.
 - **A cast of nuisances.** Swans, paparazzi in dinghies, tumbleweeds, piranhas, mosquitoes, crocodiles, low bridges, lock gates and somebody's second home.
 - **A status bar with a face.** She winces, grins, takes a drag and gets steadily more dishevelled as the hearts run out.

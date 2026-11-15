@@ -63,7 +63,7 @@ export function newRun() {
     weapons: { cloud: 1 + shopLvl('starter') }, passives: {}, evo: {},
     cd: { cloud: 0.5, trail: 0, nova: 1.5, rings: 0.5 }, orbA: 0, orbTick: 0, cloudId: 0,
     genY: 240, chunkN: 0, spawnT: 0, shake: 0, flash: 0, hitstop: 0, dead: false, deadT: 0,
-    banner: BIOMES.NAMES[0], bannerT: 2.5, biomeIdx: 0, pending: 0, choices: null, cause: '', result: null, puffT: 0, vapeT: 2.5, dragT: 0, hurtT: 0, grinT: 0, shieldT: 0, danger: false, puffStats: {},
+    banner: BIOMES.NAMES[0], bannerT: 2.5, biomeIdx: 0, pending: 0, choices: null, cause: '', result: null, puffT: 0, vapeT: 2.5, dragT: 0, hurtT: 0, grinT: 0, shieldT: 0, danger: false, puffStats: {}, novaMore: 0, novaGapT: 0,
   });
   G.ph = [rnd(6.28), rnd(6.28), rnd(6.28)];
   G.px = centreAt(0);
@@ -363,10 +363,14 @@ export function choose(i) {
 }
 
 // ---- weapons ----------------------------------------------------------------------
-const DIRS = {
-  1: [0], 3: [0, -0.87, 0.87], 4: [0, 1.571, 3.142, -1.571],
-  6: [0, 1.047, 2.094, 3.142, -2.094, -1.047], 8: [0, 0.785, 1.571, 2.356, 3.142, -2.356, -1.571, -0.785],
-};
+/** cloud directions: up to 3 fan forward; 4 or more spread evenly all round */
+const DIRS = {};
+function dirsFor(n) {
+  if (DIRS[n]) return DIRS[n];
+  const out = n === 1 ? [0] : n === 2 ? [-0.45, 0.45] : n === 3 ? [0, -0.87, 0.87] : Array.from({ length: n }, (_, i) => i / n * 6.283);
+  return DIRS[n] = out;
+}
+const extra = () => G.passives.extra || 0;
 function enemyWithin(range) {
   const r2 = range * range;
   for (let i = 0; i < enemies.n; i++) { const e = enemies.items[i], dx = e.x - G.px, dy = e.wy - G.dist; if (dx * dx + dy * dy < r2) return true; }
@@ -380,7 +384,7 @@ function updateWeapons(dt) {
     if (p.prox && !enemyWithin(p.prox * S.area)) cd.cloud = 0.05;
     else {
       const sp = WEAPONS.cloud.speed * p.size / 13 * S.area;
-      for (const a of DIRS[p.dirs]) {
+      for (const a of dirsFor(p.dirs + extra())) {
         const sx = Math.sin(a), sy = Math.cos(a);
         addCloud('puff', G.px + sx * 10, G.dist + sy * 16, sx * sp, sy * sp, p.size * 0.45 * S.area, p.size * S.area, p.life * S.dur, p.dmg, 0);
       }
@@ -392,6 +396,11 @@ function updateWeapons(dt) {
     if (cd.rings <= 0) {
       const R = PASSIVES.rings, p = R.levels[G.passives.rings - 1]; cd.rings = p.cd * S.cd;
       addCloud('ring', G.px, G.dist + 18, 0, R.speed, 6, p.r * S.area, p.life * S.dur, p.dmg, 0);
+      const M = PASSIVES.extra.miniRing;
+      for (let k = 0; k < extra(); k++) {                     // +1 CLOUD: mini rings peel off to the sides and float forward
+        const side = k % 2 ? 1 : -1, spread = 1 + (k >> 1) * 0.6;
+        addCloud('ring', G.px + side * 8, G.dist + 14, side * M.side * spread, R.speed * M.up, 4, p.r * M.size * S.area, p.life * S.dur, p.dmg, 0);
+      }
       sfx.puff();
     }
   }
@@ -408,13 +417,20 @@ function updateWeapons(dt) {
       const p = wp('nova'); cd.nova = p.cd * S.cd;
       addCloud('nova', G.px, G.dist, 0, 0, 8, p.r * S.area, p.r * S.area / WEAPONS.nova.expand, p.dmg, 0);
       G.shake = Math.max(G.shake, JUICE.SHAKE_NOVA); sfx.nova();
+      G.novaMore = extra(); G.novaGapT = PASSIVES.extra.novaGap;
+    }
+    if (G.novaMore > 0 && (G.novaGapT -= dt) <= 0) {          // +1 CLOUD: follow-up blasts
+      const p = wp('nova'); G.novaMore--; G.novaGapT = PASSIVES.extra.novaGap;
+      addCloud('nova', G.px, G.dist, 0, 0, 8, p.r * S.area, p.r * S.area / WEAPONS.nova.expand, p.dmg, 0);
+      G.shake = Math.max(G.shake, JUICE.SHAKE_NOVA * 0.6); sfx.nova();
     }
   }
   orbs.length = 0;
   if (G.weapons.storm) {
     const p = wp('storm');
     G.orbA += WEAPONS.storm.spin * dt;
-    for (let i = 0; i < p.n; i++) { const a = G.orbA + i / p.n * 6.283; orbs.push({ x: G.px + Math.cos(a) * p.orbit * S.area, wy: G.dist + Math.sin(a) * p.orbit * S.area, r: p.r * S.area }); }
+    const n = p.n + extra();
+    for (let i = 0; i < n; i++) { const a = G.orbA + i / n * 6.283; orbs.push({ x: G.px + Math.cos(a) * p.orbit * S.area, wy: G.dist + Math.sin(a) * p.orbit * S.area, r: p.r * S.area }); }
     if (p.outer) for (let i = 0; i < p.outer; i++) { const a = -G.orbA * 0.7 + i / p.outer * 6.283; orbs.push({ x: G.px + Math.cos(a) * p.orbit * 1.9 * S.area, wy: G.dist + Math.sin(a) * p.orbit * 1.9 * S.area, r: p.r * 1.2 * S.area }); }
     G.orbTick -= dt;
     if (G.orbTick <= 0) {
@@ -437,7 +453,7 @@ function updateClouds(dt) {
       c.x += c.vx * dt; c.wy += (c.vwy + G.speed) * dt;
       c.r = c.r0 + (c.r1 - c.r0) * (1 - (1 - t) * (1 - t));
     } else if (c.kind === 'trail') c.r = c.r0 + (c.r1 - c.r0) * Math.min(1, t * 4);
-    else if (c.kind === 'ring') { c.wy += (c.vwy + G.speed) * dt; c.r = c.r0 + (c.r1 - c.r0) * Math.sqrt(t); }
+    else if (c.kind === 'ring') { c.x += c.vx * dt; c.wy += (c.vwy + G.speed) * dt; c.r = c.r0 + (c.r1 - c.r0) * Math.sqrt(t); }
     else { c.x = G.px; c.wy = G.dist; c.r = c.r0 + (c.r1 - c.r0) * t; }
     const ring = c.kind === 'ring', puff = c.kind === 'puff', nova = c.kind === 'nova' || ring;      // these hit each enemy once
     if (!nova && !puff) { c.tickT -= dt; if (c.tickT > 0) continue; c.tickT += c.tick; }

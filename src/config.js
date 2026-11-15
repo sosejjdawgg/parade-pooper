@@ -201,7 +201,9 @@ export const WEAPONS = {
 
 // ---- In-run passives. Value is per level. -----------------------------------
 export const PASSIVES = {
-  lungs:  { name: 'BIGGER VAPE BATTERY', maxLvl: 5, per: 0.12, desc: '+12% CLOUD SIZE' },
+  lungs:  { name: 'BIGGER VAPE BATTERY', maxLvl: 5, per: 0.2, desc: '+20% SIZE FOR EVERY CLOUD, RING AND TRAIL' },
+  extra:  { name: '+1 CLOUD', maxLvl: 3, desc: '+1 CLOUD FOR EVERY WEAPON EXCEPT VAPETRAIL',
+            novaGap: 0.3, miniRing: { size: 0.55, side: 55, up: 1.4 } },   // extra Big Vape Clouds follow 0.3s apart; extra rings are small, drift sideways and forward
   rings:  { name: 'VAPE RINGS',  maxLvl: 5, desc: 'BLOWS LARGE GROWING HOOPS THAT CUT THROUGH ENEMIES', speed: 60, band: 7,
             levels: [{ dmg: 10, cd: 3.2, r: 42, life: 1.4 }, { dmg: 14, cd: 2.9, r: 52, life: 1.5 }, { dmg: 18, cd: 2.6, r: 62, life: 1.6 },
                      { dmg: 24, cd: 2.3, r: 74, life: 1.7 }, { dmg: 30, cd: 2.0, r: 88, life: 1.8 }] },
