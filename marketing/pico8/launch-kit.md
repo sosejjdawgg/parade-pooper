@@ -33,9 +33,9 @@ The forum takes carts as `.p8.png`. In PICO-8: `load vape-kayak.p8`, then `save 
 
 > A political-satire endless runner that turns into a bullet heaven.
 >
-> You paddle a kayak down a procedurally generated canal, hoovering up spinning vapes. Every vape is XP; every level is a choice of three upgrades. Your little puff of vapour grows into clouds in eight directions, a toxic trail, orbiting storm clouds and blasts that clear the screen. By the jungle, the swans and paparazzi are the ones running.
+> You paddle a kayak down a procedurally generated canal, hoovering up spinning vapes. Every vape is XP; every level is a choice of three upgrades. Your little puff of vapour grows into clouds in eight directions, a toxic trail, orbiting storm clouds and blasts that clear the screen. By the volcano, the swans and paparazzi are the ones running.
 >
-> - Three biomes, each with its own chiptune: British canal, desert, jungle
+> - Three biomes, each with its own chiptune and bank colours: British canal, desert, volcano
 > - 4 weapons plus Vape Rings, 6 passives, 4 evolutions
 > - Cash shop between runs: Vape Engine, Political Immunity and more
 > - Boost-ram enemies with the bow of the kayak
@@ -55,7 +55,7 @@ The forum takes carts as `.p8.png`. In PICO-8: `load vape-kayak.p8`, then `save 
 >
 > [trailer.gif]
 >
-> It starts as a simple runner: dodge barges and low bridges, collect vapes. Then the auto-firing clouds level up until you're melting hordes in the jungle. Built for 60 fps on cheap retro handhelds too. Happy to talk about fitting a survivors-like into 8,192 tokens: the weapon stats all live in `split()` strings.
+> It starts as a simple runner: dodge barges and low bridges, collect vapes. Then the auto-firing clouds level up until you're melting hordes by the volcano. Built for 60 fps on cheap retro handhelds too. Happy to talk about fitting a survivors-like into 8,192 tokens: the weapon stats all live in `split()` strings.
 
 **r/SBCGaming, r/R36S, r/RetroHandhelds**
 

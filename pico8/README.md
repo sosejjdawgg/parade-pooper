@@ -37,8 +37,8 @@ Progress (cash, shop upgrades, best run) is saved by PICO-8's `cartdata` on the 
 The handheld cart keeps the same game, rebuilt for a 128×128 screen, physical buttons and the cart's size limit:
 
 - **Steering:** hold-to-paddle with momentum instead of tap nudges, which suits a d-pad. Menus are d-pad lists; any face button selects.
-- **Everything else from the browser version:** three biomes with their own music, spinning vapes, level-ups with 3 choices, all four cloud weapons plus Vape Rings, +1 Cloud and the four evolutions. Also the enemies with red outlines, tea, cash, the shop (Vape Engine, five-level Engine Tuning, Thick Skin, Political Immunity and the rest), boost ramming, red banks in the late game, the face portrait in a bottom status bar, and the satire.
-- **Music:** original chiptunes written for the cart: an A-minor theme on the canal and title, a phrygian "desert" theme, and a faster jungle version. The browser version's MP3s aren't used: a PICO-8 cart can only hold its own tracker music.
+- **Everything else from the browser version:** three biomes (canal, desert, volcano) with their own music, and banks coloured per biome, spinning vapes, level-ups with 3 choices, all four cloud weapons plus Vape Rings, +1 Cloud and the four evolutions. Also the enemies with red outlines, tea, cash, the shop (Vape Engine, five-level Engine Tuning, Thick Skin, Political Immunity and the rest), boost ramming, red banks in the late game, the face portrait in a bottom status bar, and the satire.
+- **Music:** original chiptunes written for the cart: an A-minor theme on the canal and title, a phrygian "desert" theme, and a faster volcano version. The browser version's MP3s aren't used: a PICO-8 cart can only hold its own tracker music.
 - **Cut for space:** lock gates, the heat-haze mirage barges and the side-art border. The How-to-Play screen is a single page.
 
 ## Development

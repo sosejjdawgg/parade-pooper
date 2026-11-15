@@ -11,16 +11,19 @@
 -- px/metre, start+max scroll, metres to max,
 -- kayak y, damage per hit, base health,
 -- steer accel/max/glide, xp curve (first,
--- step, curve), desert m, jungle m, blend m,
+-- step, curve), desert m, volcano m, blend m,
 -- red banks m, max enemies, enemy hp/km,
 -- boost needed to ram
 ppm,spd0,spd1,rampm,py,hitd,hp0,sac,smax,sfric,xpf,xps,xpc,desm,junm,blendm,redm,maxe,hpgrow,ramb=unpack(split"7,.62,1.12,2600,84,34,100,.3,1.7,.8,50,20,1.5,650,1700,220,1500,36,.35,.18")
+-- bank colours: canal green, desert yellow,
+-- volcano red (bright edge, dark dither)
+bcol,bdark=split"11,10,8",split"3,4,8"
 cwid,cgap,erate=split"66,84,61",split"54,46,37",split".55,1.2,3.2"
 -- vape engine: burst per vape, cap (by tuning)
 badd,bcap,immcd=split".14,.17,.2,.23,.27,.31",split".47,.59,.71,.83,.98,1.13",split"600,480,300,180,120"
 -- weapons by level 1-6; entry 7 is the
 -- evolved form
-cdir,cdmg,crad,clife,ccd=split"1,1,3,3,4,6,8",split"9,12,14,17,21,26,40",split"4.7,5.4,6.1,6.8,7.5,8.2,11",split"33,36,39,42,45,48,57",split"57,51,45,39,33,27,22"
+cdir,cdmg,crad,clife,ccd=split"1,2,3,4,5,6,8",split"9,12,14,17,21,26,40",split"4.7,5.4,6.1,6.8,7.5,8.2,11",split"33,36,39,42,45,48,57",split"57,51,45,39,33,27,22"
 tdmg,trad,tlife=split"5,7,9,11,13,0,18",split"4.7,5.4,6.1,6.8,7.5,0,12",split"96,120,144,168,192,0,240"
 ndmg,nrad,ncd=split"12,18,24,32,42,0,95",split"39,48,57,66,75,0,120",split"324,288,252,216,180,0,168"
 sn,sdmg,sorb,srad,sres=split"2,3,3,4,5,0,7",split"10,12,15,18,22,0,34",split"15,17,20,22,24,0,28",split"3.6,3.9,4.3,4.6,5,0,5.7",split"210,180,156,132,108,0,60"
@@ -43,7 +46,7 @@ cks=parse"snake,snake,snake,snake,snake,snake,snake,snake,cluster,barge,barge,ba
 -- name;costs;effect;flavour
 shop=parse("vape engine;40;every vape = speed burst;the desert island essential|engine tuning;70,140,240,360,500;faster, bigger speed bursts;deputy no more|warm-up puff;80,220;start with a stronger cloud;a cheeky one before conference|fast learner;30,60,100,160,240;+10% xp;left school at 16. learnt anyway|expenses;30,60,100,160,240;+20% cash;airpods sold separately|magnetic hair;25,50,90,140,200;+15% pickup range;attracts vapes and headlines|thick skin;60,120,200,300;+25% max health;for when the sunday papers call|political immunity;80,150,250,400,600;shield kills on touch;recharge 10s, then 8,5,3,2",";",false)
 -- id;name;max;level descriptions
-ups=parse("cloud;vape cloud;6;more damage, faster/three directions/bigger, stronger/four directions/six directions|trail;vapetrail;5;hurts enemies/thicker trail/stronger trail/longer trail/much thicker|nova;big vape clouds;5;blasts the area clear/bigger cloud/faster, stronger/bigger cloud/huge cloud|storm;vape storm;5;orbiting clouds pop on enemies/+1 orbiter/wider, stronger/+1 orbiter/+1 orbiter|rings;vape rings;5;growing hoops cut through enemies/bigger hoops/stronger hoops/faster hoops/huge hoops|bat;bigger vape battery;5;+20% size, every cloud|extra;+1 cloud;3;+1 cloud, every weapon but the trail|chain;chain vaper;5;-8% cooldowns|thick;thicker clouds;5;+15% cloud duration|duty;duty free;5;+30% pickup range|hivis;hi-vis vest;3;+34% max health and a full heal",";",false)
+ups=parse("cloud;vape cloud;6;a weak puff at nearby enemies/two directions/three directions, always on/four directions, all round/five directions, bigger/six directions|trail;vapetrail;5;hurts enemies/thicker trail/stronger trail/longer trail/much thicker|nova;big vape clouds;5;blasts the area clear/bigger cloud/faster, stronger/bigger cloud/huge cloud|storm;vape storm;5;orbiting clouds pop on enemies/+1 orbiter/wider, stronger/+1 orbiter/+1 orbiter|rings;vape rings;5;growing hoops cut through enemies/bigger hoops/stronger hoops/faster hoops/huge hoops|bat;bigger vape battery;5;+20% size, every cloud|extra;+1 cloud;3;+1 cloud, every weapon but the trail|chain;chain vaper;5;-8% cooldowns|thick;thicker clouds;5;+15% cloud duration|duty;duty free;5;+30% pickup range|hivis;hi-vis vest;3;+34% max health and a full heal",";",false)
 for v in all(shop) do v[2]=split(v[2]) end
 for v in all(ups) do v[3],v[4]=tonum(v[3]),split(v[4],"/",false) end
 evos=parse("cloud,bat,pea souper,eight directions. enormous.|storm,chain,hurricane ange,a ring of angry weather.|nova,rings,mushroom cloud,clears the whole screen.|trail,thick,chemtrail,a vast lingering wake of fog.",",",false)
@@ -83,7 +86,8 @@ function wi(id) return ev[id] and 7 or lv[id] end
 function newrow(i)
  local w=lerp3(cwid,biome(dist))+3*sin(p3)
  local c=64+mid(0,(128-w)/2-8,18)*(.6*sin(p1)+.4*sin(p2))
- rl[i],rr[i],rg[i],rd[i]=flr((c-w/2)/2)*2,flr((c+w/2)/2)*2,flr(rnd(9)),dist>=redm
+ -- rg = bank colour; biomes blend row by row
+ rl[i],rr[i],rg[i],rd[i]=flr((c-w/2)/2)*2,flr((c+w/2)/2)*2,flr(biome(dist)+rnd()),dist>=redm
  p1,p2,p3=(p1+.0023)%1,(p2+.005)%1,(p3+.0017)%1
 end
 function row(y) return (top-flr(mid(-189,y,127)))%512 end
@@ -166,7 +170,7 @@ ck={
   addh("vortex",x,-28,0,0) ring8(x,-28,14)
   if rnd()<.5 then addp(3,x+pick{-7,7},-28) end
   return 60 end,
- -- desert sandbars / jungle vines: alternate sides
+ -- desert sandbars / volcano vines: alternate sides
  sand=function() return alt("sand",3,34) end,
  vine=function() return alt("vine",3+flr(rnd(2)),28) end,
 }
@@ -223,7 +227,7 @@ function die(c)
  if dead then return end
  dead,deadt,cause,hp,hstop,shake,flash,sh,cs=true,0,c,0,27,12,10,0,-1
  sfx(9) music(-1,300)
- burstp(px,py,30,2.4) burstp(px,py,10,1.6,9)
+ burstp(px,py,40,2.4)
  local tot=cash+flr((flr(dist/100)+lvl-1)*cashm)
  res={v=vapes,m=flr(dist),l=lvl,k=kills,c=tot,best=vapes>dget(1),t=pick(dtitles),tip=pick(tips)}
  dset(0,min(30000,dget(0)+tot)) dset(1,max(dget(1),vapes)) dset(2,max(dget(2),flr(dist)))
@@ -236,7 +240,7 @@ function collect(p)
  p.dead=true
  local k,n=p.k,p.k==2 and 5 or 1
  if k==4 then
-  if hp<maxhp then hp=min(maxhp,hp+34) float("+health",p.x,p.y) else gain(5) float("lovely",p.x,p.y) end
+  hp=min(maxhp,hp+34) float("+health",p.x,p.y)
   sfx(10)
  elseif k==3 then n=flr(5*cashm) cash=cash+n float("+"..n.." cash",p.x,p.y) sfx(2)
  else
@@ -478,7 +482,7 @@ function upd_play()
  if vapet<=0 and dragt<=0 then dragt,vapet=96,210+rnd(210) end
  dragt=max(0,dragt-1)
  if dragt<60 and dragt%7==1 then addcl(5,px+2,py-2,0,0,1.5,3.5+rnd(2),80+rnd(40),0) end
- if flr(b+.5)~=bi then bi=flr(b+.5) banner,bant=({"british canal","desert canal","jungle canal"})[bi+1],180 song(bi) end
+ if flr(b+.5)~=bi then bi=flr(b+.5) banner,bant=({"british canal","desert canal","volcano canal"})[bi+1],180 song(bi) end
  bant=max(0,bant-1)
  if dist>50 then
   spawna=spawna+lerp3(erate,b)*(1+dist/1000*.7)*sqrt(spd/spd0)*min(1.8,.55+lvl*.045)/60
@@ -543,19 +547,30 @@ function clouds()
   fillp()
  end
 end
+-- banks: bright edge, then the land pixelates
+-- out to black towards the screen edges
 function banks()
- local pl,pr,st=0,0,flr(biome(dist)+.5)
+ for b=0,3 do
+  fillp(({0,0,0x5a5a+.5,0x7d7d+.5})[b+1])
+  for y=0,109 do
+   local i=(top-y)%512
+   local l,r=rl[i],rr[i]
+   if b==0 then rectfill(0,y,l-3,y,0) rectfill(r+2,y,127,y,0)
+   else
+    local c,w,o=bdark[rg[i]+1],({4,8,12})[b],({3,7,15})[b]
+    rectfill(l-o-w+1,y,l-o,y,c) rectfill(r+o-1,y,r+o+w-2,y,c)
+   end
+  end
+ end
+ fillp()
+ local pl,pr=0,0
  for y=0,109 do
   local i=(top-y)%512
-  local l,r,g=rl[i],rr[i],rg[i]
-  local c=rd[i] and 8 or 7
-  rectfill(0,y,l-3,y,0) rectfill(r+2,y,127,y,0)
+  local l,r=rl[i],rr[i]
+  local c=rd[i] and (fr%20<10 and 7 or 8) or bcol[rg[i]+1]
   line(l-2,y,l-1,y,c) line(r,y,r+1,y,c)
   if y>0 then line(min(l,pl)-2,y,max(l,pl)-1,y,c) line(min(r,pr),y,max(r,pr)+1,y,c) end
   pl,pr=l,r
-  if g<2 then
-   line(l-7-g*9,y,l-7-g*9+2-st,y,c) line(r+4+g*9,y,r+6+g*9-st,y,c)
-  end
  end
 end
 function dvape(x,y,a,big)
@@ -580,7 +595,7 @@ function kayak()
  rectfill(x-6,py+f-1,x-5,py+f+1,7) rectfill(x+5,py-f-1,x+6,py-f+1,7)
  spr(1,x-4,py-8,1,2)
  if mode=="play" and sl(8)>0 then
-  for i=1,(1-shield/immcd[sl(8)])*12 do pset(x+cos(i/12)*9,py+sin(i/12)*9,7) end
+  if shield<=0 then circ(x,py,9,7) end
  end
 end
 function draw_world(full)
@@ -610,7 +625,7 @@ function hud()
  rectfill(0,110,127,127,0) line(0,110,127,110,7)
  line(0,111,127*min(1,xp/xpn),111,12)
  rect(0,112,54,127,7) rect(73,112,127,127,7)
- print(vapes.." vapes",3,114,7) print("hp "..max(0,flr(hp)).."%",3,121,hp<=hitd and 8 or 7)
+ print(vapes.." vapes",3,114,7) print("hp "..max(0,flr(hp)).."%",3,121,7)
  print("lv "..lvl,76,114,7) spr(15,103,114) print(cash,107,114,9) print(flr(dist).."m",76,121,7)
  local f=hp/maxhp
  palt(0,false) spr(32+2*((dead or hp<=0) and 5 or hurtt>0 and 3 or dragt>60 and 4 or f>.66 and 0 or f>.33 and 1 or 2),56,112,2,2) palt(0,true)
@@ -645,7 +660,7 @@ function d_how()
 end
 function d_lvl()
  fillp(0x5a5a+.5) rectfill(0,0,127,109,0) fillp()
- rectfill(40,1,87,7,0) pc("level up!",2,9)
+ pc("level up!",2,9)
  for i=1,#choices do
   local c,y,s=choices[i],10+(i-1)*33,sel==i
   local fg=s and 0 or 7
@@ -658,7 +673,6 @@ end
 function d_over()
  cls() rect(1,1,126,126,7)
  pc(res.t,5) pc(causes[cause] or "",13,9) pc(res.v.." vapes",25)
- if res.best then pc("new best!",32,fr%30<15 and 9 or 7) end
  for i,r in pairs{{"distance",res.m.."m"},{"level",res.l},{"melted",res.k},{"tax advice taken","none"},{"cash banked","+"..res.c}} do
   local v=tostr(r[2]) print(r[1],8,41+i*6,6) print(v,120-#v*4,41+i*6,7)
  end
