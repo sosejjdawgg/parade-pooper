@@ -42,14 +42,19 @@ P.srand = function(s) math.randomseed(s) end
 P.tostr = function(v) if type(v) == "number" and v == flr(v) then return string.format("%d", v) end return tostring(v) end
 P.tonum = tonumber
 P.sub = function(s, i, j) return string.sub(s, i, j) end
-P.split = function(s, sep, conv)
-  s = tostring(s); sep = sep or ","
+-- matches Fake-08 (z8lua): numbers convert only when the 3rd argument is
+-- absent or truthy; an explicit nil means "no conversion"
+P.split = function(...)
+  local s, sep, conv = ...
+  if select("#", ...) < 3 then conv = true end
+  conv = conv and true or false
+  s = tostring(s); sep = (type(sep) == "string" and sep ~= "") and sep or ","
   local out, start = {}, 1
   while true do
     local i = string.find(s, sep, start, true)
     local piece = string.sub(s, start, (i or 0) - 1)
     if i == nil then piece = string.sub(s, start) end
-    if conv ~= false and tonumber(piece) then piece = tonumber(piece) end
+    if conv and tonumber(piece) then piece = tonumber(piece) end
     out[#out + 1] = piece
     if not i then break end
     start = i + #sep

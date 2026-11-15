@@ -27,9 +27,10 @@ sn,sdmg,sorb,srad,sres=split"2,3,3,4,5,0,7",split"10,12,15,18,22,0,34",split"15,
 rdmg,rrad,rlife,rcd=split"10,14,18,24,30",split"19,24,28,32,37",split"90,96,102,108,114",split"174,156,138,120,102"
 dx4,dy4=split"-1,1,0,0",split"0,0,-1,1"
 
--- "a|b" -> {split a, split b}
+-- "a|b" -> {split a, split b}. never pass split a nil third
+-- argument: fake-08 then skips number conversion
 function parse(s,sep,conv)
- local o={} for p in all(split(s,"|",false)) do add(o,split(p,sep,conv)) end return o
+ local o={} for p in all(split(s,"|",false)) do add(o,split(p,sep or ",",conv~=false)) end return o
 end
 -- name,hp,r,speed,mode(0 drift,1 chase,
 -- 2 bounce),xp,drop,turn,stamina,sprite
