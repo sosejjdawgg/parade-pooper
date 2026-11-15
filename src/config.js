@@ -120,12 +120,14 @@ export const HAZARDS = {
 // turn = how sharply a chaser can change heading (rad/s): low = easy to side-step.
 // stamina = seconds of chasing before it gives up and drifts off.
 export const ENEMIES = {
-  swan:    { hp: 7,  r: 6, speed: 22, steer: 9,  mode: 'drift',  xp: 1, drop: 0.4 },
-  pap:     { hp: 12, r: 6, speed: 46, steer: 0,  mode: 'chase',  xp: 2, drop: 0.5, turn: 0.9, stamina: 5 },
-  tumble:  { hp: 9,  r: 6, speed: 30, steer: 70, mode: 'bounce', xp: 1, drop: 0.4 },
-  piranha: { hp: 11, r: 5, speed: 66, steer: 0,  mode: 'chase',  xp: 2, drop: 0.45, turn: 1.3, stamina: 6 },
+  // hp: one level-1 vape cloud (9 damage) kills a swan or pap in the British canal. Desert and jungle enemies
+  // are tougher, and every enemy gains HP_GROWTH_PER_KM, so damage upgrades are needed to keep one-shotting.
+  swan:    { hp: 6,  r: 6, speed: 22, steer: 9,  mode: 'drift',  xp: 1, drop: 0.4 },
+  pap:     { hp: 8,  r: 6, speed: 46, steer: 0,  mode: 'chase',  xp: 2, drop: 0.5, turn: 0.9, stamina: 5 },
+  tumble:  { hp: 11, r: 6, speed: 30, steer: 70, mode: 'bounce', xp: 1, drop: 0.4 },
+  piranha: { hp: 15, r: 5, speed: 66, steer: 0,  mode: 'chase',  xp: 2, drop: 0.45, turn: 1.3, stamina: 6 },
   mozzie:  { hp: 3,  r: 3, speed: 84, steer: 0,  mode: 'chase',  xp: 1, drop: 0.25, turn: 2.0, stamina: 7 },
-  croc:    { hp: 60, r: 9, speed: 26, steer: 14, mode: 'drift',  xp: 8, drop: 1, big: true, tea: 0.3 },   // tea: chance to drop a cuppa
+  croc:    { hp: 70, r: 9, speed: 26, steer: 14, mode: 'drift',  xp: 8, drop: 1, big: true, tea: 0.3 },   // tea: chance to drop a cuppa
 };
 
 export const SPAWN = {
@@ -135,7 +137,7 @@ export const SPAWN = {
   // enemy numbers also follow the player's level, so slow levellers aren't swamped and strong builds get a horde
   LEVEL_BASE: 0.55, LEVEL_PER: 0.045, LEVEL_MAX: 1.8,
   MAX_ALIVE: 150,
-  HP_GROWTH_PER_KM: 0.3,            // enemy hp *= 1 + km * this
+  HP_GROWTH_PER_KM: 0.35,           // enemy hp *= 1 + km * this
   PACK_CHANCE: [0.05, 0.15, 0.45],   // chance a spawn is a pack
   PACK_SIZE: [3, 5, 9],
   BEHIND_CHANCE: [0, 0.1, 0.25],     // chasers that come from behind
@@ -150,16 +152,18 @@ export const SPAWN = {
 // ---- In-run weapons. Each array entry is one level. -------------------------
 export const WEAPONS = {
   cloud: {
-    name: 'VAPE CLOUD', maxLvl: 6, tick: 0.2, speed: 95,
+    // each puff hits each enemy ONCE for `dmg`. Level 1 one-shots the canal's swans and paps;
+    // tougher biomes (and enemy health growth with distance) need the upgrades.
+    name: 'VAPE CLOUD', maxLvl: 6, speed: 95,
     levels: [
-      { dirs: 1, dmg: 4,  cd: 1.05, size: 13, life: 0.5, prox: 95 },
-      { dirs: 1, dmg: 6,  cd: 0.9,  size: 15, life: 0.55, prox: 115 },
-      { dirs: 3, dmg: 6,  cd: 0.85, size: 16, life: 0.6 },
-      { dirs: 3, dmg: 8,  cd: 0.75, size: 18, life: 0.65 },
-      { dirs: 4, dmg: 10, cd: 0.7,  size: 20, life: 0.7 },
-      { dirs: 6, dmg: 12, cd: 0.6,  size: 22, life: 0.75 },
+      { dirs: 1, dmg: 9,  cd: 1.05, size: 13, life: 0.5, prox: 95 },
+      { dirs: 1, dmg: 12, cd: 0.9,  size: 15, life: 0.55, prox: 115 },
+      { dirs: 3, dmg: 14, cd: 0.85, size: 16, life: 0.6 },
+      { dirs: 3, dmg: 17, cd: 0.75, size: 18, life: 0.65 },
+      { dirs: 4, dmg: 21, cd: 0.7,  size: 20, life: 0.7 },
+      { dirs: 6, dmg: 26, cd: 0.6,  size: 22, life: 0.75 },
     ],
-    evo: { dirs: 8, dmg: 20, cd: 0.36, size: 30, life: 0.95 },
+    evo: { dirs: 8, dmg: 40, cd: 0.36, size: 30, life: 0.95 },
     desc: ['', 'MORE DAMAGE, FASTER', 'THREE DIRECTIONS, ALWAYS ON', 'BIGGER, STRONGER', 'FOUR DIRECTIONS', 'SIX DIRECTIONS'],
   },
   trail: {

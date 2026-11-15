@@ -16,9 +16,9 @@ const root = path.resolve(__dirname, '..');
   let next = 30, lastHits = 0, lastKills = 0;
   for (;;) {
     await pg.waitForTimeout(250);
-    const s = await pg.evaluate(() => { const { G, enemies, clouds } = __vc; return { t: G.t, m: (G.dist / 20) | 0, sp: G.speed | 0, lv: G.level, v: G.vapes, k: G.kills, en: enemies.n, cl: clouds.n, hits: G.hits, crashes: G.crashes, w: JSON.stringify(G.weapons), e: Object.keys(G.evo).join(',') }; });
+    const s = await pg.evaluate(() => { const { G, enemies, clouds } = __vc; return { t: G.t, m: (G.dist / 20) | 0, sp: G.speed | 0, lv: G.level, v: G.vapes, k: G.kills, en: enemies.n, cl: clouds.n, hits: G.hits, crashes: G.crashes, w: JSON.stringify(G.weapons), e: Object.keys(G.evo).join(','), ps: Object.entries(G.puffStats || {}).map(([k, [a, n]]) => k + ':' + (a / n).toFixed(2)).join(' ') }; });
     if (s.t >= next) {
-      console.log(`${String(next).padStart(4)}s ${String(s.m).padStart(5)}m sp${s.sp} lv${s.lv} vapes${s.v} kills${s.k}(+${s.k - lastKills}) alive${s.en} clouds${s.cl} hits+${s.hits - lastHits} crashes${s.crashes} ${s.w} evo[${s.e}]`);
+      console.log(`${String(next).padStart(4)}s ${String(s.m).padStart(5)}m sp${s.sp} lv${s.lv} vapes${s.v} kills${s.k}(+${s.k - lastKills}) alive${s.en} clouds${s.cl} hits+${s.hits - lastHits} crashes${s.crashes} ${s.w} evo[${s.e}] puffs/kill[${s.ps}]`); await pg.evaluate(() => { __vc.G.puffStats = {}; });
       lastHits = s.hits; lastKills = s.k; next += 30;
       if (process.argv[4]) await pg.screenshot({ path: `${process.argv[4]}/bal${next - 30}.png` });
     }

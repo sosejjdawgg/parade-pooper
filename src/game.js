@@ -63,7 +63,7 @@ export function newRun() {
     weapons: { cloud: 1 + shopLvl('starter') }, passives: {}, evo: {},
     cd: { cloud: 0.5, trail: 0, nova: 1.5, rings: 0.5 }, orbA: 0, orbTick: 0, cloudId: 0,
     genY: 240, chunkN: 0, spawnT: 0, shake: 0, flash: 0, hitstop: 0, dead: false, deadT: 0,
-    banner: BIOMES.NAMES[0], bannerT: 2.5, biomeIdx: 0, pending: 0, choices: null, cause: '', result: null, puffT: 0, vapeT: 2.5, dragT: 0, hurtT: 0, grinT: 0, shieldT: 0, danger: false,
+    banner: BIOMES.NAMES[0], bannerT: 2.5, biomeIdx: 0, pending: 0, choices: null, cause: '', result: null, puffT: 0, vapeT: 2.5, dragT: 0, hurtT: 0, grinT: 0, shieldT: 0, danger: false, puffStats: {},
   });
   G.ph = [rnd(6.28), rnd(6.28), rnd(6.28)];
   G.px = centreAt(0);
@@ -118,6 +118,7 @@ function addCloud(kind, x, wy, vx, vwy, r0, r1, life, dmg, tick) {
   const c = clouds.spawn(); if (!c) return;
   c.kind = kind; c.x = x; c.wy = wy; c.vx = vx; c.vwy = vwy; c.r0 = r0; c.r1 = r1; c.r = r0; c.life = life; c.age = 0;
   c.dmg = dmg; c.tick = tick; c.tickT = 0; c.id = ++G.cloudId;
+  if (kind === 'puff') { if (c.hit) c.hit.clear(); else c.hit = new Set(); }   // a puff damages each enemy once
 }
 function addEnemy(type, x, wy, behind) {
   const e = enemies.spawn(); if (!e) return;
@@ -125,7 +126,7 @@ function addEnemy(type, x, wy, behind) {
   e.type = type; e.wy = wy; e.x = clamp(x, leftAt(wy) + d.r + 2, rightAt(wy) - d.r - 2);
   e.hp = e.maxHp = d.hp * (1 + G.dist / WORLD.PX_PER_M / 1000 * SPAWN.HP_GROWTH_PER_KM);
   e.r = d.r; e.chasing = !!behind; e.vx = (Math.random() < 0.5 ? -1 : 1) * d.steer; e.seed = rnd(100);
-  e.ox = rnd(-9, 9); e.oy = rnd(-12, 12); e.novaId = -1; e.flash = 0; e.chaseT = 0; e.gaveUp = false;
+  e.ox = rnd(-9, 9); e.oy = rnd(-12, 12); e.novaId = -1; e.flash = 0; e.puffs = 0; e.chaseT = 0; e.gaveUp = false;
   e.ang = Math.atan2(G.dist - wy, G.px - e.x);
 }
 
@@ -314,7 +315,8 @@ function damageEnemy(e, dmg) {
   if (floaters.n < 14) addFloater(Math.round(dmg), e.x, e.wy + e.r, 1);
   if (e.hp > 0) return;
   const d = ENEMIES[e.type];
-  e.dead = true; G.kills++; gainXp(d.xp);
+  e.dead = true; G.kills++;
+  if (e.puffs) { const s = G.puffStats[e.type] || (G.puffStats[e.type] = [0, 0]); s[0] += e.puffs; s[1]++; }   // balance telemetry: puffs per kill gainXp(d.xp);
   burst(e.x, e.wy, d.big ? 16 : 6, d.big ? 120 : 80, 0.35, d.big ? 3 : 2);
   G.shake = Math.max(G.shake, JUICE.SHAKE_KILL); sfx.kill();
   if (d.tea && G.hp < G.maxHp && Math.random() < d.tea) addPickup('tea', e.x, e.wy);
@@ -380,7 +382,7 @@ function updateWeapons(dt) {
       const sp = WEAPONS.cloud.speed * p.size / 13 * S.area;
       for (const a of DIRS[p.dirs]) {
         const sx = Math.sin(a), sy = Math.cos(a);
-        addCloud('puff', G.px + sx * 10, G.dist + sy * 16, sx * sp, sy * sp, p.size * 0.45 * S.area, p.size * S.area, p.life * S.dur, p.dmg, WEAPONS.cloud.tick);
+        addCloud('puff', G.px + sx * 10, G.dist + sy * 16, sx * sp, sy * sp, p.size * 0.45 * S.area, p.size * S.area, p.life * S.dur, p.dmg, 0);
       }
       cd.cloud = p.cd * S.cd; sfx.puff();
     }
@@ -437,15 +439,15 @@ function updateClouds(dt) {
     } else if (c.kind === 'trail') c.r = c.r0 + (c.r1 - c.r0) * Math.min(1, t * 4);
     else if (c.kind === 'ring') { c.wy += (c.vwy + G.speed) * dt; c.r = c.r0 + (c.r1 - c.r0) * Math.sqrt(t); }
     else { c.x = G.px; c.wy = G.dist; c.r = c.r0 + (c.r1 - c.r0) * t; }
-    const ring = c.kind === 'ring', nova = c.kind === 'nova' || ring;      // these hit each enemy once
-    if (!nova) { c.tickT -= dt; if (c.tickT > 0) continue; c.tickT += c.tick; }
+    const ring = c.kind === 'ring', puff = c.kind === 'puff', nova = c.kind === 'nova' || ring;      // these hit each enemy once
+    if (!nova && !puff) { c.tickT -= dt; if (c.tickT > 0) continue; c.tickT += c.tick; }
     for (let j = 0; j < enemies.n; j++) {
       const e = enemies.items[j];
-      if (nova && e.novaId === c.id) continue;
+      if ((nova && e.novaId === c.id) || (puff && c.hit.has(e))) continue;
       const dx = e.x - c.x, dy = e.wy - c.wy, rr = c.r + e.r;
       const d2 = dx * dx + dy * dy;
       if (ring) { const band = PASSIVES.rings.band + e.r, dd = Math.sqrt(d2) - c.r; if (dd > band || dd < -band) continue; }
-      if (d2 < rr * rr + (ring ? 1e6 : 0)) { if (nova) e.novaId = c.id; damageEnemy(e, c.dmg); }
+      if (d2 < rr * rr + (ring ? 1e6 : 0)) { if (nova) e.novaId = c.id; if (puff) { c.hit.add(e); e.puffs++; } damageEnemy(e, c.dmg); }
     }
   }
 }
