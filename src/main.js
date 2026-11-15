@@ -9,7 +9,7 @@ import { save, loadSave, writeSave, resetSave, shopLvl, sfx, input, initInput, r
 const { BG, FG, GINGER } = COLORS, W = VIEW.W, STEP = 1 / 60;
 const params = new URLSearchParams(location.search);
 let FAST = +params.get('fast') || 1;
-let last = 0, acc = 0, modeT = 0, prevMode = '', backTo = 'title', toast = '', toastT = 0, resetArm = 0, introThenPlay = false;
+let musicErr = false, last = 0, acc = 0, modeT = 0, prevMode = '', backTo = 'title', toast = '', toastT = 0, resetArm = 0, introThenPlay = false;
 
 // ---- immediate-mode UI ----------------------------------------------------------
 const hit = (t, x, y, w, h) => t.x >= x && t.x < x + w && t.y >= y && t.y < y + h;
@@ -262,7 +262,9 @@ function frame(ts) {
   }
 
   const onTitle = G.mode === 'title' || G.mode === 'settings' || G.mode === 'legal' || G.mode === 'intro' || (G.mode === 'shop' && backTo === 'title');
-  musicFrame(!openerFinished() ? MUSIC.OPENER : onTitle ? 'menu' : MUSIC.BIOME_TRACKS[G.biomeIdx || 0], G.mode !== 'play' && G.mode !== 'title');
+  try {   // audio must never be able to freeze the game
+    musicFrame(!openerFinished() ? MUSIC.OPENER : onTitle ? 'menu' : MUSIC.BIOME_TRACKS[G.biomeIdx || 0], G.mode !== 'play' && G.mode !== 'title');
+  } catch (err) { if (!musicErr) { musicErr = true; console.warn('music disabled:', err); } }
   const menu = G.mode === 'title' || G.mode === 'settings' || G.mode === 'legal' || G.mode === 'intro' || (G.mode === 'shop');
   drawWorld(menu ? 'menu' : 'full');
   if (!menu) drawHud();

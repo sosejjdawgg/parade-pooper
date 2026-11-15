@@ -58,6 +58,8 @@ const pointers = new Map();
 function refreshDir() { let d = 0; for (const v of pointers.values()) d = v; input.dir = d; }
 export function initInput() {
   const pos = (e) => { const r = canvas.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * view.W, y: (e.clientY - r.top) / r.height * view.H }; };
+  // iOS only lets audio start from touchend/click, not pointerdown: unlock on those too
+  for (const ev of ['touchend', 'click', 'keydown']) window.addEventListener(ev, unlockAudio, { passive: true });
   window.addEventListener('pointerdown', (e) => {
     unlockAudio(); const p = pos(e); input.taps.push(p);
     pointers.set(e.pointerId, p.x < view.W / 2 ? -1 : 1); refreshDir(); e.preventDefault();

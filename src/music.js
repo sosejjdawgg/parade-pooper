@@ -42,7 +42,10 @@ function start(track) {
   // ease in on a curve (slow start, then swell) so music never jumps in
   const dur = started ? MUSIC.FADE_IN : MUSIC.FADE_IN_FIRST, curve = new Float32Array(24);
   for (let i = 0; i < 24; i++) curve[i] = Math.pow(i / 23, 2.2);
-  g.gain.setValueAtTime(0, t); g.gain.setValueCurveAtTime(curve, t, dur); started = true;
+  // plain ramps only: Safari (every iPhone browser) throws on setValueCurveAtTime next to another event
+  g.gain.setValueAtTime(0, t);
+  for (let i = 1; i < curve.length; i++) g.gain.linearRampToValueAtTime(curve[i], t + dur * i / (curve.length - 1));
+  started = true;
   g.connect(filter); curGain = g;
   if (track === 'menu') { chip.gain = g; chip.next = t + 0.1; chip.step = 0; return; }
   const def = MUSIC.TRACKS[track], s = ac.createBufferSource();
@@ -109,6 +112,7 @@ function hat(t, vol) {
   const s = ac.createBufferSource(), g = ac.createGain(); s.buffer = hatBuf; g.gain.value = vol; s.connect(g).connect(chip.gain); s.start(t);
 }
 function chipSchedule() {
+  if (!chip.gain) return;
   const sixteenth = 60 / MUSIC.MENU_BPM / 4, table = leadTable();
   if (chip.next < ac.currentTime - 0.5) chip.next = ac.currentTime + 0.05;      // tab was asleep: don't burst-catch-up
   while (chip.next < ac.currentTime + 0.25) {
