@@ -61,7 +61,7 @@ export function newRun() {
     t: 0, dist: 0, speed: PLAYER.SPEED_START, burst: 0, slow: 1, snag: 0, pvx: 0, holdT: 0, paddle: 0, paddleT: 0,
     hp: 0, maxHp: 0, inv: 1, vapes: 0, cash: 0, xp: 0, level: 1, xpNeed: XP.need(1), kills: 0, combo: 0, comboT: 0,
     weapons: { cloud: 1 + shopLvl('starter') }, passives: {}, evo: {},
-    cd: { cloud: 0.5, trail: 0, nova: 1.5, rings: 0.5 }, orbA: 0, orbTick: 0, cloudId: 0,
+    cd: { cloud: 0.5, trail: 0, nova: 1.5, rings: 0.5 }, orbA: 0, orbState: [], cloudId: 0,
     genY: 240, chunkN: 0, spawnT: 0, shake: 0, flash: 0, hitstop: 0, dead: false, deadT: 0,
     banner: BIOMES.NAMES[0], bannerT: 2.5, biomeIdx: 0, pending: 0, choices: null, cause: '', result: null, puffT: 0, vapeT: 2.5, dragT: 0, hurtT: 0, grinT: 0, shieldT: 0, danger: false, puffStats: {}, novaMore: 0, novaGapT: 0,
   });
@@ -427,18 +427,30 @@ function updateWeapons(dt) {
   }
   orbs.length = 0;
   if (G.weapons.storm) {
-    const p = wp('storm');
-    G.orbA += WEAPONS.storm.spin * dt;
-    const n = p.n + extra();
-    for (let i = 0; i < n; i++) { const a = G.orbA + i / n * 6.283; orbs.push({ x: G.px + Math.cos(a) * p.orbit * S.area, wy: G.dist + Math.sin(a) * p.orbit * S.area, r: p.r * S.area }); }
-    if (p.outer) for (let i = 0; i < p.outer; i++) { const a = -G.orbA * 0.7 + i / p.outer * 6.283; orbs.push({ x: G.px + Math.cos(a) * p.orbit * 1.9 * S.area, wy: G.dist + Math.sin(a) * p.orbit * 1.9 * S.area, r: p.r * 1.2 * S.area }); }
-    G.orbTick -= dt;
-    if (G.orbTick <= 0) {
-      G.orbTick = WEAPONS.storm.tick;
-      for (const o of orbs) for (let i = 0; i < enemies.n; i++) {
-        const e = enemies.items[i], dx = e.x - o.x, dy = e.wy - o.wy, rr = o.r + e.r;
-        if (dx * dx + dy * dy < rr * rr) damageEnemy(e, p.dmg);
+    const p = wp('storm'), Wst = WEAPONS.storm;
+    G.orbA += Wst.spin * dt;
+    const n = p.n + extra(), total = n + (p.outer || 0);
+    while (G.orbState.length < total) G.orbState.push({ cd: 0, age: 1 });
+    for (let i = 0; i < total; i++) {
+      const st = G.orbState[i];
+      if (st.cd > 0) { if ((st.cd -= dt) <= 0) st.age = 0; continue; }      // popped: regrowing
+      st.age += dt;
+      const outer = i >= n, k = outer ? i - n : i, m = outer ? p.outer : n;
+      const a = outer ? -G.orbA * 0.7 + k / m * 6.283 : G.orbA + k / m * 6.283, rad = p.orbit * (outer ? 1.9 : 1) * S.area;
+      const o = { x: G.px + Math.cos(a) * rad, wy: G.dist + Math.sin(a) * rad, r: p.r * (outer ? 1.2 : 1) * S.area * Math.min(1, 0.3 + st.age / Wst.grow) };
+      let hitE = null;
+      for (let j = 0; j < enemies.n; j++) {
+        const e = enemies.items[j], dx = e.x - o.x, dy = e.wy - o.wy, rr = o.r + e.r;
+        if (!e.dead && dx * dx + dy * dy < rr * rr) { hitE = e; break; }
       }
+      if (hitE) {                                                              // poof: one hit, then it's gone for a while
+        damageEnemy(hitE, p.dmg);
+        st.cd = p.respawn * S.cd;
+        addCloud('poof', o.x, o.wy, 0, 0, o.r, o.r * 1.8, 0.35, 0, 0);
+        for (let q = 0; q < 6; q++) { const pa = rnd(6.28); addPart(o.x, o.wy, Math.cos(pa) * 70, Math.sin(pa) * 70 + G.speed, 0.3, 2); }
+        continue;
+      }
+      orbs.push(o);
     }
   }
 }
@@ -452,7 +464,8 @@ function updateClouds(dt) {
       const drag = Math.exp(-1.6 * dt); c.vx *= drag; c.vwy *= drag;
       c.x += c.vx * dt; c.wy += (c.vwy + G.speed) * dt;
       c.r = c.r0 + (c.r1 - c.r0) * (1 - (1 - t) * (1 - t));
-    } else if (c.kind === 'trail') c.r = c.r0 + (c.r1 - c.r0) * Math.min(1, t * 4);
+    } else if (c.kind === 'poof') { c.wy += G.speed * dt; c.r = c.r0 + (c.r1 - c.r0) * t; continue; }   // harmless puff of smoke
+    else if (c.kind === 'trail') c.r = c.r0 + (c.r1 - c.r0) * Math.min(1, t * 4);
     else if (c.kind === 'ring') { c.x += c.vx * dt; c.wy += (c.vwy + G.speed) * dt; c.r = c.r0 + (c.r1 - c.r0) * Math.sqrt(t); }
     else { c.x = G.px; c.wy = G.dist; c.r = c.r0 + (c.r1 - c.r0) * t; }
     const ring = c.kind === 'ring', puff = c.kind === 'puff', nova = c.kind === 'nova' || ring;      // these hit each enemy once

@@ -189,13 +189,15 @@ export const WEAPONS = {
     desc: ['A BIG VAPE CLOUD BILLOWS OUT AND CLEARS THE AREA', 'BIGGER CLOUD', 'FASTER, STRONGER', 'BIGGER CLOUD', 'HUGE CLOUD'],
   },
   storm: {
-    name: 'VAPE STORM', maxLvl: 5, tick: 0.2, spin: 3.2,
+    // each orbiting cloud pops on the first enemy it touches (one hit for `dmg`), then regrows after `respawn` seconds
+    name: 'VAPE STORM', maxLvl: 5, spin: 3.2, grow: 0.25,
     levels: [
-      { n: 2, dmg: 4, r: 9, orbit: 36 }, { n: 3, dmg: 5, r: 10, orbit: 40 }, { n: 3, dmg: 7, r: 11, orbit: 46 },
-      { n: 4, dmg: 8, r: 12, orbit: 52 }, { n: 5, dmg: 10, r: 13, orbit: 58 },
+      { n: 2, dmg: 10, r: 9,  orbit: 36, respawn: 3.5 }, { n: 3, dmg: 12, r: 10, orbit: 40, respawn: 3.0 },
+      { n: 3, dmg: 15, r: 11, orbit: 46, respawn: 2.6 }, { n: 4, dmg: 18, r: 12, orbit: 52, respawn: 2.2 },
+      { n: 5, dmg: 22, r: 13, orbit: 58, respawn: 1.8 },
     ],
-    evo: { n: 7, dmg: 17, r: 16, orbit: 66, outer: 6 },
-    desc: ['CLOUDS ORBIT THE KAYAK', 'THIRD CLOUD', 'WIDER, STRONGER', 'FOURTH CLOUD', 'FIFTH CLOUD'],
+    evo: { n: 7, dmg: 34, r: 16, orbit: 66, outer: 6, respawn: 1.0 },
+    desc: ['CLOUDS ORBIT THE KAYAK AND POP ON ENEMIES', 'THIRD CLOUD', 'WIDER, STRONGER', 'FOURTH CLOUD', 'FIFTH CLOUD'],
   },
 };
 

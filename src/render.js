@@ -140,7 +140,7 @@ function drawClouds() {
     }
     if (y < -c.r || y > view.H + c.r) continue;
     if (c.kind === 'ring') { if (t < 0.85 || ((G.t * 20) & 1)) { drawDisc(c.x, y, c.r, 3); drawDisc(c.x, y, c.r - 2, 3); if (c.r > 12) drawDisc(c.x, y, c.r - 5, 3); } continue; }
-    drawDisc(c.x, y, c.r, c.kind === 'puff' ? (t < 0.1 ? 0 : t < 0.7 ? 1 : 2) : (t < 0.65 ? 1 : 2));
+    drawDisc(c.x, y, c.r, (c.kind === 'puff' || c.kind === 'poof') ? (t < 0.1 ? 0 : t < 0.7 ? 1 : 2) : (t < 0.65 ? 1 : 2));
   }
 }
 function drawPickups() {
