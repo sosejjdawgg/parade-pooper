@@ -27,4 +27,11 @@ Two games in one: a virtual pet you raise and care for, and an arcade wave-survi
 - **Industry:** Gaming / Entertainment
 - **Project cost:** your choice. To match your packages, it is Premium-level work (around £600+)
 - **Duration:** fill in how long it took you
-- **Images to attach:** the Bones images from your itch.io page: the "BONES good boy / bad dog" cover, the DOGCAM screen, the 11-themes banner and the sheep-herding banner
+- **Attachments (in `marketing/fiverr/bones/`, upload in this order):**
+  1. `bones-1-cover.png` (the project thumbnail)
+  2. `bones-2-pet.png`
+  3. `bones-3-park.png`
+  4. `bones-4-boss.png`
+  5. `bones-5-herding.png`
+  6. `bones-6-themes.png`
+  7. `bones-gameplay.mp4` (30 s of real gameplay)
