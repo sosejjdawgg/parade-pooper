@@ -146,7 +146,7 @@ function deadScreen() {
   draw(SPR.bigVape[((G.t * 10) | 0) & 15], W / 2, y + 108);
   text(r.vapes, W / 2, y + 126, 8, FG, 0.5);
   text(r.newBest ? 'NEW BEST!' : 'VAPES', W / 2, y + 172, 2, r.newBest && ((G.t * 4) & 1) ? BG : FG, 0.5);
-  const rows = [['DISTANCE', r.m + 'M'], ['LEVEL', r.level], ['MELTED', r.kills], ['TAX ADVICE TAKEN', 'NONE'], ['CASH BANKED', '+£' + r.cash]];
+  const rows = [['DISTANCE', r.m + 'M'], ['LEVEL', r.level], ['MELTED', r.kills], r.lights ? ['NOT VAPE SHOPS', r.lights] : ['TAX ADVICE TAKEN', 'NONE'], ['CASH BANKED', '+£' + r.cash]];
   rows.forEach(([a, b], i) => { text(a, 44, y + 202 + i * 18, 2); text(b, W - 44, y + 202 + i * 18, 2, FG, 1); });
   rect(44, y + 294, W - 88, 1);
   text('WALLET £' + save.cash, W / 2, y + 302, 2, FG, 0.5);

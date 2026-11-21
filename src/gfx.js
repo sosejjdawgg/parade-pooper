@@ -1,7 +1,7 @@
 // Canvas, pixel font, sprites. Everything is hard-edged: no arcs, no fillText.
 import { VIEW, COLORS } from './config.js';
 
-const { BG, FG, GINGER, ENEMY, VAPE } = COLORS;
+const { BG, FG, GINGER, ENEMY, VAPE, CASH, TEA } = COLORS;
 export const canvas = document.getElementById('game');
 export const ctx = canvas.getContext('2d', { alpha: false });
 export const view = { W: VIEW.W, H: VIEW.H_MIN };
@@ -83,11 +83,11 @@ export function wrap(str, maxChars) {
 
 // ---- sprite building --------------------------------------------------------
 /** add a 1px black outline around every opaque pixel */
-function outlined(src, col = BG) {
+function outlined(src, col = BG, thin = false) {
   const w = src.width, h = src.height;
   const d = src.getContext('2d').getImageData(0, 0, w, h).data;
   const [c, g] = mk(w + 2, h + 2);
-  if (col === BG) {                       // chunky black backing behind every pixel
+  if (col === BG && !thin) {                       // chunky black backing behind every pixel
     g.fillStyle = col;
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3]) g.fillRect(x, y, 3, 3);
     g.drawImage(src, 1, 1);
@@ -113,13 +113,23 @@ function outlined(src, col = BG) {
   g.drawImage(src, 1, 1);
   return c;
 }
+/** a black silhouette of a sprite, grown by `grow` px: drawn underneath so it reads over white fog */
+function halo(src, grow) {
+  const w = src.width, h = src.height, d = src.getContext('2d').getImageData(0, 0, w, h).data;
+  const [c, g] = mk(w + grow * 2, h + grow * 2); g.fillStyle = BG;
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3]) {
+    g.fillRect(x, y + grow, 1 + grow * 2, 1); g.fillRect(x + grow, y, 1, 1 + grow * 2);
+  }
+  return c;
+}
 function doubled(src) { const [c, g] = mk(src.width * 2, src.height * 2); g.drawImage(src, 0, 0, c.width, c.height); return c; }
-/** '#' white, 'o' ginger, 'x' black, anything else transparent */
+/** '#' white, 'o' ginger, 'x' black, 'g' cash green, 'b' tea brown, anything else transparent */
+const ART = { o: GINGER, x: BG, g: CASH, b: TEA };
 function art(rows, outline = true) {
   const [c, g] = mk(Math.max(...rows.map(r => r.length)), rows.length);
   rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) {
     const ch = r[x]; if (ch === '.' || ch === ' ') continue;
-    g.fillStyle = ch === 'o' ? GINGER : ch === 'x' ? BG : FG; g.fillRect(x, y, 1, 1);
+    g.fillStyle = ART[ch] || FG; g.fillRect(x, y, 1, 1);
   } });
   return outline ? outlined(c, outline === true ? BG : outline) : c;
 }
@@ -145,7 +155,7 @@ function makeKayak(frame) {
   g.fillRect(cx - 2, 17, 5, 6); g.fillRect(cx - 1, 16, 3, 1);
   g.fillRect(cx - 1, 23, 3, 3); g.fillRect(cx, 26, 1, 2);
   g.fillStyle = VAPE; g.fillRect(cx + 3, 16, 1, 3);                     // the vape
-  return outlined(c);
+  return outlined(c, BG, true);                                         // thin outline: the hull already has a black core
 }
 
 function makeVapeFrames(len, wid, n = 16) {
@@ -284,14 +294,24 @@ export function face(tier, mode) {
 export const SPR = {};
 export function buildSprites() {
   SPR.kayak = [makeKayak(0), makeKayak(1)];
+  SPR.kayakHalo = SPR.kayak.map((k) => halo(k, 1));                      // keeps her readable inside the fog, hugging her shape
   SPR.vape = makeVapeFrames(11, 3);
   SPR.bigVape = makeVapeFrames(19, 5);
   SPR.barge = { 70: makeBarge(70), 90: makeBarge(90), 110: makeBarge(110) };
   SPR.sandbar = [makeSandbar(1), makeSandbar(2), makeSandbar(3)];
   SPR.pier = makePier();
-  SPR.cash = art([
-    '..##.##..', '...###...', '...###...', '..#####..', '.###xx##.', '.##x####.', '.#xxx###.', '.##x####.', '.#xxxx##.', '..#####..']);
-  SPR.tea = art(['..#..#...', '.#..#....', '.........', '#######..', '########.', '#######.#', '#######.#', '########.', '.#####...']);
+  SPR.cash = art([                                                      // money bag with a green pound sign
+    '...##...##...', '....##.##....', '.....###.....', '....#####....', '.....###.....', '...#######...', '..#########..',
+    '.#####ggg###.', '.####g###g##.', '#####g#######', '###ggggg#####', '#####g#######', '#####g#######', '####ggggg####',
+    '.###########.', '..#########..']);
+  SPR.tea = art([                                                       // a proper brew: white mug, brown tea, steam
+    '...#...#.....', '..#...#......', '...#...#.....', '....#...#....', '.............', '###########..', '#bbbbbbbbb#..',
+    '#bbbbbbbbb#..', '###########.#', '###########..#', '###########..#', '###########.#.', '###########...',
+    '.#########....']);
+  SPR.lighthouse = doubled(art([                                        // out at sea. It is not a vape shop
+    '.....ooo.....', '....ooooo....', '...#######...', '....#x#x#....', '....#x#x#....', '...#######...', '....#####....',
+    '....#####....', '....xxxxx....', '....xxxxx....', '...#######...', '...#######...', '...xxxxxxx...', '...xxxxxxx...',
+    '..#########..', '..#########..', '..#xx###xx#..', '.###########.', '.###########.', '#############']));
   SPR.heart = art(['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'], false);
   SPR.heartEmpty = art(['.##.##.', '#..#..#', '#.....#', '.#...#.', '..#.#..', '...#...'], false);
   SPR.swan = art([

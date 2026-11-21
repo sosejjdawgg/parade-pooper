@@ -10,7 +10,7 @@ export const VIEW = {
   PLAYER_Y: 0.68,    // kayak sits this far down the screen
 };
 
-export const COLORS = { BG: '#000000', FG: '#ffffff', GINGER: '#ff5a1f', ENEMY: '#ff1a2e', VAPE: '#a9d6f5' };   // ENEMY = thin outline on hostiles
+export const COLORS = { BG: '#000000', FG: '#ffffff', GINGER: '#ff5a1f', ENEMY: '#ff1a2e', VAPE: '#a9d6f5', CASH: '#38d65a', TEA: '#9b5a2a' };   // ENEMY = thin outline on hostiles
 
 export const WORLD = { PX_PER_M: 20 };
 
@@ -67,19 +67,20 @@ export const PICKUPS = {
 };
 
 export const BIOMES = {
-  NAMES: ['BRITISH CANAL', 'DESERT CANAL', 'VOLCANO CANAL'],
+  NAMES: ['BRITISH CANAL', 'DESERT CANAL', 'VOLCANO CANAL', 'THE OPEN SEA'],
   EDGE_MARGIN: 50,           // the water never comes closer than this to the screen edge, so some bank always shows
   // riverbanks: [bright edge, land colour] per biome. The land fades to black towards the screen edges
   // through ordered dither. FADE rows are [distance from the edge, band width, pixel density].
-  BANK_COLORS: [['#4dff6a', '#1f9a3c'], ['#ffe04a', '#c9871c'], ['#ff5a3c', '#b0161f']],
+  BANK_COLORS: [['#4dff6a', '#1f9a3c'], ['#ffe04a', '#c9871c'], ['#ff5a3c', '#b0161f'], ['#ff5a3c', '#b0161f']],
   BANK_FADE: [[0, 12, 1], [12, 24, 0.5], [36, 36, 0.25]],   // like the PICO-8 cart: solid, chequered, sparse
   BANK_DITHER_PX: 3,         // size of one dither square (a PICO-8 pixel is about 3 of ours)
   DESERT_AT: 650,            // metres where the blend into desert starts
   JUNGLE_AT: 1700,
+  SEA_AT: 2500,              // the red river opens out into the sea (level 4)
   BLEND: 220,                // metres a transition takes
-  WIDTH: [186, 236, 172],    // canal width per biome
+  WIDTH: [186, 236, 172, 3600],   // canal width per biome (the sea is so wide the banks leave the screen)
   MEANDER: 52,               // max sideways wander of the canal centre
-  CHUNK_GAP: [150, 130, 105],// clear water between chunks
+  CHUNK_GAP: [150, 130, 105, 90],// clear water between chunks
   // chunk pattern weights per biome [canal, desert, jungle]
   CHUNKS: {
     snake:    [5, 3, 3],
@@ -99,6 +100,31 @@ export const BIOMES = {
 // Ramming: while boosting, the very tip of the kayak destroys any enemy it hits, at the cost of some boost.
 // The rest of the kayak stays vulnerable. (Boost comes from the Vape Engine.)
 export const RAM = { MIN_BURST: 30, TIP_Y: 17, TIP_W: 3, TIP_H: 4, BOOST_KEEP: 0.5, BOOST_KEEP_BIG: 0.2 };
+
+// Level 4: the open sea. The river widens until the banks are gone, the camera follows the kayak sideways,
+// and enemies close in from every side in growing waves until you sink. Lighthouses dot the sea: each one's
+// fixed beam points at the next. Reaching one (it is not a vape shop) adds damage to every weapon.
+export const SEA = {
+  SPEED_MULT: 0.5,            // forward drift is slower out here: it's an arena, not a race
+  CAM_FOLLOW: 3,              // how quickly the camera catches the kayak sideways
+  RATE: 0.9,                  // enemies/sec when the sea starts...
+  RATE_GROWTH: 0.045,         // ...growing by this fraction every second you survive
+  WAVE_EVERY: 16,             // seconds between surround waves
+  WAVE_BASE: 8, WAVE_GROW: 4, // a wave is a full ring of this many (+ GROW per wave)
+  ENEMY_SPEED: 0.9,           // everything homes in on you, at this fraction of its normal speed...
+  SPEED_GROWTH: 0.003,        // ...plus this much faster per second at sea
+  HP_TAU: 75,                 // enemy health grows x2.7 every this many seconds at sea: the sea always wins in the end
+  DESPAWN: 950,               // enemies this far away give up
+  MAX_ALIVE: 200,
+  TABLE: { swan: 2, pap: 3, piranha: 3, mozzie: 3, croc: 0.5 },
+  VAPE_CLUSTERS: 3,           // vape patches scattered per sea chunk
+  LIGHT_FIRST_M: 60,          // the first lighthouse, this far into the sea (nearly dead ahead)
+  LIGHT_GAP_M: [75, 110],     // forward distance between lighthouses
+  LIGHT_SIDE: [180, 460],     // and sideways
+  LIGHT_R: 44,                // paddle this close to visit
+  LIGHT_DMG: 0.1,             // +10% damage to every weapon per lighthouse visited
+  BEAM_LEN: 1100, BEAM_SPREAD: 0.075,
+};
 
 export const IMMUNITY = { COOLDOWN: [10, 8, 5, 3, 2], RADIUS: 21 };
 
@@ -285,7 +311,7 @@ export const MUSIC = {
   FADE_IN_FIRST: 5,        // the very first music of a session eases in this slowly
   FADE_IN: 3,              // every later track start
   OPENER: 'river',         // plays once from the main menu into the run; then the biome tracks take over
-  BIOME_TRACKS: ['ufo', 'arab', 'ufo'],   // canal, desert, jungle: the track changes when the scenery does
+  BIOME_TRACKS: ['ufo', 'arab', 'ufo', 'arab'],   // canal, desert, volcano, sea: the track changes when the scenery does
   MENU_BPM: 124,
   // loop points are in seconds within the trimmed files; found by waveform matching
   TRACKS: {

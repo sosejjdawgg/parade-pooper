@@ -1,7 +1,7 @@
 // Draws the world and the in-run HUD. Three colours only: black, white, ginger.
-import { VIEW, COLORS, BIOMES, VAPING, JUICE, IMMUNITY, PLAYER } from './config.js';
+import { VIEW, COLORS, BIOMES, VAPING, JUICE, IMMUNITY, PLAYER, SEA } from './config.js';
 import { ctx, view, rect, box, text, textO, textW, draw, drawDisc, face, SPR, hash } from './gfx.js';
-import { G, vapes, enemies, hazards, clouds, parts, floaters, orbs, biomeAt, dangerAt, leftAt, rightAt, playerY, metres } from './game.js';
+import { G, vapes, enemies, hazards, clouds, parts, floaters, orbs, biomeAt, dangerAt, seaAt, leftAt, rightAt, playerY, metres } from './game.js';
 import { save, shopLvl } from './platform.js';
 
 const { BG, FG } = COLORS, W = VIEW.W;
@@ -17,12 +17,18 @@ function getChecker() {
 }
 export function dither(x, y, w, h) { ctx.fillStyle = getChecker(); ctx.fillRect(x | 0, y | 0, w | 0, h | 0); }
 
+let CX = 0;      // camera x: 0 on the river, follows the kayak sideways at sea
 function drawWater(lo, hi) {
+  const i0 = Math.floor(CX / 16) - 1;
   for (let j = Math.floor(lo / 16); j <= Math.floor(hi / 16); j++) {
-    const y = sy(j * 16);
-    for (let i = 0; i < 23; i++) {
+    const y = sy(j * 16), sea = seaAt(j * 16);
+    for (let i = i0; i < i0 + 25; i++) {
       const h = hash(j * 131 + i * 7919);
       if (h < 0.05) rect(i * 16 + h * 200, y, h < 0.02 ? 5 : 3, 1);
+      else if (sea > 0 && h < 0.05 + 0.05 * sea) {                       // open sea: little rolling waves
+        const x = i * 16 + (h * 977 % 1) * 12, k = ((G.t * 1.5 + h * 9) | 0) & 1;
+        rect(x, y + k, 3, 1); rect(x + 3, y - 1 + k, 3, 1); rect(x + 6, y + k, 2, 1);
+      }
     }
   }
 }
@@ -47,8 +53,9 @@ function drawBanks(lo, hi) {
   for (let j = Math.floor(lo / 8) - 1; j <= Math.floor(hi / 8) + 1; j++) {
     const wy = j * 8, y = sy(wy + 8);
     const l = Math.round(leftAt(wy) / 4) * 4, r = Math.round(rightAt(wy) / 4) * 4;
-    rect(0, y, l, 8, BG); rect(r, y, W - r, 8, BG);
-    const b = biomeAt(wy), bi = Math.min(2, Math.floor(b) + (hash(j * 53) < b % 1 ? 1 : 0));
+    if (l < CX - 90 && r > CX + W + 90) { lp = l; rp = r; continue; }       // out at sea: no banks in view
+    if (l > CX) rect(CX, y, l - CX, 8, BG); if (r < CX + W) rect(r, y, CX + W - r, 8, BG);
+    const b = biomeAt(wy), bi = Math.min(BIOMES.BANK_COLORS.length - 1, Math.floor(b) + (hash(j * 53) < b % 1 ? 1 : 0));
     const [edge, land] = BIOMES.BANK_COLORS[bi];
     for (const [off, w, dens] of BIOMES.BANK_FADE) {            // coloured land, dithering out to black
       ctx.fillStyle = dens >= 1 ? land : ditherFill(land, dens);
@@ -67,7 +74,7 @@ function drawBanks(lo, hi) {
     const dh = hash(j * 271);
     if (dh < 0.045) {
       const s = bi === 0 ? (dh < 0.011 ? SPR.signs[(dh * 9973 | 0) % SPR.signs.length] : dh < 0.025 ? SPR.lamp : SPR.bollard) : bi === 1 ? SPR.cactus : SPR.palm;
-      if (dh * 1000 % 2 < 1) { if (l > s.width + 20) ctx.drawImage(s, l - s.width - 10, y); } else if (r < W - s.width - 20) ctx.drawImage(s, r + 11, y);
+      if (dh * 1000 % 2 < 1) { if (l - CX > s.width + 20) ctx.drawImage(s, l - s.width - 10, y); } else if (r < CX + W - s.width - 20) ctx.drawImage(s, r + 11, y);
     }
   }
 }
@@ -132,6 +139,28 @@ function drawClouds() {
     drawDisc(c.x, y, c.r, (c.kind === 'puff' || c.kind === 'poof') ? (t < 0.1 ? 0 : t < 0.7 ? 1 : 2) : (t < 0.65 ? 1 : 2));
   }
 }
+// lighthouses: a fixed beam from each one points the way to the next (never explained: you work it out)
+let beamFill = null;
+function drawLights() {
+  const L = G.lights; if (!L.length) return;
+  if (!beamFill) beamFill = [ditherFill(FG, 0.25), ditherFill(FG, 0.5)];
+  for (let i = 0; i < L.length; i++) {
+    const h = L[i], nx = L[i + 1], y = sy(h.wy), ly = y - 34;
+    if (nx) {
+      const a = Math.atan2(-(nx.wy - h.wy), nx.x - h.x);
+      for (let k = 0; k < 2; k++) {
+        const sp = SEA.BEAM_SPREAD * (k ? 0.45 : 1), len = SEA.BEAM_LEN * (k ? 0.7 : 1);
+        ctx.fillStyle = beamFill[k]; ctx.beginPath(); ctx.moveTo(h.x, ly);
+        ctx.lineTo(h.x + Math.cos(a - sp) * len, ly + Math.sin(a - sp) * len); ctx.lineTo(h.x + Math.cos(a + sp) * len, ly + Math.sin(a + sp) * len);
+        ctx.closePath(); ctx.fill();
+      }
+    }
+    if (y < -90 || y > view.H + 60 || h.x < CX - 60 || h.x > CX + W + 60) continue;
+    drawDisc(h.x, y + 14, 26, 2); drawDisc(h.x, y + 14, 18, 1);        // the rock it stands on
+    draw(SPR.lighthouse, h.x, y - 10);
+    if (h.visited) textO(':(', h.x, y + 34, 1, FG, 0.5);
+  }
+}
 function drawPickups() {
   for (let i = 0; i < vapes.n; i++) {
     const v = vapes.items[i], y = sy(v.wy);
@@ -166,21 +195,22 @@ function drawFx() {
 
 /** mode: 'full' = everything, 'menu' = just water, banks and an idle kayak */
 export function drawWorld(mode = 'full') {
-  PY = playerY(); D = Math.round(G.dist);
+  PY = playerY(); D = Math.round(G.dist); CX = mode === 'full' ? Math.round(G.camX || 0) : 0;
   const lo = D - (view.H - PY), hi = D + PY;
   rect(0, 0, W, view.H, BG);
   ctx.save();
   if (G.shake > 0.3) ctx.translate(Math.round((Math.random() - 0.5) * G.shake * 2), Math.round((Math.random() - 0.5) * G.shake * 2));
+  ctx.translate(-CX, 0);
   ctx.fillStyle = FG; drawWater(lo, hi);
   const full = mode === 'full';
   hudShown = full;
   if (full) { drawHazards(false); drawClouds(); }
   drawBanks(lo, hi);
   if (full) {
-    drawPickups(); drawEnemies();
+    drawLights(); drawPickups(); drawEnemies();
     for (const o of orbs) { const y = sy(o.wy); drawDisc(o.x, y, o.r, 1); drawDisc(o.x, y, o.r * 0.45, 0); }
   }
-  if (full && !G.dead) { const x = Math.round(G.px); rect(x - 7, PY - 23, 15, 47, BG); rect(x - 10, PY - 18, 21, 37, BG); rect(x - 13, PY - 11, 27, 23, BG); }   // keep her readable inside the fog
+  if (full && !G.dead) draw(SPR.kayakHalo[G.paddle], G.px, PY);   // keep her readable inside the fog: a black edge hugging her shape
   if (!G.dead && !(full && G.inv > 0 && ((G.t * 14) & 1))) draw(SPR.kayak[G.paddle], G.px, PY);
   if (full && !G.dead && shopLvl('immunity')) {             // political immunity: solid ring when ready, dots filling in while it recharges
     const R = IMMUNITY.RADIUS, cd = IMMUNITY.COOLDOWN[shopLvl('immunity') - 1];
@@ -191,7 +221,7 @@ export function drawWorld(mode = 'full') {
   drawFx();
   if (full && G.burst > 22) {
     const n = Math.min(16, G.burst / 7) * JUICE.SPEED_FX, k = (G.t * 24) | 0;
-    for (let i = 0; i < n; i++) rect(hash(i * 13 + k * 7) * W, hash(i * 29 + k * 3) * view.H, 1, (20 + G.burst / 4) * JUICE.SPEED_FX);
+    for (let i = 0; i < n; i++) rect(CX + hash(i * 13 + k * 7) * W, hash(i * 29 + k * 3) * view.H, 1, (20 + G.burst / 4) * JUICE.SPEED_FX);
   }
   ctx.restore();
   if (G.flash > 0) dither(0, 0, W, view.H);
@@ -227,7 +257,7 @@ export function drawHud() {
   if (G.hurtT > 0.45 && ((G.t * 20) & 1)) box(171, y0 + 13, 42, 50, FG, 3);          // hit flash, palette-safe
   // pause button stays up top, out of the thumbs' way
   rect(W - 28, 6, 22, 22, BG); box(W - 28, 6, 22, 22, FG, 2); rect(W - 21, 12, 3, 10); rect(W - 16, 12, 3, 10);
-  if (G.bannerT > 0 && !(G.bannerT < 0.8 && ((G.t * 12) & 1))) textO(G.banner, W / 2, H * 0.2, 3, FG, 0.5);
+  if (G.bannerT > 0 && !(G.bannerT < 0.8 && ((G.t * 12) & 1))) G.banner.split('\n').forEach((l, i) => textO(l, W / 2, H * 0.2 + i * 24, i ? 2 : fit(l, W, 3), FG, 0.5));
   if (save.runs < 2 && G.t < 6 && !G.dead && ((G.t * 3) & 1)) {
     textO('< TAP', 28, PY + 70, 2); textO('TAP >', W - 28, PY + 70, 2, FG, 1);
   }

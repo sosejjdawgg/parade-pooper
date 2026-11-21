@@ -1,7 +1,7 @@
 // Simulation: canal, chunks, pickups, enemies, weapons, level-ups. No drawing here.
 import {
   VIEW, WORLD, PLAYER, ENGINE, XP, PICKUPS, BIOMES, HAZARDS, ENEMIES, SPAWN,
-  WEAPONS, PASSIVES, EVOLUTIONS, LEVELUP, REWARD, JUICE, VAPING, FLAVOUR, IMMUNITY, BANKS, RAM,
+  WEAPONS, PASSIVES, EVOLUTIONS, LEVELUP, REWARD, JUICE, VAPING, FLAVOUR, IMMUNITY, BANKS, RAM, SEA,
 } from './config.js';
 import { view } from './gfx.js';
 import { save, shopLvl, writeSave, sfx, input } from './platform.js';
@@ -22,7 +22,7 @@ class Pool {
     }
   }
 }
-export const vapes = new Pool(400), enemies = new Pool(SPAWN.MAX_ALIVE + 20), hazards = new Pool(160),
+export const vapes = new Pool(400), enemies = new Pool(Math.max(SPAWN.MAX_ALIVE, SEA.MAX_ALIVE) + 20), hazards = new Pool(160),
   clouds = new Pool(600), parts = new Pool(JUICE.MAX_PARTICLES), floaters = new Pool(JUICE.MAX_FLOATERS);
 const pools = [vapes, enemies, hazards, clouds, parts, floaters];
 
@@ -34,21 +34,28 @@ const rnd = (a = 1, b) => b === undefined ? Math.random() * a : a + Math.random(
 const pick = (arr) => arr[(Math.random() * arr.length) | 0];
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const smooth = (t) => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
-export const lerp3 = (a, b) => b <= 1 ? a[0] + (a[1] - a[0]) * b : a[1] + (a[2] - a[1]) * (b - 1);
+// interpolate a per-biome array at a fractional biome index (arrays shorter than the biome count hold their last value)
+export const lerp3 = (a, b) => { const i = Math.min(a.length - 1, Math.floor(b)); return i >= a.length - 1 ? a[a.length - 1] : a[i] + (a[i + 1] - a[i]) * (b - i); };
 export const playerY = () => Math.round(view.H * VIEW.PLAYER_Y);
 export const metres = () => Math.floor(G.dist / WORLD.PX_PER_M);
 
 // ---- canal shape: pure functions of world-y, so nothing needs storing --------
 export function biomeAt(wy) {
   const m = wy / WORLD.PX_PER_M;
-  return smooth((m - BIOMES.DESERT_AT) / BIOMES.BLEND) + smooth((m - BIOMES.JUNGLE_AT) / BIOMES.BLEND);
+  return smooth((m - BIOMES.DESERT_AT) / BIOMES.BLEND) + smooth((m - BIOMES.JUNGLE_AT) / BIOMES.BLEND) + smooth((m - BIOMES.SEA_AT) / BIOMES.BLEND);
 }
-export function widthAt(wy) { return lerp3(BIOMES.WIDTH, biomeAt(wy)) + 10 * Math.sin(wy * 0.0037 + G.ph[2]); }
+export function widthAt(wy) {
+  const b = biomeAt(wy), W = BIOMES.WIDTH;
+  const w = b <= 2 ? lerp3(W, b) : W[2] + (W[3] - W[2]) * Math.pow(b - 2, 2.6);   // the sea opens slowly, then all at once
+  return w + 10 * Math.sin(wy * 0.0037 + G.ph[2]);
+}
 export function centreAt(wy) {
   const amp = clamp((VIEW.W - widthAt(wy)) / 2 - BIOMES.EDGE_MARGIN, 0, BIOMES.MEANDER);
   return VIEW.W / 2 + amp * (0.6 * Math.sin(wy * 0.0052 + G.ph[0]) + 0.4 * Math.sin(wy * 0.0113 + G.ph[1]));
 }
 export const dangerAt = (wy) => wy / WORLD.PX_PER_M >= BANKS.DANGER_AT_M;
+/** 0 on the river, 1 out at sea */
+export const seaAt = (wy) => clamp(biomeAt(wy) - 2, 0, 1);
 export const leftAt = (wy) => centreAt(wy) - widthAt(wy) / 2;
 export const rightAt = (wy) => centreAt(wy) + widthAt(wy) / 2;
 const laneX = (wy, f, margin = 18) => { const l = leftAt(wy) + margin, r = rightAt(wy) - margin; return l + (r - l) * f; };
@@ -63,7 +70,7 @@ export function newRun() {
     weapons: { cloud: 1 + shopLvl('starter') }, passives: {}, evo: {},
     cd: { cloud: 0.5, trail: 0, nova: 1.5, rings: 0.5 }, orbA: 0, orbState: [], cloudId: 0,
     genY: 240, chunkN: 0, spawnT: 0, shake: 0, flash: 0, hitstop: 0, dead: false, deadT: 0,
-    banner: BIOMES.NAMES[0], bannerT: 2.5, biomeIdx: 0, pending: 0, choices: null, cause: '', result: null, puffT: 0, vapeT: 2.5, dragT: 0, hurtT: 0, grinT: 0, shieldT: 0, danger: false, puffStats: {}, novaMore: 0, novaGapT: 0,
+    banner: BIOMES.NAMES[0], bannerT: 2.5, seaF: 0, seaT: 0, waveT: 6, wave: 0, camX: 0, lights: [], lighthouses: 0, biomeIdx: 0, pending: 0, choices: null, cause: '', result: null, puffT: 0, vapeT: 2.5, dragT: 0, hurtT: 0, grinT: 0, shieldT: 0, danger: false, puffStats: {}, novaMore: 0, novaGapT: 0,
   });
   G.ph = [rnd(6.28), rnd(6.28), rnd(6.28)];
   G.px = centreAt(0);
@@ -74,7 +81,7 @@ export function newRun() {
 const plvl = (id) => G.passives[id] || 0;
 function calcStats() {
   S.area = 1 + plvl('lungs') * PASSIVES.lungs.per;
-  S.dmg = 1;
+  S.dmg = 1 + (G.lighthouses || 0) * SEA.LIGHT_DMG;
   S.cd = Math.pow(1 - PASSIVES.chain.per, plvl('chain'));
   S.dur = 1 + plvl('linger') * PASSIVES.linger.per;
   S.magnet = (1 + plvl('magnet') * PASSIVES.magnet.per) * (1 + shopLvl('magnet') * 0.15);
@@ -124,7 +131,7 @@ function addEnemy(type, x, wy, behind) {
   const e = enemies.spawn(); if (!e) return;
   const d = ENEMIES[type];
   e.type = type; e.wy = wy; e.x = clamp(x, leftAt(wy) + d.r + 2, rightAt(wy) - d.r - 2);
-  e.hp = e.maxHp = d.hp * (1 + G.dist / WORLD.PX_PER_M / 1000 * SPAWN.HP_GROWTH_PER_KM);
+  e.hp = e.maxHp = d.hp * (1 + G.dist / WORLD.PX_PER_M / 1000 * SPAWN.HP_GROWTH_PER_KM) * (G.seaF > 0.5 ? Math.exp(G.seaT / SEA.HP_TAU) : 1);
   e.r = d.r; e.chasing = !!behind; e.vx = (Math.random() < 0.5 ? -1 : 1) * d.steer; e.seed = rnd(100);
   e.ox = rnd(-9, 9); e.oy = rnd(-12, 12); e.novaId = -1; e.flash = 0; e.puffs = 0; e.chaseT = 0; e.gaveUp = false;
   e.ang = Math.atan2(G.dist - wy, G.px - e.x);
@@ -214,7 +221,18 @@ const CHUNKS = {
     return n * 100;
   },
 };
+function seaChunk() {
+  const len = 260;
+  for (let k = 0; k < SEA.VAPE_CLUSTERS; k++) {
+    const cx = G.px + rnd(-420, 420), wy = G.genY + rnd(len), n = 3 + ((Math.random() * 4) | 0);
+    for (let i = 0; i < n; i++) addVape(cx + rnd(-16, 16), wy + rnd(-22, 22));
+  }
+  if (Math.random() < PICKUPS.CASH_CHUNK_CHANCE) addPickup('cash', G.px + rnd(-300, 300), G.genY + rnd(len));
+  if (Math.random() < PICKUPS.TEA_CHUNK_CHANCE * (G.hp < G.maxHp ? PICKUPS.TEA_HURT_MULT : 1)) addPickup('tea', G.px + rnd(-300, 300), G.genY + rnd(len));
+  G.chunkN++; G.genY += len;
+}
 function genChunk() {
+  if (biomeAt(G.genY) > 2.3) return seaChunk();
   const m = G.genY / WORLD.PX_PER_M, b = biomeAt(G.genY), dens = 1 + m * PICKUPS.DENSITY_PER_M * 10;
   let name = 'snake';
   if (G.chunkN >= 2) {
@@ -255,6 +273,50 @@ function spawnWave(b) {
   for (let i = 0; i < n; i++) addEnemy(type, x + (i ? rnd(-26, 26) : 0), wy + (i ? rnd(-30, 30) : 0), behind);
 }
 
+// ---- the open sea: enemies from every side, surround waves, lighthouses ---------------
+function seaType() {
+  let total = 0; for (const k in SEA.TABLE) total += SEA.TABLE[k];
+  let r = Math.random() * total; for (const k in SEA.TABLE) { r -= SEA.TABLE[k]; if (r <= 0) return k; }
+  return 'swan';
+}
+/** a point just off screen in direction `a` (a > 0 = ahead), so enemies arrive from every side */
+function seaSpot(a) {
+  const dx = Math.cos(a), dy = Math.sin(a), hx = VIEW.W / 2 + 30, ahead = playerY() + 30, behind = view.H - playerY() + 30;
+  const t = Math.min(hx / Math.max(1e-3, Math.abs(dx)), (dy > 0 ? ahead : behind) / Math.max(1e-3, Math.abs(dy)));
+  return [G.camX + VIEW.W / 2 + dx * t, G.dist + dy * t];
+}
+function seaSpawns(dt) {
+  G.seaT += dt;
+  G.spawnT += SEA.RATE * (1 + G.seaT * SEA.RATE_GROWTH) * dt;
+  while (G.spawnT >= 1) { G.spawnT--; if (enemies.n < SEA.MAX_ALIVE) { const [x, wy] = seaSpot(rnd(6.283)); addEnemy(seaType(), x, wy, true); } }
+  G.waveT -= dt;
+  if (G.waveT <= 0) {                     // a full ring closes in
+    G.wave++; G.waveT = SEA.WAVE_EVERY;
+    const n = SEA.WAVE_BASE + SEA.WAVE_GROW * (G.wave - 1), type = seaType(), a0 = rnd(6.283);
+    for (let i = 0; i < n && enemies.n < SEA.MAX_ALIVE + 15; i++) { const [x, wy] = seaSpot(a0 + i / n * 6.283); addEnemy(type, x, wy, true); }
+    G.banner = 'WAVE ' + G.wave; G.bannerT = 2; sfx.level();
+  }
+}
+function updateLights() {
+  const L = G.lights;
+  if (!L.length) {
+    if (G.dist / WORLD.PX_PER_M < BIOMES.SEA_AT) return;
+    L.push({ x: G.px + rnd(-50, 50), wy: (BIOMES.SEA_AT + BIOMES.BLEND + SEA.LIGHT_FIRST_M) * WORLD.PX_PER_M, visited: false });
+  }
+  while (L[L.length - 1].wy < G.dist + 3200) {
+    const p = L[L.length - 1];
+    L.push({ x: p.x + (Math.random() < 0.5 ? -1 : 1) * rnd(SEA.LIGHT_SIDE[0], SEA.LIGHT_SIDE[1]), wy: p.wy + rnd(SEA.LIGHT_GAP_M[0], SEA.LIGHT_GAP_M[1]) * WORLD.PX_PER_M, visited: false });
+  }
+  while (L.length > 2 && L[1].wy < G.dist - 2500) L.shift();
+  for (const h of L) {
+    if (h.visited || Math.abs(h.x - G.px) > SEA.LIGHT_R || Math.abs(h.wy - G.dist) > SEA.LIGHT_R) continue;
+    h.visited = true; G.lighthouses++; calcStats();
+    G.banner = "AWHHH, THIS ISN'T A VAPE SHOP :(\nLET'S TRY THE NEXT ONE"; G.bannerT = 4;
+    addFloater('+' + Math.round(SEA.LIGHT_DMG * 100) + '% DAMAGE', h.x, h.wy + 30, 2);
+    burst(h.x, h.wy, 18, 120, 0.5); sfx.big(); G.shake = Math.max(G.shake, 3);
+  }
+}
+
 // ---- player actions ---------------------------------------------------------------
 export function nudge(dir) {
   if (G.mode !== 'play' || G.dead) return;
@@ -277,7 +339,7 @@ function die(cause) {
   for (let i = 0; i < 70; i++) { const a = rnd(6.28), s = rnd(20, 260); addPart(G.px + rnd(-6, 6), G.dist + rnd(-14, 14), Math.cos(a) * s, Math.sin(a) * s, rnd(0.4, 1.3), pick([2, 2, 3, 4])); }
   const m = metres(), bonus = Math.floor(m / 100) * REWARD.CASH_PER_100M + (G.level - 1) * REWARD.CASH_PER_LEVEL;
   const total = G.cash + Math.round(bonus * S.cash);
-  G.result = { title: pick(FLAVOUR.DEATH_TITLES), tip: pick(FLAVOUR.TIPS), vapes: G.vapes, m, level: G.level, kills: G.kills, cash: total, newBest: G.vapes > save.best };
+  G.result = { title: pick(FLAVOUR.DEATH_TITLES), tip: pick(FLAVOUR.TIPS), vapes: G.vapes, m, level: G.level, kills: G.kills, cash: total, lights: G.lighthouses, newBest: G.vapes > save.best };
   save.cash += total; save.runs++; save.best = Math.max(save.best, G.vapes); save.bestDist = Math.max(save.bestDist, m);
   writeSave();
 }
@@ -489,7 +551,12 @@ function updateEnemies(dt) {
     const e = enemies.items[i], d = ENEMIES[e.type];
     const dx = G.px + e.ox - e.x, dwy = G.dist + e.oy - e.wy, dist = Math.hypot(dx, dwy) || 1;
     if (e.flash > 0) e.flash -= dt;
-    if (d.mode === 'chase') {
+    if (G.seaF > 0.5) {                                                   // at sea everything homes in, from every side
+      const sp = d.speed * SEA.ENEMY_SPEED * (1 + G.seaT * SEA.SPEED_GROWTH) * (d.mode === 'drift' ? 1.6 : 1);
+      e.x += dx / dist * sp * dt; e.wy += (dwy / dist * sp + G.speed) * dt;
+      if (e.type === 'mozzie') e.x += Math.sin(G.t * 9 + e.seed) * 40 * dt;
+      if (dist > SEA.DESPAWN) { e.dead = true; continue; }
+    } else if (d.mode === 'chase') {
       if (!e.chasing && !e.gaveUp && dist < SPAWN.CHASE_RANGE) { e.chasing = true; e.ang = Math.atan2(dwy, dx); }
       if (e.chasing) {
         // steer with a limited turn rate: they commit to a line, so a side-step makes them overshoot
@@ -508,7 +575,7 @@ function updateEnemies(dt) {
     }
     const l = leftAt(e.wy) + e.r + 2, r = rightAt(e.wy) - e.r - 2;
     if (e.x < l) { e.x = l; if (e.vx < 0) e.vx = -e.vx; } else if (e.x > r) { e.x = r; if (e.vx > 0) e.vx = -e.vx; }
-    if (e.wy < below) { e.dead = true; continue; }
+    if (G.seaF <= 0.5 && e.wy < below) { e.dead = true; continue; }
     if (G.burst >= RAM.MIN_BURST && Math.abs(e.x - G.px) < e.r + RAM.TIP_W && Math.abs(e.wy - (G.dist + RAM.TIP_Y)) < e.r + RAM.TIP_H) {
       // boosting: the tip of the kayak rams it. Obliterated, but it knocks the boost down
       G.burst *= d.big ? RAM.BOOST_KEEP_BIG : RAM.BOOST_KEEP;
@@ -606,6 +673,8 @@ export function update(dt) {
   const m = G.dist / WORLD.PX_PER_M;
   let base = PLAYER.SPEED_START + (PLAYER.SPEED_MAX - PLAYER.SPEED_START) * Math.min(1, m / PLAYER.SPEED_RAMP_M);
   if (shopLvl('engine')) base *= ENGINE.SPEED_MULT + shopLvl('turbo') * ENGINE.TUNING_SPEED;
+  G.seaF = seaAt(G.dist);
+  base *= 1 + (SEA.SPEED_MULT - 1) * G.seaF;                      // out at sea the current is gentler
   G.burst *= Math.exp(-ENGINE.BURST_DECAY * dt);
   G.slow = Math.min(1, G.slow + HAZARDS.SLOW_RECOVER * dt);      // steady climb back to whatever full speed currently is
   G.speed = (base + G.burst) * G.slow;
@@ -627,6 +696,7 @@ export function update(dt) {
     G.px = clamp(G.px, l, r); G.pvx = 0;
     if (G.danger) { hurt(1, 'bank'); G.pvx = (leftSide ? 1 : -1) * BANKS.PUSH; }
   }
+  G.camX += ((G.px - VIEW.W / 2) * G.seaF - G.camX) * Math.min(1, dt * SEA.CAM_FOLLOW);   // follows her sideways at sea
   if (G.inv > 0) G.inv -= dt;
   if (G.shieldT > 0) G.shieldT -= dt;
   if (!G.danger && dangerAt(G.dist)) { G.danger = true; G.banner = "RED WALL: DON'T TOUCH!"; G.bannerT = 4; }
@@ -647,12 +717,14 @@ export function update(dt) {
   const b = biomeAt(G.dist), bi = Math.round(b);
   if (bi !== G.biomeIdx) { G.biomeIdx = bi; G.banner = BIOMES.NAMES[bi]; G.bannerT = 3; }
   if (G.bannerT > 0) G.bannerT -= dt;
-  if (m > SPAWN.START_M) {
+  if (G.seaF > 0.5) seaSpawns(dt);
+  else if (m > SPAWN.START_M) {
     G.spawnT += lerp3(SPAWN.RATE, b) * (1 + m / 1000 * SPAWN.RATE_GROWTH_PER_KM) * Math.sqrt(G.speed / PLAYER.SPEED_START)
       * Math.min(SPAWN.LEVEL_MAX, SPAWN.LEVEL_BASE + G.level * SPAWN.LEVEL_PER) * dt;
     while (G.spawnT >= 1) { G.spawnT--; if (enemies.n < SPAWN.MAX_ALIVE) spawnWave(b); }
   }
 
+  updateLights();
   updateWeapons(dt);
   updateClouds(dt);
   updateEnemies(dt);
@@ -668,11 +740,13 @@ export function update(dt) {
 let botT = 0;
 function botSteer(dt) {
   botT -= dt; if (botT > 0) return;
-  const l = leftAt(G.dist + 40) + 14, r = rightAt(G.dist + 40) - 14;
+  const sea = G.seaF > 0.5;
+  const l = sea ? G.px - 120 : leftAt(G.dist + 40) + 14, r = sea ? G.px + 120 : rightAt(G.dist + 40) - 14;
+  const goal = sea ? G.lights.find((h) => !h.visited && h.wy > G.dist) : null;
   let best = G.px, bestCost = 1e9;
   for (let k = 0; k <= 14; k++) {
     const x = l + (r - l) * k / 14;
-    let cost = Math.abs(x - G.px) * 0.25;
+    let cost = Math.abs(x - G.px) * 0.25 + (goal ? Math.abs(x - goal.x) * 0.5 : 0);
     for (let i = 0; i < hazards.n; i++) {
       const h = hazards.items[i], dy = h.wy - G.dist;
       if (h.type === 'deck' || h.type === 'vine' || dy + h.hh < -16 || dy - h.hh > 210) continue;
