@@ -1,7 +1,7 @@
 // Draws the world and the in-run HUD. Three colours only: black, white, ginger.
 import { VIEW, COLORS, BIOMES, VAPING, JUICE, IMMUNITY, PLAYER, SEA } from './config.js';
 import { ctx, view, rect, box, text, textO, textW, draw, drawDisc, face, SPR, hash, LIGHTHOUSE_LAMP_Y } from './gfx.js';
-import { G, S, DEV, vapes, enemies, hazards, clouds, parts, floaters, orbs, biomeAt, dangerAt, seaAt, leftAt, rightAt, playerY, metres } from './game.js';
+import { G, S, DEV, orcaAt, vapes, enemies, hazards, clouds, parts, floaters, orbs, biomeAt, dangerAt, seaAt, leftAt, rightAt, playerY, metres } from './game.js';
 import { save, shopLvl } from './platform.js';
 import { devOverlay } from './dev.js';
 
@@ -178,8 +178,38 @@ function drawEnemies() {
   for (let i = 0; i < enemies.n; i++) {
     const e = enemies.items[i], y = sy(e.wy);
     if (y < -24 || y > view.H + 24) continue;
-    const s = SPR[e.type], bob = e.type === 'mozzie' ? 0 : Math.round(Math.sin(G.t * 6 + e.seed) * 1);
-    if (e.flash > 0) drawDisc(e.x, y, e.r + 2, 0); else draw(s, e.x, y + bob);
+    const s = SPR[e.type], bob = e.type === 'mozzie' || e.type === 'gull' ? 0 : Math.round(Math.sin(G.t * 6 + e.seed) * 1);
+    if (e.flash > 0) drawDisc(e.x, y, e.r + 2, 0);
+    else if (e.type === 'puffer' && e.inflate > 0) { const k = e.r / 7; ctx.drawImage(s, Math.round(e.x - s.width * k / 2), Math.round(y + bob - s.height * k / 2), Math.round(s.width * k), Math.round(s.height * k)); }
+    else if (e.type === 'gull') { ctx.save(); ctx.translate(Math.round(e.x), y); ctx.rotate(Math.atan2(-e.vwy, e.vx) - Math.PI / 2); ctx.drawImage(s, -(s.width >> 1), -(s.height >> 1)); ctx.restore(); }
+    else draw(s, e.x, y + bob);
+  }
+}
+// killer whales: a blinking dotted warning along the path, then the pod sweeps through, surfacing and diving
+let shadowFill = null;
+function drawPods() {
+  if (!G.pods || !G.pods.length) return;
+  if (!shadowFill) shadowFill = ditherFill('#4a6478', 0.5);
+  for (const pod of G.pods) {
+    const cx = G.camX + W / 2;
+    if (pod.t < SEA.ORCA_WARN + 0.35) {                                    // the warning: ripples along the line, ! where they come from
+      const on = ((pod.t * 8) | 0) & 1;
+      for (let s = 0; s <= pod.L; s += 12) {
+        const f = s / pod.L, ux = (pod.x1 - pod.x0) / pod.L, uy = (pod.y1 - pod.y0) / pod.L, b = Math.sin(f * Math.PI) * pod.arc;
+        const x = cx + pod.x0 + (pod.x1 - pod.x0) * f - uy * b, y = sy(G.dist + pod.y0 + (pod.y1 - pod.y0) * f + ux * b);
+        if (((s / 12) & 1) === on) rect(x - 3, y - 1, 6, 2, COLORS.ENEMY);
+      }
+      const ex = Math.max(CX + 14, Math.min(CX + W - 14, cx + pod.x0)), ey = Math.max(40, Math.min(view.H - 90, sy(G.dist + pod.y0)));
+      if (on) textO('!', ex, ey - 8, 4, COLORS.ENEMY, 0.5);
+    }
+    for (let i = pod.n - 1; i >= 0; i--) {
+      const o = orcaAt(pod, i); if (!o) continue;
+      const y = sy(o.wy);
+      ctx.save(); ctx.translate(Math.round(o.x), y); ctx.rotate(-o.ang);
+      if (o.up) { ctx.drawImage(SPR.orca, -(SPR.orca.width >> 1), -(SPR.orca.height >> 1)); }
+      else { ctx.fillStyle = shadowFill; ctx.fillRect(-30, -8, 60, 16); ctx.fillRect(-22, -11, 40, 22); }   // a dark shape just under the surface
+      ctx.restore();
+    }
   }
 }
 function drawFx() {
@@ -210,11 +240,13 @@ export function drawWorld(mode = 'full') {
   if (full) { drawHazards(false); drawClouds(); }
   drawBanks(lo, hi);
   if (full) {
-    drawLights(); drawPickups(); drawEnemies();
+    drawLights(); drawPickups(); drawEnemies(); drawPods();
     for (const o of orbs) { const y = sy(o.wy); drawDisc(o.x, y, o.r, 1); drawDisc(o.x, y, o.r * 0.45, 0); }
   }
   if (full && !G.dead) draw(SPR.kayakHalo[G.paddle], G.px, PY);   // keep her readable inside the fog: a black edge hugging her shape
-  if (!G.dead && !(full && G.inv > 0 && ((G.t * 14) & 1))) draw(SPR.kayak[G.paddle], G.px, PY);
+  if (G.flipT > 0 && !G.dead) {                              // capsized: she spins
+    const k = SPR.kayak[G.paddle]; ctx.save(); ctx.translate(Math.round(G.px), PY); ctx.rotate((1 - G.flipT / 0.8) * Math.PI * 2); ctx.drawImage(k, -(k.width >> 1), -(k.height >> 1)); ctx.restore();
+  } else if (!G.dead && !(full && G.inv > 0 && ((G.t * 14) & 1))) draw(SPR.kayak[G.paddle], G.px, PY);
   if (full && !G.dead && shopLvl('immunity')) {             // political immunity: solid ring when ready, dots filling in while it recharges
     const R = IMMUNITY.RADIUS, cd = IMMUNITY.COOLDOWN[shopLvl('immunity') - 1];
     if (G.shieldT <= 0) drawDisc(G.px, PY, R + (((G.t * 4) | 0) & 1), 3);

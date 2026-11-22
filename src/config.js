@@ -120,7 +120,9 @@ export const SEA = {
   HP_TAU: 75,                 // enemy health grows x2.7 every this many seconds at sea: the sea always wins in the end
   DESPAWN: 950,               // enemies this far away give up
   MAX_ALIVE: 200,
-  TABLE: { swan: 2, pap: 3, piranha: 3, mozzie: 3, croc: 0.5 },
+  TABLE: { swan: 2, pap: 3, piranha: 3, mozzie: 3, croc: 0.5, puffer: 1 },
+  HP_MULT: 1,                 // sea enemy health x (1 + (build power / POWER_REF)^2): barely tougher for an ordinary build,
+  POWER_REF: 16,              // much tougher for a stacked one (build power = weapon levels + 3 per evolution + half passive levels)
   VAPE_CLUSTERS: 3,           // vape patches scattered per sea chunk
   LIGHT_FIRST_M: 60,          // the first lighthouse, this far into the sea (nearly dead ahead)
   LIGHT_GAP_M: [75, 110],     // forward distance between lighthouses
@@ -128,6 +130,14 @@ export const SEA = {
   LIGHT_R: 44,                // paddle this close to visit
   LIGHT_DMG: 0.1,             // +10% damage to every weapon per lighthouse visited
   BEAM_LEN: 1200, BEAM_SPREAD: 0.11,
+  // killer whale pods: can't be vaped. Warned by a dotted line, then a pod sweeps across, surfacing and diving.
+  // Only surfaced whales can hit you, and a hit capsizes the kayak. Political immunity doesn't help.
+  ORCA_FIRST: 14, ORCA_EVERY: [9, 14], ORCA_EVERY_MIN: 5,   // seconds; the gap shrinks the longer you survive
+  ORCA_WARN: 1.5, ORCA_SPEED: 250, ORCA_GAP: 62, ORCA_HIT_LEN: 26, ORCA_HIT_W: 11,
+  ORCA_POD: [3, 8], ORCA_POD_GROW: 45,                     // pod size: +1 whale per this many seconds at sea
+  ORCA_HIT: 1.6, ORCA_KNOCK: 330, ORCA_FLIP: 0.8,         // damage (x a normal hit), shove, seconds spinning
+  GULL_FIRST: 25, GULL_EVERY: [7, 11], GULL_FLOCK: [5, 9],
+  VORTEX_CHANCE: 0.12,        // whirlpools out at sea, per chunk
 };
 
 export const IMMUNITY = { COOLDOWN: [10, 8, 5, 3, 2], RADIUS: 21 };
@@ -163,6 +173,9 @@ export const ENEMIES = {
   piranha: { hp: 15, r: 5, speed: 66, steer: 0,  mode: 'chase',  xp: 2, drop: 0.45, turn: 1.3, stamina: 6 },
   mozzie:  { hp: 3,  r: 3, speed: 84, steer: 0,  mode: 'chase',  xp: 1, drop: 0.25, turn: 2.0, stamina: 7 },
   croc:    { hp: 70, r: 9, speed: 26, steer: 14, mode: 'drift',  xp: 8, drop: 1, big: true, tea: 0.3 },   // tea: chance to drop a cuppa
+  // open sea only. resist: fraction of vape damage shrugged off
+  puffer:  { hp: 16, r: 7, speed: 30, steer: 0,  mode: 'drift',  xp: 5, drop: 1, resist: 0.65 },   // puffs up when hit
+  gull:    { hp: 6,  r: 5, speed: 190, steer: 0, mode: 'dive',   xp: 1, drop: 0.2 },                // dive-bombs in V flocks
 };
 
 export const SPAWN = {
@@ -284,7 +297,7 @@ export const FLAVOUR = {
     'A KAYAK IS NOT A SECOND HOME. PROBABLY.',
   ],
   CAUSES: {
-    dev: 'PULLED BY A DEVELOPER',
+    dev: 'PULLED BY A DEVELOPER', orca: 'TOPPLED BY KILLER WHALES', puffer: 'SPIKED BY A PUFFERFISH', gull: 'DIVE-BOMBED BY GULLS',
     barge: "RAMMED SOMEONE'S SECOND HOME", pier: 'HIT A LOW BRIDGE', gate: 'HIT A LOCK GATE', vortex: 'DOWN THE PLUGHOLE',
     debris: 'SUNK BY FLY-TIPPING', bank: 'HIT THE RED WALL', sandbar: 'RAN AGROUND', swan: 'A SWAN TOOK IT PERSONALLY', pap: 'PAPPED MID-PUFF',
     tumble: 'TUMBLEWEEDED', piranha: 'NIBBLED BY THE BACKBENCHES', mozzie: 'BITTEN TO BITS', croc: 'SNAPPED UP',

@@ -324,6 +324,19 @@ function makeLighthouse() {
   return outlined(c);
 }
 
+/** killer whale seen from above, facing right: black body, white eye patches, grey saddle, white outline */
+function makeOrca() {
+  const [c, g] = mk(36, 17), cy = 8;
+  const hw = (x) => x < 4 ? 0 : Math.round(6.5 * Math.pow(Math.sin(Math.PI * (x - 3) / 33), 0.7));
+  g.fillStyle = BG;
+  for (let x = 4; x < 36; x++) { const h = hw(x); if (h > 0) g.fillRect(x, cy - h, 1, h * 2 + 1); }
+  for (let x = 0; x < 6; x++) { const s = 2 + (6 - x); g.fillRect(x, cy - s, 2, 2); g.fillRect(x, cy + s - 1, 2, 2); g.fillRect(x + 1, cy - 1, 4, 3); }   // tail flukes
+  g.fillStyle = FG; g.fillRect(25, cy - 5, 5, 2); g.fillRect(25, cy + 4, 5, 2);                 // eye patches
+  g.fillRect(14, cy, 6, 1);                                                                    // dorsal fin, edge-on
+  g.fillStyle = '#7a8a96'; g.fillRect(10, cy - 3, 4, 2); g.fillRect(10, cy + 2, 4, 2);          // saddle
+  return outlined(c, FG);
+}
+
 export const SPR = {};
 export function buildSprites() {
   SPR.kayak = [makeKayak(0), makeKayak(1)];
@@ -353,6 +366,10 @@ export function buildSprites() {
   SPR.piranha = art([
     '..####....', '.######..#', '#x####.###', '#######.##', '#.#.##.###', '.######..#', '..####....'], ENEMY);
   SPR.mozzie = art(['#.#.#', '.###.', '#.#.#'], ENEMY);
+  SPR.puffer = art([                                                  // pufferfish: shrugs off most vape
+    '.#..#..#..#.', '..#######...', '#.##x###x##.', '.##########.', '###########o', '.##########.', '#.#.#.#.###.', '..#######...', '.#..#..#..#.'], ENEMY);
+  SPR.gull = art(['##.......##', '.##.....##.', '..##.#.##..', '...#####...', '....###....', '.....o.....'], ENEMY);
+  SPR.orca = doubled(makeOrca());                                       // big: these are killer whales, not ducks
   SPR.croc = art([
     '...####...', '...#..#...', '...####...', '...####...', '..#x##x#..', '..######..', '.########.', '##########', '.########.',
     '.########.', '##########', '.########.', '..######..', '...####...', '...###....', '....##....', '....#.....'], ENEMY);

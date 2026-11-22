@@ -2,7 +2,7 @@
 import { VIEW, COLORS, SHOP, FLAVOUR, MUSIC, LEGAL, VERSION } from './config.js';
 import { preloadMusic, musicFrame, musicState, openerFinished } from './music.js';
 import { ctx, view, resize, rect, box, text, textO, textW, wrap, draw, buildSprites, SPR, face } from './gfx.js';
-import { G, DEV, newRun, update, idle, nudge, choose, playerY, enemies, clouds, vapes, centreAt } from './game.js';
+import { G, DEV, newRun, update, idle, nudge, choose, playerY, enemies, clouds, vapes, centreAt, orcaPod, gullFlock, devJump } from './game.js';
 import { loadDev, openDev, devState, devCodeScreen, devScreen } from './dev.js';
 import { drawWorld, drawHud, dither, PAUSE_RECT } from './render.js';
 import { save, loadSave, writeSave, resetSave, shopLvl, sfx, input, initInput, requestTilt, getAC } from './platform.js';
@@ -302,7 +302,7 @@ function boot() {
   });
   newRun(); G.mode = 'title'; G.banner = ''; G.inv = 0;
   if (params.get('bot')) { newRun(); G.bot = true; G.god = !!params.get('god'); G.hits = G.crashes = 0; }
-  window.__vc = { text, setFast: (n) => { FAST = n; }, musicState, G, save, newRun, enemies, clouds, vapes, SPR, face, centreAt, DEV };
+  window.__vc = { text, setFast: (n) => { FAST = n; }, musicState, G, save, newRun, enemies, clouds, vapes, SPR, face, centreAt, DEV, orcaPod, gullFlock, devJump };
   requestAnimationFrame(frame);
 }
 boot();

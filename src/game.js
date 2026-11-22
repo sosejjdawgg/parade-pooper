@@ -72,7 +72,7 @@ export function newRun() {
     weapons: { cloud: 1 + shopLvl('starter') }, passives: {}, evo: {},
     cd: { cloud: 0.5, trail: 0, nova: 1.5, rings: 0.5 }, orbA: 0, orbState: [], cloudId: 0,
     genY: 240, chunkN: 0, spawnT: 0, shake: 0, flash: 0, hitstop: 0, dead: false, deadT: 0,
-    banner: BIOMES.NAMES[0], bannerT: 2.5, seaF: 0, seaT: 0, waveT: 6, wave: 0, camX: 0, lights: [], lighthouses: 0, biomeIdx: 0, pending: 0, choices: null, cause: '', result: null, puffT: 0, vapeT: 2.5, dragT: 0, hurtT: 0, grinT: 0, shieldT: 0, danger: false, puffStats: {}, novaMore: 0, novaGapT: 0,
+    banner: BIOMES.NAMES[0], bannerT: 2.5, seaF: 0, seaT: 0, waveT: 6, wave: 0, pods: [], orcaT: SEA.ORCA_FIRST, gullT: SEA.GULL_FIRST, flipT: 0, camX: 0, lights: [], lighthouses: 0, biomeIdx: 0, pending: 0, choices: null, cause: '', result: null, puffT: 0, vapeT: 2.5, dragT: 0, hurtT: 0, grinT: 0, shieldT: 0, danger: false, puffStats: {}, novaMore: 0, novaGapT: 0,
   });
   G.ph = [rnd(6.28), rnd(6.28), rnd(6.28)];
   G.px = centreAt(0);
@@ -130,14 +130,22 @@ function addCloud(kind, x, wy, vx, vwy, r0, r1, life, dmg, tick) {
   c.dmg = dmg; c.tick = tick; c.tickT = 0; c.id = ++G.cloudId;
   if (kind === 'puff') { if (c.hit) c.hit.clear(); else c.hit = new Set(); }   // a puff damages each enemy once
 }
+/** how strong the current build is: weapon levels, evolutions count triple, passives half */
+export function buildPower() {
+  let p = 0;
+  for (const k in G.weapons) p += G.weapons[k] + (G.evo[k] ? 3 : 0);
+  for (const k in G.passives) p += G.passives[k] * 0.5;
+  return p;
+}
 export function addEnemy(type, x, wy, behind) {
-  const e = enemies.spawn(); if (!e) return;
+  const e = enemies.spawn(); if (!e) return null;
   const d = ENEMIES[type];
   e.type = type; e.wy = wy; e.x = clamp(x, leftAt(wy) + d.r + 2, rightAt(wy) - d.r - 2);
-  e.hp = e.maxHp = d.hp * (1 + G.dist / WORLD.PX_PER_M / 1000 * SPAWN.HP_GROWTH_PER_KM) * (G.seaF > 0.5 ? Math.exp(G.seaT / SEA.HP_TAU) : 1);
+  e.hp = e.maxHp = d.hp * (1 + G.dist / WORLD.PX_PER_M / 1000 * SPAWN.HP_GROWTH_PER_KM) * (G.seaF > 0.5 ? SEA.HP_MULT * (1 + (buildPower() / SEA.POWER_REF) ** 2) * Math.exp(G.seaT / SEA.HP_TAU) : 1);
   e.r = d.r; e.chasing = !!behind; e.vx = (Math.random() < 0.5 ? -1 : 1) * d.steer; e.seed = rnd(100);
   e.ox = rnd(-9, 9); e.oy = rnd(-12, 12); e.novaId = -1; e.flash = 0; e.puffs = 0; e.chaseT = 0; e.gaveUp = false;
-  e.ang = Math.atan2(G.dist - wy, G.px - e.x);
+  e.ang = Math.atan2(G.dist - wy, G.px - e.x); e.inflate = 0; e.vwy = 0;
+  return e;
 }
 
 // ---- procedural chunks ----------------------------------------------------------
@@ -231,6 +239,7 @@ function seaChunk() {
     for (let i = 0; i < n; i++) addVape(cx + rnd(-16, 16), wy + rnd(-22, 22));
   }
   if (Math.random() < PICKUPS.CASH_CHUNK_CHANCE) addPickup('cash', G.px + rnd(-300, 300), G.genY + rnd(len));
+  if (G.seaF > 0.5 && Math.random() < SEA.VORTEX_CHANCE) addHazard('vortex', G.px + rnd(-220, 220), G.genY + rnd(len), 0, 0);
   if (Math.random() < PICKUPS.TEA_CHUNK_CHANCE * (G.hp < G.maxHp ? PICKUPS.TEA_HURT_MULT : 1)) addPickup('tea', G.px + rnd(-300, 300), G.genY + rnd(len));
   G.chunkN++; G.genY += len;
 }
@@ -299,6 +308,61 @@ function seaSpawns(dt) {
     for (let i = 0; i < n && enemies.n < SEA.MAX_ALIVE + 15; i++) { const [x, wy] = seaSpot(a0 + i / n * 6.283); addEnemy(type, x, wy, true); }
     G.banner = 'WAVE ' + G.wave; G.bannerT = 2; sfx.level();
   }
+  G.orcaT -= dt;
+  if (G.orcaT <= 0) { orcaPod(); G.orcaT = Math.max(SEA.ORCA_EVERY_MIN, rnd(SEA.ORCA_EVERY[0], SEA.ORCA_EVERY[1]) - G.seaT * 0.02); }
+  G.gullT -= dt;
+  if (G.gullT <= 0) { gullFlock(); G.gullT = rnd(SEA.GULL_EVERY[0], SEA.GULL_EVERY[1]); }
+}
+/** a V of gulls appears ahead and dive-bombs the spot where you are now */
+export function gullFlock() {
+  const n = Math.round(rnd(SEA.GULL_FLOCK[0], SEA.GULL_FLOCK[1])), side = rnd(-120, 120), sp = ENEMIES.gull.speed;
+  const x0 = G.camX + VIEW.W / 2 + side, y0 = G.dist + playerY() + 30, a = Math.atan2(G.dist - y0, G.px - x0);
+  for (let i = 0; i < n; i++) {
+    const k = (i + 1) >> 1, s = i & 1 ? 1 : -1, bx = -Math.sin(a), by = Math.cos(a);   // the V trails behind the leader
+    const e = addEnemy('gull', x0 + s * k * 14 * bx - Math.cos(a) * k * 16, y0 + s * k * 14 * by - Math.sin(a) * k * 16, true);
+    if (e) { e.vx = Math.cos(a) * sp; e.vwy = Math.sin(a) * sp; e.x = x0 + s * k * 14 * bx - Math.cos(a) * k * 16; }
+  }
+  sfx.no();
+}
+// ---- killer whale pods: immune to vapes, telegraphed, then a sweep you have to dodge ----------
+/** paths are relative to the kayak's screen spot (x across the screen, y = metres ahead in px) */
+export function orcaPod(kind) {
+  const hw = VIEW.W / 2 + 70, top = playerY() + 40, bot = -(view.H - playerY()) - 40, dir = Math.random() < 0.5 ? -1 : 1;
+  kind = kind || pick(['sweep', 'sweep', 'diag', 'charge']);
+  let p;
+  if (kind === 'sweep') { const y = rnd(-30, 170); p = [-hw * dir, y, hw * dir, y + rnd(-40, 40), rnd(30, 60)]; }
+  else if (kind === 'diag') p = [-hw * dir, rnd(250, top), hw * dir, rnd(bot + 60, -40), rnd(-30, 30)];
+  else { const x = rnd(-50, 50); p = [x, top + 60, x + rnd(-60, 60), bot, rnd(25, 45) * dir]; }
+  const n = Math.min(SEA.ORCA_POD[1], SEA.ORCA_POD[0] + Math.floor(G.seaT / SEA.ORCA_POD_GROW));
+  G.pods.push({ t: 0, x0: p[0], y0: p[1], x1: p[2], y1: p[3], arc: p[4], n, L: Math.hypot(p[2] - p[0], p[3] - p[1]), seed: rnd(10) });
+}
+/** where whale i of a pod is now: null if it's not in the water yet (or has gone) */
+export function orcaAt(pod, i) {
+  const s = (pod.t - SEA.ORCA_WARN) * SEA.ORCA_SPEED - i * SEA.ORCA_GAP;
+  if (s < 0 || s > pod.L) return null;
+  const f = s / pod.L, ux = (pod.x1 - pod.x0) / pod.L, uy = (pod.y1 - pod.y0) / pod.L, bend = Math.sin(f * Math.PI) * pod.arc;
+  return { x: G.camX + VIEW.W / 2 + pod.x0 + (pod.x1 - pod.x0) * f - uy * bend, wy: G.dist + pod.y0 + (pod.y1 - pod.y0) * f + ux * bend,
+    ang: Math.atan2(-(pod.y1 - pod.y0), pod.x1 - pod.x0), up: Math.sin(s * 0.03 + i * 1.9 + pod.seed) > -0.3, s };
+}
+function updatePods(dt) {
+  for (const pod of G.pods) {
+    const was = pod.t; pod.t += dt;
+    if (was < SEA.ORCA_WARN && pod.t >= SEA.ORCA_WARN) sfx.nova();
+    for (let i = 0; i < pod.n; i++) {
+      const o = orcaAt(pod, i); if (!o) continue;
+      if (o.up && Math.random() < dt * 18) addPart(o.x + rnd(-22, 22), o.wy + rnd(-8, 8), rnd(-40, 40), G.speed + rnd(-30, 30), 0.4, 3);   // spray
+      if (!o.up || G.dead || G.inv > 0) continue;
+      const rx = G.px - o.x, ry = G.dist - o.wy, ca = Math.cos(o.ang), sa = Math.sin(o.ang);
+      const along = rx * ca + ry * sa, across = -rx * sa + ry * ca;                                       // in the whale's own frame
+      if (Math.abs(along) < SEA.ORCA_HIT_LEN + PLAYER.HIT_W && Math.abs(across) < SEA.ORCA_HIT_W + PLAYER.HIT_W) {          // capsized!
+        const shove = Math.sign(G.px - o.x) || 1;
+        hurt(SEA.ORCA_HIT, 'orca');
+        G.pvx = shove * SEA.ORCA_KNOCK; G.flipT = SEA.ORCA_FLIP; G.shake = Math.max(G.shake, 8);
+        addFloater('TOPPLED!', G.px, G.dist + 26, 2); burst(G.px, G.dist, 24, 160, 0.5, 3);
+      }
+    }
+  }
+  G.pods = G.pods.filter((p) => (p.t - SEA.ORCA_WARN) * SEA.ORCA_SPEED - (p.n - 1) * SEA.ORCA_GAP <= p.L);
 }
 function updateLights() {
   const L = G.lights;
@@ -307,8 +371,11 @@ function updateLights() {
     L.push({ x: G.px + rnd(-50, 50), wy: Math.max((BIOMES.SEA_AT + BIOMES.BLEND + SEA.LIGHT_FIRST_M) * WORLD.PX_PER_M, G.dist + 600), visited: false });
   }
   while (L[L.length - 1].wy < G.dist + 3200) {
-    const p = L[L.length - 1];
-    L.push({ x: p.x + (Math.random() < 0.5 ? -1 : 1) * rnd(SEA.LIGHT_SIDE[0], SEA.LIGHT_SIDE[1]), wy: p.wy + rnd(SEA.LIGHT_GAP_M[0], SEA.LIGHT_GAP_M[1]) * WORLD.PX_PER_M, visited: false });
+    const p = L[L.length - 1], wy = p.wy + rnd(SEA.LIGHT_GAP_M[0], SEA.LIGHT_GAP_M[1]) * WORLD.PX_PER_M;
+    const c = centreAt(wy), room = Math.max(200, widthAt(wy) / 2 - 400);        // stay well inside the sea: its edges are the red banks
+    let side = Math.random() < 0.5 ? -1 : 1;
+    if (Math.abs(p.x + side * SEA.LIGHT_SIDE[1] - c) > room) side = -side;
+    L.push({ x: clamp(p.x + side * rnd(SEA.LIGHT_SIDE[0], SEA.LIGHT_SIDE[1]), c - room, c + room), wy, visited: false });
   }
   while (L.length > 2 && L[1].wy < G.dist - 2500) L.shift();
   for (const h of L) {
@@ -393,7 +460,9 @@ function collect(v) {
 }
 function damageEnemy(e, dmg) {
   if (e.dead) return;
-  dmg = DEV.oneHit ? 1e9 : dmg * S.dmg; e.hp -= dmg; e.flash = 0.08;
+  const dd = ENEMIES[e.type];
+  dmg = DEV.oneHit ? 1e9 : dmg * S.dmg * (1 - (dd.resist || 0)); e.hp -= dmg;
+  if (e.type === 'puffer') e.inflate = 1.6; e.flash = 0.08;
   if (floaters.n < 14) addFloater(Math.round(dmg), e.x, e.wy + e.r, 1);
   if (e.hp > 0) return;
   const d = ENEMIES[e.type];
@@ -572,8 +641,14 @@ function updateEnemies(dt) {
     const dx = G.px + e.ox - e.x, dwy = G.dist + e.oy - e.wy, dist = Math.hypot(dx, dwy) || 1;
     if (e.flash > 0) e.flash -= dt;
     if (G.seaF > 0.5) {                                                   // at sea everything homes in, from every side
-      const sp = d.speed * SEA.ENEMY_SPEED * (1 + G.seaT * SEA.SPEED_GROWTH) * (d.mode === 'drift' ? 1.6 : 1);
-      e.x += dx / dist * sp * dt; e.wy += (dwy / dist * sp + G.speed) * dt;
+      if (d.mode === 'dive') {                                            // gulls: committed to a straight dive
+        e.x += e.vx * dt; e.wy += (e.vwy + G.speed) * dt;
+        if (e.wy < G.dist - (view.H - playerY()) - 40) { e.dead = true; continue; }
+      } else {
+        const sp = d.speed * SEA.ENEMY_SPEED * (1 + G.seaT * SEA.SPEED_GROWTH) * (d.mode === 'drift' ? 1.6 : 1);
+        e.x += dx / dist * sp * dt; e.wy += (dwy / dist * sp + G.speed) * dt;
+      }
+      if (e.inflate > 0) { e.inflate -= dt; e.r = d.r * (1 + 0.7 * Math.min(1, e.inflate)); } else e.r = d.r;
       if (e.type === 'mozzie') e.x += Math.sin(G.t * 9 + e.seed) * 40 * dt;
       if (dist > SEA.DESPAWN) { e.dead = true; continue; }
     } else if (d.mode === 'chase') {
@@ -746,6 +821,8 @@ export function update(dt) {
   }
 
   updateLights();
+  if (G.pods.length) updatePods(dt);
+  if (G.flipT > 0) G.flipT -= dt;
   updateWeapons(dt);
   updateClouds(dt);
   updateEnemies(dt);
