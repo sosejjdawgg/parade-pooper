@@ -53,7 +53,7 @@ export const sfx = {
 };
 
 // ---- input ------------------------------------------------------------------
-export const input = { taps: [], dir: 0, tilt: 0, pause: false };
+export const input = { taps: [], dir: 0, tilt: 0, pause: false, dash: false };
 // a floating analog stick for 360-degree paddling at sea: wherever a thumb lands becomes the centre
 export const stick = { on: false, id: null, ox: 0, oy: 0, x: 0, y: 0, t: 0 };
 export const STICK_R = 44;
@@ -64,8 +64,7 @@ export function moveVector() {
   if (stick.on) {
     let dx = stick.x - stick.ox, dy = stick.y - stick.oy, d = Math.hypot(dx, dy);
     if (d > STICK_R) { stick.ox += dx / d * (d - STICK_R); stick.oy += dy / d * (d - STICK_R); dx = stick.x - stick.ox; dy = stick.y - stick.oy; d = STICK_R; }   // the base follows the thumb
-    const m = d / STICK_R;
-    if (m > 0.14) { const k = (m - 0.14) / 0.86; x = dx / d * k; y = -dy / d * k; }
+    if (d > 0.5) { const m = d / STICK_R; x = dx / d * m; y = -dy / d * m; }     // raw: the game applies the throttle curve
   }
   const kx = (keysHeld.has('r') ? 1 : 0) - (keysHeld.has('l') ? 1 : 0), ky = (keysHeld.has('u') ? 1 : 0) - (keysHeld.has('d') ? 1 : 0);
   if (kx || ky) { const n = Math.hypot(kx, ky); x = kx / n; y = ky / n; }
@@ -79,11 +78,18 @@ export function initInput() {
   for (const ev of ['touchend', 'click', 'keydown']) window.addEventListener(ev, unlockAudio, { passive: true });
   window.addEventListener('pointerdown', (e) => {
     unlockAudio(); const p = pos(e); input.taps.push(p);
-    if (!stick.on) Object.assign(stick, { on: true, id: e.pointerId, ox: p.x, oy: p.y, x: p.x, y: p.y, t: performance.now() });
+    if (!stick.on) Object.assign(stick, { on: true, id: e.pointerId, ox: p.x, oy: p.y, x: p.x, y: p.y, t: performance.now(), sx: p.x, sy: p.y });
+    else input.dash = true;                                                // a second finger: dash
     pointers.set(e.pointerId, p.x < view.W / 2 ? -1 : 1); refreshDir(); e.preventDefault();
   }, { passive: false });
   window.addEventListener('pointermove', (e) => { if (stick.on && e.pointerId === stick.id) { const p = pos(e); stick.x = p.x; stick.y = p.y; } });
-  const up = (e) => { pointers.delete(e.pointerId); refreshDir(); if (e.pointerId === stick.id) stick.on = false; };
+  const up = (e) => {
+    pointers.delete(e.pointerId); refreshDir();
+    if (e.pointerId === stick.id) {                                         // a quick tap (no drag) is a dash too
+      if (performance.now() - stick.t < 200 && Math.hypot(stick.x - stick.sx, stick.y - stick.sy) < 12) input.dash = true;
+      stick.on = false;
+    }
+  };
   window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
   window.addEventListener('blur', () => { pointers.clear(); refreshDir(); stick.on = false; keysHeld.clear(); });
   const keyMove = (k) => ({ ArrowLeft: 'l', a: 'l', A: 'l', ArrowRight: 'r', d: 'r', D: 'r', ArrowUp: 'u', w: 'u', W: 'u', ArrowDown: 'd', s: 'd', S: 'd' })[k];
@@ -94,6 +100,7 @@ export function initInput() {
     const d = keyDir(e.key);
     if (d) { input.taps.push({ x: d < 0 ? 40 : view.W - 40, y: view.H * 0.6, key: true }); pointers.set('k' + d, d); refreshDir(); }
     if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') input.pause = true;
+    if (e.key === ' ' || e.key === 'Shift') input.dash = true;
   });
   window.addEventListener('keyup', (e) => { if (keyMove(e.key)) keysHeld.delete(keyMove(e.key)); const d = keyDir(e.key); if (d) { pointers.delete('k' + d); refreshDir(); } });
   window.addEventListener('deviceorientation', (e) => {

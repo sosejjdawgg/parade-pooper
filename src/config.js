@@ -112,26 +112,30 @@ export const SEA = {
   SPEED_MULT: 0.5,            // forward drift is slower out here: it's an arena, not a race
   CAM_FOLLOW: 3,              // how quickly the camera catches the kayak
   // free roam: in open water you paddle any direction with a floating analog stick (or arrows / WASD)
-  ROAM_SPEED: 125,            // top paddling speed (x Big Paddle; the Vape Engine's boost adds on top)
-  ROAM_ACCEL: 4.5,            // how quickly she reaches the stick's speed: lower = more glide
-  CURRENT: 12,                // a gentle current carries you forward when you stop paddling
+  ROAM_SPEED: 135,            // top paddling speed (x Big Paddle; the Vape Engine's boost adds on top)
+  ROAM_ACCEL: 14,             // snappy, like DOGPARK: she's at the stick's speed almost at once...
+  ROAM_STOP: 12,              // ...and stops almost at once when you let go
+  JOY_DEAD: 0.16, JOY_MIN: 0.34, JOY_CURVE: 1.5,   // DOGPARK's throttle: a dead zone, a slow creep, then up to full
+  CURRENT: 0,
+  DASH_MUL: 2.6, DASH_T: 0.24, DASH_CD: 1.1,       // dash: tap (or a second finger / Space): a burst you can't be hurt during
+  AREA: 0.85,                 // her weapons reach a little less far out here
   TURN: 9,                    // how fast the kayak swings round to face her heading
   PLAYER_Y: 0.55,             // the kayak sits nearer the middle of the screen at sea
   CAM_LEAD: 0.4, CAM_LEAD_MAX: 90,   // the camera looks ahead in the direction you paddle
   PICKUP_EVERY: 1.3,          // a patch of vapes appears off screen around you this often
   CULL: 1000,                 // pickups and hazards this far away are tidied up
-  RATE: 0.9,                  // enemies/sec when the sea starts...
+  RATE: 2.4,                  // enemies/sec when the sea starts...
   RATE_GROWTH: 0.045,         // ...growing by this fraction every second you survive
   WAVE_EVERY: 16,             // seconds between surround waves
-  WAVE_BASE: 8, WAVE_GROW: 4, // a wave is a full ring of this many (+ GROW per wave)
+  WAVE_BASE: 18, WAVE_GROW: 6, // a wave is a full ring of this many (+ GROW per wave)
   ENEMY_SPEED: 1.3,           // everything homes in on you, at this multiple of its normal speed...
   SPEED_GROWTH: 0.003,        // ...plus this much faster per second at sea
-  HP_TAU: 60,                 // enemy health grows x2.7 every this many seconds at sea: the sea always wins in the end
+  HP_TAU: 50,                 // enemy health grows x2.7 every this many seconds at sea: the sea always wins in the end
   DESPAWN: 950,               // enemies this far away give up
-  MAX_ALIVE: 200,
+  MAX_ALIVE: 280,
   TABLE: { swan: 2, pap: 3, piranha: 3, mozzie: 3, croc: 0.5, puffer: 1 },
   HP_MULT: 1,                 // sea enemy health x (1 + (build power / POWER_REF)^2): barely tougher for an ordinary build,
-  POWER_REF: 16,              // much tougher for a stacked one (build power = weapon levels + 3 per evolution + half passive levels)
+  POWER_REF: 13,              // much tougher for a stacked one (build power = weapon levels + 3 per evolution + half passive levels)
   VAPE_CLUSTERS: 3,           // vape patches scattered per sea chunk
   LIGHT_FIRST_M: 60,          // the first lighthouse, this far into the sea (nearly dead ahead)
   LIGHT_GAP_M: [120, 170],     // forward distance between lighthouses

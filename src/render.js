@@ -7,7 +7,7 @@ import { devOverlay } from './dev.js';
 
 const { BG, FG, GINGER } = COLORS, W = VIEW.W;
 export const BAR_H = 64;
-let PY = 0, KY = 0, D = 0, checker = null;   // PY: the kayak's resting row; KY: where she is drawn (the camera can lead her)
+let PY = 0, KY = 0, D = 0, VW = VIEW.W, VH = 640, checker = null;   // PY: the kayak's resting row; KY: where she is drawn (the camera can lead her)
 const sy = (wy) => PY - Math.round(wy - D);
 
 function getChecker() {
@@ -20,10 +20,10 @@ export function dither(x, y, w, h) { ctx.fillStyle = getChecker(); ctx.fillRect(
 
 let CX = 0;      // camera x: 0 on the river, follows the kayak sideways at sea
 function drawWater(lo, hi) {
-  const i0 = Math.floor(CX / 16) - 1;
+  const i0 = Math.floor(CX / 16) - 1, nI = Math.ceil(VW / 16) + 3;
   for (let j = Math.floor(lo / 16); j <= Math.floor(hi / 16); j++) {
     const y = sy(j * 16), sea = seaAt(j * 16);
-    for (let i = i0; i < i0 + 25; i++) {
+    for (let i = i0; i < i0 + nI; i++) {
       const h = hash(j * 131 + i * 7919);
       if (h < 0.05) rect(i * 16 + h * 200, y, h < 0.02 ? 5 : 3, 1);
       else if (sea > 0 && h < 0.05 + 0.05 * sea) {                       // open sea: little rolling waves
@@ -54,8 +54,8 @@ function drawBanks(lo, hi) {
   for (let j = Math.floor(lo / 8) - 1; j <= Math.floor(hi / 8) + 1; j++) {
     const wy = j * 8, y = sy(wy + 8);
     const l = Math.round(leftAt(wy) / 4) * 4, r = Math.round(rightAt(wy) / 4) * 4;
-    if (l < CX - 90 && r > CX + W + 90) { lp = l; rp = r; continue; }       // out at sea: no banks in view
-    if (l > CX) rect(CX, y, l - CX, 8, BG); if (r < CX + W) rect(r, y, CX + W - r, 8, BG);
+    if (l < CX - 90 && r > CX + VW + 90) { lp = l; rp = r; continue; }       // out at sea: no banks in view
+    if (l > CX) rect(CX, y, l - CX, 8, BG); if (r < CX + VW) rect(r, y, CX + VW - r, 8, BG);
     const b = biomeAt(wy), bi = Math.min(BIOMES.BANK_COLORS.length - 1, Math.floor(b) + (hash(j * 53) < b % 1 ? 1 : 0));
     const [edge, land] = BIOMES.BANK_COLORS[bi];
     for (const [off, w, dens] of BIOMES.BANK_FADE) {            // coloured land, dithering out to black
@@ -75,7 +75,7 @@ function drawBanks(lo, hi) {
     const dh = hash(j * 271);
     if (dh < 0.045) {
       const s = bi === 0 ? (dh < 0.011 ? SPR.signs[(dh * 9973 | 0) % SPR.signs.length] : dh < 0.025 ? SPR.lamp : SPR.bollard) : bi === 1 ? SPR.cactus : SPR.palm;
-      if (dh * 1000 % 2 < 1) { if (l - CX > s.width + 20) ctx.drawImage(s, l - s.width - 10, y); } else if (r < CX + W - s.width - 20) ctx.drawImage(s, r + 11, y);
+      if (dh * 1000 % 2 < 1) { if (l - CX > s.width + 20) ctx.drawImage(s, l - s.width - 10, y); } else if (r < CX + VW - s.width - 20) ctx.drawImage(s, r + 11, y);
     }
   }
 }
@@ -83,7 +83,7 @@ function drawBanks(lo, hi) {
 function drawHazards(top) {
   for (let i = 0; i < hazards.n; i++) {
     const h = hazards.items[i], y = sy(h.wy);
-    if (y < -80 || y > view.H + 80) continue;
+    if (y < -80 || y > VH + 80) continue;
     const upper = h.type === 'deck' || h.type === 'pier';
     if (upper !== top) continue;
     if (h.type === 'barge') {
@@ -135,9 +135,10 @@ function drawClouds() {
       if (c.r < 150) drawDisc(c.x, y, c.r - 6, t < 0.6 ? 1 : 2);        // billows out as a thick cloud, then thins
       continue;
     }
-    if (y < -c.r || y > view.H + c.r) continue;
+    if (y < -c.r || y > VH + c.r) continue;
     if (c.kind === 'ring') { if (t < 0.85 || ((G.t * 20) & 1)) { drawDisc(c.x, y, c.r, 3); drawDisc(c.x, y, c.r - 2, 3); if (c.r > 12) drawDisc(c.x, y, c.r - 5, 3); } continue; }
-    drawDisc(c.x, y, c.r, (c.kind === 'puff' || c.kind === 'poof') ? (t < 0.1 ? 0 : t < 0.7 ? 1 : 2) : (t < 0.65 ? 1 : 2));
+    const sea = G.seaF > 0.5;                                        // at sea, lighter clouds: you can see the fight through them
+    drawDisc(c.x, y, c.r, (c.kind === 'puff' || c.kind === 'poof') ? (t < 0.1 ? (sea ? 1 : 0) : t < (sea ? 0.25 : 0.7) ? 1 : 2) : (t < (sea ? 0.3 : 0.65) ? 1 : 2));
   }
 }
 // lighthouses: a fixed beam from each one points the way to the next (never explained: you work it out)
@@ -156,7 +157,7 @@ function drawLights() {
         ctx.closePath(); ctx.fill();
       }
     }
-    if (y < -40 || top > view.H + 40 || h.x < CX - 80 || h.x > CX + W + 80) continue;
+    if (y < -40 || top > VH + 40 || h.x < CX - 80 || h.x > CX + VW + 80) continue;
     drawDisc(h.x, y + 14, 46, 2); drawDisc(h.x, y + 12, 36, 1);                 // surf and rock
     for (let k = 0; k < 9; k++) { const a = k / 9 * 6.283 + h.x, rr = 18 + (hash(k * 31 + (h.wy | 0)) * 10 | 0); rect(h.x + Math.cos(a) * rr - 4, y + 10 + Math.sin(a) * rr * 0.6 - 3, 8, 6, BG); rect(h.x + Math.cos(a) * rr - 3, y + 10 + Math.sin(a) * rr * 0.6 - 2, 6, 3, FG); }
     if (((G.t * 3) | 0) & 1) drawDisc(h.x, ly, 16, 3);                    // the lamp pulses
@@ -167,7 +168,7 @@ function drawLights() {
 function drawPickups() {
   for (let i = 0; i < vapes.n; i++) {
     const v = vapes.items[i], y = sy(v.wy);
-    if (y < -20 || y > view.H + 20) continue;
+    if (y < -20 || y > VH + 20) continue;
     if (v.kind === 'tea') { draw(SPR.tea, v.x, y + Math.round(Math.sin(G.t * 4 + v.ang) * 1.5)); continue; }
     if (v.kind === 'cash') { draw(SPR.cash, v.x, y + Math.round(Math.sin(G.t * 5 + v.ang) * 1.5)); continue; }
     const fr = v.kind === 'big' ? SPR.bigVape : SPR.vape;
@@ -177,7 +178,7 @@ function drawPickups() {
 function drawEnemies() {
   for (let i = 0; i < enemies.n; i++) {
     const e = enemies.items[i], y = sy(e.wy);
-    if (y < -24 || y > view.H + 24) continue;
+    if (y < -24 || y > VH + 24) continue;
     const s = SPR[e.type], bob = e.type === 'mozzie' || e.type === 'gull' ? 0 : Math.round(Math.sin(G.t * 6 + e.seed) * 1);
     if (e.flash > 0) drawDisc(e.x, y, e.r + 2, 0);
     else if (e.type === 'puffer' && e.inflate > 0) { const k = e.r / 7; ctx.drawImage(s, Math.round(e.x - s.width * k / 2), Math.round(y + bob - s.height * k / 2), Math.round(s.width * k), Math.round(s.height * k)); }
@@ -203,7 +204,7 @@ function drawPods() {
         const x = cx + pod.x0 + (pod.x1 - pod.x0) * f - uy * b, y = sy(cy + pod.y0 + (pod.y1 - pod.y0) * f + ux * b);
         if (((s / 12) & 1) === on) rect(x - 3, y - 1, 6, 2, COLORS.ENEMY);
       }
-      const ex = Math.max(CX + 14, Math.min(CX + W - 14, cx + pod.x0)), ey = Math.max(40, Math.min(view.H - 90, sy(cy + pod.y0)));
+      const ex = Math.max(CX + 14, Math.min(CX + VW - 14, cx + pod.x0)), ey = Math.max(40, Math.min(VH - 90, sy(cy + pod.y0)));
       if (on) textO('!', ex, ey - 8, 4, COLORS.ENEMY, 0.5);
     }
     for (let i = pod.n - 1; i >= 0; i--) {
@@ -232,10 +233,14 @@ function drawFx() {
 
 /** mode: 'full' = everything, 'menu' = just water, banks and an idle kayak */
 export function drawWorld(mode = 'full') {
-  PY = playerY(); D = Math.round(G.dist + (mode === 'full' ? G.camY || 0 : 0)); KY = sy(G.dist); CX = mode === 'full' ? Math.round(G.camX || 0) : 0;
-  const lo = D - (view.H - PY), hi = D + PY;
+  const Z = mode === 'full' ? G.zoom || 1 : 1;                           // at sea the camera pulls back
+  VW = W / Z; VH = view.H / Z;
+  PY = Math.round(VH * playerY() / view.H); D = Math.round(G.dist + (mode === 'full' ? G.camY || 0 : 0)); KY = sy(G.dist);
+  CX = mode === 'full' ? Math.round((G.camX || 0) + (W - VW) / 2) : 0;
+  const lo = D - (VH - PY), hi = D + PY;
   rect(0, 0, W, view.H, BG);
   ctx.save();
+  if (Z !== 1) ctx.scale(Z, Z);
   if (G.shake > 0.3) ctx.translate(Math.round((Math.random() - 0.5) * G.shake * 2), Math.round((Math.random() - 0.5) * G.shake * 2));
   ctx.translate(-CX, 0);
   ctx.fillStyle = FG; drawWater(lo, hi);
@@ -249,6 +254,10 @@ export function drawWorld(mode = 'full') {
   }
   const hd = Math.round((G.heading || 0) / (Math.PI / 16)) * (Math.PI / 16);     // 32 headings: crisp pixels, smooth enough to feel analog
   if (full && !G.dead) drawRot(SPR.kayakHalo[G.paddle], G.px, KY, hd);   // keep her readable inside the fog: a black edge hugging her shape
+  if (full && G.dashT > 0 && !G.dead) {                       // dash: afterimages streaming behind her
+    for (let k = 3; k >= 1; k--) { ctx.globalAlpha = 0.5 - k * 0.12; drawRot(SPR.kayak[G.paddle], G.px - Math.sin(G.dashA) * k * 11, KY + Math.cos(G.dashA) * k * 11, hd); }
+    ctx.globalAlpha = 1;
+  }
   if (G.flipT > 0 && !G.dead) {                              // capsized: she spins
     drawRot(SPR.kayak[G.paddle], G.px, KY, hd + (1 - G.flipT / 0.8) * Math.PI * 2);
   } else if (!G.dead && !(full && G.inv > 0 && ((G.t * 14) & 1))) drawRot(SPR.kayak[G.paddle], G.px, KY, hd);
@@ -269,7 +278,7 @@ export function drawWorld(mode = 'full') {
   }
   if (full && G.burst > 22) {
     const n = Math.min(16, G.burst / 7) * JUICE.SPEED_FX, k = (G.t * 24) | 0;
-    for (let i = 0; i < n; i++) rect(CX + hash(i * 13 + k * 7) * W, hash(i * 29 + k * 3) * view.H, 1, (20 + G.burst / 4) * JUICE.SPEED_FX);
+    for (let i = 0; i < n; i++) rect(CX + hash(i * 13 + k * 7) * VW, hash(i * 29 + k * 3) * VH, 1, (20 + G.burst / 4) * JUICE.SPEED_FX);
   }
   ctx.restore();
   if (G.flash > 0) dither(0, 0, W, view.H);
@@ -329,6 +338,8 @@ function drawStick() {
   for (let i = 0; i < n; i++) { const t = i / n * 6.283; ctx.fillRect(Math.round(ox + Math.cos(t) * R) - 2, Math.round(oy + Math.sin(t) * R) - 2, 4, 4); }
   for (let i = 0; i < n; i++) { const t = i / n * 6.283, big = i % 7 === 0; ctx.fillStyle = big ? GINGER : FG; ctx.fillRect(Math.round(ox + Math.cos(t) * R) - 1, Math.round(oy + Math.sin(t) * R) - 1, big ? 3 : 2, big ? 3 : 2); }
   rect(ox - 4, oy, 9, 1, FG); rect(ox, oy - 4, 1, 9, FG);                                // centre mark
+  const ready = 1 - (G.dashCd || 0) / SEA.DASH_CD, dn = 20;                               // dash meter: an inner ring that fills ginger
+  for (let i = 0; i < dn; i++) { const t = -1.571 + i / dn * 6.283, on = i < ready * dn; if (on || ((i & 1) === 0)) rect(Math.round(ox + Math.cos(t) * (R - 9)) - 1, Math.round(oy + Math.sin(t) * (R - 9)) - 1, 2, 2, on ? (ready >= 1 ? GINGER : FG) : '#444'); }
   const m = Math.hypot(mv.x, mv.y);
   if (m > 0.05) {                                                                       // ginger pointer on the rim
     const ang = Math.atan2(-mv.y, mv.x);
@@ -338,6 +349,6 @@ function drawStick() {
   drawDisc(kx, ky, 15, 0); drawDisc(kx, ky, 15, 3); drawDisc(kx, ky, 6, 1);              // the knob
   rect(Math.round(kx) - 2, Math.round(ky) - 2, 4, 4, GINGER);
   ctx.globalAlpha = 1;
-  if (ghost && ((G.t * 2) & 1)) textO('DRAG TO PADDLE', W / 2, oy + R + 12, 2, FG, 0.5);
+  if (ghost && ((G.t * 2) & 1)) { textO('DRAG TO PADDLE', W / 2, oy + R + 12, 2, FG, 0.5); textO('TAP TO DASH', W / 2, oy + R + 26, 2, GINGER, 0.5); }
 }
 export const PAUSE_RECT = { x: W - 48, y: 0, w: 48, h: 44 };   // generous: thumbs are big

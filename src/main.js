@@ -243,6 +243,7 @@ function pauseScreen() {
 // ---- main loop ----------------------------------------------------------------------
 function frame(ts) {
   requestAnimationFrame(frame);
+  ctx.setTransform(view.S, 0, 0, view.S, 0, 0); ctx.imageSmoothingEnabled = false;
   const dt = Math.min(0.1, (ts - last) / 1000 || 0); last = ts;
   if (G.mode !== prevMode) { prevMode = G.mode; modeT = 0; acc = 0; }
   modeT += dt;
@@ -286,7 +287,7 @@ function frame(ts) {
   else if (G.mode === 'dev') devScreen(ui);
   if (toastT > 0) { toastT -= dt; const tw = textW(toast, 2) + 20; rect(W / 2 - tw / 2, view.H - 96, tw, 22, FG); text(toast, W / 2, view.H - 90, 2, BG, 0.5); }
 
-  input.taps.length = 0; input.pause = false;
+  input.taps.length = 0; input.pause = false; input.dash = false;
 }
 
 function boot() {

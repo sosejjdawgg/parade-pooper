@@ -4,14 +4,19 @@ import { VIEW, COLORS } from './config.js';
 const { BG, FG, GINGER, ENEMY, VAPE, CASH, TEA } = COLORS;
 export const canvas = document.getElementById('game');
 export const ctx = canvas.getContext('2d', { alpha: false });
-export const view = { W: VIEW.W, H: VIEW.H_MIN };
+export const view = { W: VIEW.W, H: VIEW.H_MIN, S: 1, seaZoom: 0.68 };
 
 export function resize() {
   const vw = window.innerWidth, vh = window.innerHeight;
   const h = Math.max(VIEW.H_MIN, Math.min(VIEW.H_MAX, Math.round(VIEW.W * vh / vw)));
-  if (canvas.width !== VIEW.W || canvas.height !== h) { canvas.width = VIEW.W; canvas.height = h; }
-  view.H = h;
   const s = Math.min(vw / VIEW.W, vh / h);
+  // draw at the screen's real resolution (a whole multiple of the 360-wide game), so a zoomed-out
+  // world can still land every game pixel on whole device pixels
+  const S = Math.max(1, Math.min(4, Math.round(s * (window.devicePixelRatio || 1))));
+  if (canvas.width !== VIEW.W * S || canvas.height !== h * S) { canvas.width = VIEW.W * S; canvas.height = h * S; }
+  view.H = h; view.S = S;
+  view.seaZoom = S >= 3 ? Math.round(S * 0.68) / S : 0.68;      // 2/3 on a 3x screen, 3/4 on 4x: crisp
+  ctx.setTransform(S, 0, 0, S, 0, 0);
   canvas.style.width = Math.floor(VIEW.W * s) + 'px';
   canvas.style.height = Math.floor(h * s) + 'px';
   ctx.imageSmoothingEnabled = false;
