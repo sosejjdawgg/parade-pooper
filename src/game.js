@@ -4,7 +4,7 @@ import {
   WEAPONS, PASSIVES, EVOLUTIONS, LEVELUP, REWARD, JUICE, VAPING, FLAVOUR, IMMUNITY, BANKS, RAM, SEA,
 } from './config.js';
 import { view } from './gfx.js';
-import { save, shopLvl, writeSave, sfx, input } from './platform.js';
+import { save, shopLvl, writeSave, sfx, input, moveVector } from './platform.js';
 
 class Pool {
   constructor(max) { this.items = []; this.n = 0; this.max = max; }
@@ -38,8 +38,8 @@ const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
 const smooth = (t) => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
 // interpolate a per-biome array at a fractional biome index (arrays shorter than the biome count hold their last value)
 export const lerp3 = (a, b) => { const i = Math.min(a.length - 1, Math.floor(b)); return i >= a.length - 1 ? a[a.length - 1] : a[i] + (a[i + 1] - a[i]) * (b - i); };
-export const playerY = () => Math.round(view.H * VIEW.PLAYER_Y);
-export const metres = () => Math.floor(G.dist / WORLD.PX_PER_M);
+export const playerY = () => Math.round(view.H * (VIEW.PLAYER_Y + (SEA.PLAYER_Y - VIEW.PLAYER_Y) * (G.seaF || 0)));
+export const metres = () => Math.floor(Math.max(G.dist, G.far || 0) / WORLD.PX_PER_M);   // furthest reached: paddling back at sea doesn't lose it
 
 // ---- canal shape: pure functions of world-y, so nothing needs storing --------
 export function biomeAt(wy) {
@@ -72,7 +72,7 @@ export function newRun() {
     weapons: { cloud: 1 + shopLvl('starter') }, passives: {}, evo: {},
     cd: { cloud: 0.5, trail: 0, nova: 1.5, rings: 0.5 }, orbA: 0, orbState: [], cloudId: 0,
     genY: 240, chunkN: 0, spawnT: 0, shake: 0, flash: 0, hitstop: 0, dead: false, deadT: 0,
-    banner: BIOMES.NAMES[0], bannerT: 2.5, seaF: 0, seaT: 0, waveT: 6, wave: 0, pods: [], orcaT: SEA.ORCA_FIRST, gullT: SEA.GULL_FIRST, flipT: 0, camX: 0, lights: [], lighthouses: 0, biomeIdx: 0, pending: 0, choices: null, cause: '', result: null, puffT: 0, vapeT: 2.5, dragT: 0, hurtT: 0, grinT: 0, shieldT: 0, danger: false, puffStats: {}, novaMore: 0, novaGapT: 0,
+    banner: BIOMES.NAMES[0], bannerT: 2.5, seaF: 0, seaT: 0, waveT: 6, wave: 0, mvx: 0, mvy: 0, heading: 0, camY: 0, far: 0, roamHint: 0, pickT: 0, inhX: 0, pods: [], orcaT: SEA.ORCA_FIRST, gullT: SEA.GULL_FIRST, flipT: 0, camX: 0, lights: [], lighthouses: 0, biomeIdx: 0, pending: 0, choices: null, cause: '', result: null, puffT: 0, vapeT: 2.5, dragT: 0, hurtT: 0, grinT: 0, shieldT: 0, danger: false, puffStats: {}, novaMore: 0, novaGapT: 0,
   });
   G.ph = [rnd(6.28), rnd(6.28), rnd(6.28)];
   G.px = centreAt(0);
@@ -310,6 +310,12 @@ function seaSpawns(dt) {
   }
   G.orcaT -= dt;
   if (G.orcaT <= 0) { orcaPod(); G.orcaT = Math.max(SEA.ORCA_EVERY_MIN, rnd(SEA.ORCA_EVERY[0], SEA.ORCA_EVERY[1]) - G.seaT * 0.02); }
+  G.pickT -= dt;
+  if (G.pickT <= 0) {                     // vapes turn up all around you, not just ahead
+    G.pickT = SEA.PICKUP_EVERY;
+    const [x, wy] = seaSpot(rnd(6.283)), n = 3 + ((Math.random() * 4) | 0);
+    for (let i = 0; i < n; i++) addVape(x + rnd(-16, 16), wy + rnd(-16, 16));
+  }
   G.gullT -= dt;
   if (G.gullT <= 0) { gullFlock(); G.gullT = rnd(SEA.GULL_EVERY[0], SEA.GULL_EVERY[1]); }
 }
@@ -334,14 +340,14 @@ export function orcaPod(kind) {
   else if (kind === 'diag') p = [-hw * dir, rnd(250, top), hw * dir, rnd(bot + 60, -40), rnd(-30, 30)];
   else { const x = rnd(-50, 50); p = [x, top + 60, x + rnd(-60, 60), bot, rnd(25, 45) * dir]; }
   const n = Math.min(SEA.ORCA_POD[1], SEA.ORCA_POD[0] + Math.floor(G.seaT / SEA.ORCA_POD_GROW));
-  G.pods.push({ t: 0, x0: p[0], y0: p[1], x1: p[2], y1: p[3], arc: p[4], n, L: Math.hypot(p[2] - p[0], p[3] - p[1]), seed: rnd(10) });
+  G.pods.push({ t: 0, ax: G.camX + VIEW.W / 2, ay: G.dist, x0: p[0], y0: p[1], x1: p[2], y1: p[3], arc: p[4], n, L: Math.hypot(p[2] - p[0], p[3] - p[1]), seed: rnd(10) });
 }
 /** where whale i of a pod is now: null if it's not in the water yet (or has gone) */
 export function orcaAt(pod, i) {
   const s = (pod.t - SEA.ORCA_WARN) * SEA.ORCA_SPEED - i * SEA.ORCA_GAP;
   if (s < 0 || s > pod.L) return null;
   const f = s / pod.L, ux = (pod.x1 - pod.x0) / pod.L, uy = (pod.y1 - pod.y0) / pod.L, bend = Math.sin(f * Math.PI) * pod.arc;
-  return { x: G.camX + VIEW.W / 2 + pod.x0 + (pod.x1 - pod.x0) * f - uy * bend, wy: G.dist + pod.y0 + (pod.y1 - pod.y0) * f + ux * bend,
+  return { x: pod.ax + pod.x0 + (pod.x1 - pod.x0) * f - uy * bend, wy: pod.ay + pod.y0 + (pod.y1 - pod.y0) * f + ux * bend,
     ang: Math.atan2(-(pod.y1 - pod.y0), pod.x1 - pod.x0), up: Math.sin(s * 0.03 + i * 1.9 + pod.seed) > -0.3, s };
 }
 function updatePods(dt) {
@@ -406,7 +412,7 @@ export function devKill() { const g = G.god, d = DEV.god; G.god = DEV.god = fals
 
 // ---- player actions ---------------------------------------------------------------
 export function nudge(dir) {
-  if (G.mode !== 'play' || G.dead) return;
+  if (G.mode !== 'play' || G.dead || G.seaF > 0.5) return;            // at sea the stick steers
   G.pvx = dir * PLAYER.NUDGE * S.nudge;
   G.paddle ^= 1;
   addPart(G.px - dir * 9, G.dist - 4, -dir * 40, G.speed - 30, 0.3); addPart(G.px - dir * 10, G.dist - 8, -dir * 60, G.speed - 50, 0.25);
@@ -537,7 +543,7 @@ function updateWeapons(dt) {
     else {
       const sp = WEAPONS.cloud.speed * p.size / 13 * S.area;
       for (const a of dirsFor(p.dirs + extra())) {
-        const sx = Math.sin(a), sy = Math.cos(a);
+        const sx = Math.sin(a + G.heading), sy = Math.cos(a + G.heading);
         addCloud('puff', G.px + sx * 10, G.dist + sy * 16, sx * sp, sy * sp, p.size * 0.45 * S.area, p.size * S.area, p.life * S.dur, p.dmg, 0);
       }
       cd.cloud = p.cd * S.cd; sfx.puff();
@@ -547,11 +553,13 @@ function updateWeapons(dt) {
     cd.rings -= dt;
     if (cd.rings <= 0) {
       const R = PASSIVES.rings, p = R.levels[G.passives.rings - 1]; cd.rings = p.cd * S.cd;
-      addCloud('ring', G.px, G.dist + 18, 0, R.speed, 6, p.r * S.area, p.life * S.dur, p.dmg, 0);
+      const hx = Math.sin(G.heading), hy = Math.cos(G.heading);                 // rings blow out the way she's facing
+      addCloud('ring', G.px + hx * 18, G.dist + hy * 18, hx * R.speed, hy * R.speed, 6, p.r * S.area, p.life * S.dur, p.dmg, 0);
       const M = PASSIVES.extra.miniRing;
       for (let k = 0; k < extra(); k++) {                     // +1 CLOUD: mini rings peel off to the sides and float forward
         const side = k % 2 ? 1 : -1, spread = 1 + (k >> 1) * 0.6;
-        addCloud('ring', G.px + side * 8, G.dist + 14, side * M.side * spread, R.speed * M.up, 4, p.r * M.size * S.area, p.life * S.dur, p.dmg, 0);
+        const sx = side * M.side * spread, fy = R.speed * M.up;
+        addCloud('ring', G.px + hx * 14 + hy * side * 8, G.dist + hy * 14 - hx * side * 8, sx * hy + fy * hx, -sx * hx + fy * hy, 4, p.r * M.size * S.area, p.life * S.dur, p.dmg, 0);
       }
       sfx.puff();
     }
@@ -560,7 +568,7 @@ function updateWeapons(dt) {
     cd.trail -= dt;
     if (cd.trail <= 0) {
       const p = wp('trail'); cd.trail = WEAPONS.trail.every;
-      addCloud('trail', G.px + rnd(-3, 3), G.dist - 16, 0, 0, p.r * 0.6 * S.area, p.r * S.area, p.life * S.dur, p.dmg, WEAPONS.trail.tick);
+      addCloud('trail', G.px + rnd(-3, 3) - Math.sin(G.heading) * 16, G.dist - Math.cos(G.heading) * 16, 0, 0, p.r * 0.6 * S.area, p.r * S.area, p.life * S.dur, p.dmg, WEAPONS.trail.tick);
     }
   }
   if (G.weapons.nova) {
@@ -614,11 +622,11 @@ function updateClouds(dt) {
     const t = c.age / c.life;
     if (c.kind === 'puff') {
       const drag = Math.exp(-1.6 * dt); c.vx *= drag; c.vwy *= drag;
-      c.x += c.vx * dt; c.wy += (c.vwy + G.speed) * dt;
+      c.x += (c.vx + G.inhX) * dt; c.wy += (c.vwy + G.speed) * dt;
       c.r = c.r0 + (c.r1 - c.r0) * (1 - (1 - t) * (1 - t));
     } else if (c.kind === 'poof') { c.wy += G.speed * dt; c.r = c.r0 + (c.r1 - c.r0) * t; continue; }   // harmless puff of smoke
     else if (c.kind === 'trail') c.r = c.r0 + (c.r1 - c.r0) * Math.min(1, t * 4);
-    else if (c.kind === 'ring') { c.x += c.vx * dt; c.wy += (c.vwy + G.speed) * dt; c.r = c.r0 + (c.r1 - c.r0) * Math.sqrt(t); }
+    else if (c.kind === 'ring') { c.x += (c.vx + G.inhX) * dt; c.wy += (c.vwy + G.speed) * dt; c.r = c.r0 + (c.r1 - c.r0) * Math.sqrt(t); }
     else { c.x = G.px; c.wy = G.dist; c.r = c.r0 + (c.r1 - c.r0) * t; }
     const ring = c.kind === 'ring', puff = c.kind === 'puff', nova = c.kind === 'nova' || ring;      // these hit each enemy once
     if (!nova && !puff) { c.tickT -= dt; if (c.tickT > 0) continue; c.tickT += c.tick; }
@@ -642,11 +650,11 @@ function updateEnemies(dt) {
     if (e.flash > 0) e.flash -= dt;
     if (G.seaF > 0.5) {                                                   // at sea everything homes in, from every side
       if (d.mode === 'dive') {                                            // gulls: committed to a straight dive
-        e.x += e.vx * dt; e.wy += (e.vwy + G.speed) * dt;
-        if (e.wy < G.dist - (view.H - playerY()) - 40) { e.dead = true; continue; }
+        e.x += e.vx * dt; e.wy += e.vwy * dt;
+        if (dist > 700 && (e.vx * dx + e.vwy * dwy) < 0) { e.dead = true; continue; }   // flown past and away
       } else {
         const sp = d.speed * SEA.ENEMY_SPEED * (1 + G.seaT * SEA.SPEED_GROWTH) * (d.mode === 'drift' ? 1.6 : 1);
-        e.x += dx / dist * sp * dt; e.wy += (dwy / dist * sp + G.speed) * dt;
+        e.x += dx / dist * sp * dt; e.wy += (dwy / dist * sp + SEA.CURRENT) * dt;
       }
       if (e.inflate > 0) { e.inflate -= dt; e.r = d.r * (1 + 0.7 * Math.min(1, e.inflate)); } else e.r = d.r;
       if (e.type === 'mozzie') e.x += Math.sin(G.t * 9 + e.seed) * 40 * dt;
@@ -690,7 +698,7 @@ function updateHazards(dt) {
   const below = G.dist - (view.H - playerY()) - 80, jungle = clamp(biomeAt(G.dist) - 1, 0, 1);
   for (let i = 0; i < hazards.n; i++) {
     const h = hazards.items[i];
-    if (h.wy + h.hh < below) { h.dead = true; continue; }
+    if (G.seaF > 0.5 ? Math.abs(h.wy - G.dist) + Math.abs(h.x - G.px) > SEA.CULL * 1.3 : h.wy + h.hh < below) { h.dead = true; continue; }
     const dy = h.wy - G.dist, dx = h.x - G.px;
     if (h.vx) {
       h.x += h.vx * dt;
@@ -723,7 +731,7 @@ function updatePickups(dt) {
   const magR = PLAYER.MAGNET_R * S.magnet, magR2 = magR * magR, pickR2 = PLAYER.PICKUP_R * PLAYER.PICKUP_R;
   for (let i = 0; i < vapes.n; i++) {
     const v = vapes.items[i];
-    if (v.wy < below) { v.dead = true; continue; }
+    if (G.seaF > 0.5 ? Math.abs(v.wy - G.dist) + Math.abs(v.x - G.px) > SEA.CULL : v.wy < below) { v.dead = true; continue; }
     if (v.wy > top) continue;
     v.age += dt;
     v.ang += ((v.kind === 'big' ? PICKUPS.SPIN_BIG : PICKUPS.SPIN_BASE) + v.age * PICKUPS.SPIN_ACCEL) * dt;
@@ -772,33 +780,54 @@ export function update(dt) {
   base *= 1 + (SEA.SPEED_MULT - 1) * G.seaF;                      // out at sea the current is gentler
   G.burst *= Math.exp(-ENGINE.BURST_DECAY * dt);
   G.slow = Math.min(1, G.slow + HAZARDS.SLOW_RECOVER * dt);      // steady climb back to whatever full speed currently is
-  G.speed = (base + G.burst) * G.slow;
-  G.dist += G.speed * dt;
-
-  // steering
-  if (G.bot) botSteer(dt);
-  else if (input.dir) { G.holdT += dt; if (G.holdT > PLAYER.HOLD_REPEAT) { G.holdT = 0; nudge(input.dir); } } else G.holdT = 0;
-  const steer = G.snag > 0 ? HAZARDS.VINE_STEER : 1;
+  const roam = G.seaF > 0.5, steer = G.snag > 0 ? HAZARDS.VINE_STEER : 1;
   if (G.snag > 0) G.snag -= dt;
-  G.pvx *= Math.exp(-PLAYER.NUDGE_FRICTION * dt);
-  let vx = G.pvx;
-  if (save.tilt && !G.bot) vx += clamp(input.tilt / PLAYER.TILT_FULL_DEG, -1, 1) * PLAYER.TILT_SPEED * S.nudge;
+  let vx;
+  if (roam) {
+    // open water: 360-degree paddling. The stick sets a target velocity; she glides towards it
+    if (!G.roamHint) { G.roamHint = 1; G.mvx = G.pvx; G.mvy = G.speed; }       // hand over smoothly from the river
+    let mv = G.bot ? botStick() : moveVector();
+    if (save.tilt && !G.bot && !mv.x) mv = { x: clamp(input.tilt / PLAYER.TILT_FULL_DEG, -1, 1), y: mv.y };
+    const top = SEA.ROAM_SPEED * S.nudge * G.slow + G.burst * 0.6, k = Math.min(1, dt * SEA.ROAM_ACCEL);
+    G.mvx += (mv.x * top - G.mvx) * k + G.pvx * k;                       // a capsize shove still throws her sideways
+    G.mvy += (mv.y * top + SEA.CURRENT - G.mvy) * k;
+    G.pvx *= Math.exp(-PLAYER.NUDGE_FRICTION * dt);
+    G.speed = G.mvy; G.dist += G.mvy * dt; vx = G.mvx; G.inhX = G.mvx;
+    const sp = Math.hypot(G.mvx, G.mvy);
+    if (sp > 14) { let d = Math.atan2(G.mvx, G.mvy) - G.heading; d = Math.atan2(Math.sin(d), Math.cos(d)); G.heading += d * Math.min(1, dt * SEA.TURN); }
+    if (sp > 40 && Math.random() < dt * sp / 9) {                        // the wake: a V of spray left behind
+      const hx = Math.sin(G.heading), hy = Math.cos(G.heading), side = Math.random() < 0.5 ? -1 : 1;
+      addPart(G.px - hx * 18 + hy * side * 3, G.dist - hy * 18 - hx * side * 3, (hy * side * 22 - hx * 10), (-hx * side * 22 - hy * 10), 0.9, 2);
+    }
+  } else {
+    G.speed = (base + G.burst) * G.slow;
+    G.dist += G.speed * dt;
+    G.heading *= Math.exp(-6 * dt); G.inhX = 0;
+    if (G.bot) botSteer(dt);
+    else if (input.dir) { G.holdT += dt; if (G.holdT > PLAYER.HOLD_REPEAT) { G.holdT = 0; nudge(input.dir); } } else G.holdT = 0;
+    G.pvx *= Math.exp(-PLAYER.NUDGE_FRICTION * dt);
+    vx = G.pvx;
+    if (save.tilt && !G.bot) vx += clamp(input.tilt / PLAYER.TILT_FULL_DEG, -1, 1) * PLAYER.TILT_SPEED * S.nudge;
+  }
+  G.far = Math.max(G.far, G.dist);
   G.px += vx * steer * dt;
   const l = leftAt(G.dist) + 9, r = rightAt(G.dist) - 9;
   if (G.px < l || G.px > r) {
     if (Math.abs(vx) > 30 || Math.random() < dt * 8) addPart(G.px < l ? l - 8 : r + 8, G.dist + rnd(-10, 10), 0, G.speed - 40, 0.3);
     const leftSide = G.px < l;
-    G.px = clamp(G.px, l, r); G.pvx = 0;
+    G.px = clamp(G.px, l, r); G.pvx = 0; G.mvx = 0;
     if (G.danger) { hurt(1, 'bank'); G.pvx = (leftSide ? 1 : -1) * BANKS.PUSH; }
   }
-  G.camX += ((G.px - VIEW.W / 2) * G.seaF - G.camX) * Math.min(1, dt * SEA.CAM_FOLLOW);   // follows her sideways at sea
+  const lead = (v) => clamp(v * SEA.CAM_LEAD, -SEA.CAM_LEAD_MAX, SEA.CAM_LEAD_MAX) * G.seaF, ck = Math.min(1, dt * SEA.CAM_FOLLOW);
+  G.camX += ((G.px - VIEW.W / 2) * G.seaF + lead(roam ? G.mvx : 0) - G.camX) * ck;   // follows her at sea, looking ahead
+  G.camY += (lead(roam ? G.mvy - SEA.CURRENT : 0) - G.camY) * ck;
   if (G.inv > 0) G.inv -= dt;
   if (G.shieldT > 0) G.shieldT -= dt;
   if (!G.danger && dangerAt(G.dist)) { G.danger = true; G.banner = "RED WALL: DON'T TOUCH!"; G.bannerT = 4; }
   if (G.hurtT > 0) G.hurtT -= dt;
   if (G.grinT > 0) G.grinT -= dt;
   if (G.comboT > 0) G.comboT -= dt;
-  G.paddleT += dt * G.speed / 100; if (G.paddleT > 0.45) { G.paddleT = 0; G.paddle ^= 1; }
+  G.paddleT += dt * (roam ? Math.hypot(G.mvx, G.mvy) + 20 : G.speed) / 100; if (G.paddleT > 0.45) { G.paddleT = 0; G.paddle ^= 1; }
   // the occasional drag: hold, then a cloud that drifts away behind her
   G.vapeT -= dt;
   if (G.vapeT <= 0 && G.dragT <= 0) { G.dragT = VAPING.DRAG + VAPING.EXHALE; G.vapeT = rnd(VAPING.EVERY[0], VAPING.EVERY[1]); }
@@ -835,6 +864,23 @@ export function update(dt) {
 }
 
 // ---- autoplay bot (for headless balance runs: ?bot=1) -------------------------------
+/** open water autopilot: head for the next lighthouse, swerve away from anything close */
+function botStick() {
+  const goal = G.lights.find((h) => !h.visited && h.wy > G.dist - 200);
+  let x = goal ? goal.x - G.px : 0, y = goal ? goal.wy - G.dist : 300;
+  const d0 = Math.hypot(x, y) || 1; x /= d0; y /= d0;
+  for (let i = 0; i < enemies.n; i++) {
+    const e = enemies.items[i], dx = G.px - e.x, dy = G.dist - e.wy, d = Math.hypot(dx, dy);
+    if (d < 110 && d > 0) { x += dx / d * (110 - d) / 40; y += dy / d * (110 - d) / 40; }
+  }
+  for (const pod of G.pods) for (let i = 0; i < pod.n; i++) {
+    const o = orcaAt(pod, i); if (!o) continue;
+    const dx = G.px - o.x, dy = G.dist - o.wy, d = Math.hypot(dx, dy);
+    if (d < 140 && d > 0) { x += dx / d * 3; y += dy / d * 3; }
+  }
+  const n = Math.hypot(x, y) || 1;
+  return { x: x / n, y: y / n };
+}
 let botT = 0;
 function botSteer(dt) {
   botT -= dt; if (botT > 0) return;

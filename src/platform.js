@@ -54,6 +54,23 @@ export const sfx = {
 
 // ---- input ------------------------------------------------------------------
 export const input = { taps: [], dir: 0, tilt: 0, pause: false };
+// a floating analog stick for 360-degree paddling at sea: wherever a thumb lands becomes the centre
+export const stick = { on: false, id: null, ox: 0, oy: 0, x: 0, y: 0, t: 0 };
+export const STICK_R = 44;
+const keysHeld = new Set();
+/** the paddling direction: x right, y forward (up the screen), length 0..1 */
+export function moveVector() {
+  let x = 0, y = 0;
+  if (stick.on) {
+    let dx = stick.x - stick.ox, dy = stick.y - stick.oy, d = Math.hypot(dx, dy);
+    if (d > STICK_R) { stick.ox += dx / d * (d - STICK_R); stick.oy += dy / d * (d - STICK_R); dx = stick.x - stick.ox; dy = stick.y - stick.oy; d = STICK_R; }   // the base follows the thumb
+    const m = d / STICK_R;
+    if (m > 0.14) { const k = (m - 0.14) / 0.86; x = dx / d * k; y = -dy / d * k; }
+  }
+  const kx = (keysHeld.has('r') ? 1 : 0) - (keysHeld.has('l') ? 1 : 0), ky = (keysHeld.has('u') ? 1 : 0) - (keysHeld.has('d') ? 1 : 0);
+  if (kx || ky) { const n = Math.hypot(kx, ky); x = kx / n; y = ky / n; }
+  return { x, y };
+}
 const pointers = new Map();
 function refreshDir() { let d = 0; for (const v of pointers.values()) d = v; input.dir = d; }
 export function initInput() {
@@ -62,19 +79,23 @@ export function initInput() {
   for (const ev of ['touchend', 'click', 'keydown']) window.addEventListener(ev, unlockAudio, { passive: true });
   window.addEventListener('pointerdown', (e) => {
     unlockAudio(); const p = pos(e); input.taps.push(p);
+    if (!stick.on) Object.assign(stick, { on: true, id: e.pointerId, ox: p.x, oy: p.y, x: p.x, y: p.y, t: performance.now() });
     pointers.set(e.pointerId, p.x < view.W / 2 ? -1 : 1); refreshDir(); e.preventDefault();
   }, { passive: false });
-  const up = (e) => { pointers.delete(e.pointerId); refreshDir(); };
+  window.addEventListener('pointermove', (e) => { if (stick.on && e.pointerId === stick.id) { const p = pos(e); stick.x = p.x; stick.y = p.y; } });
+  const up = (e) => { pointers.delete(e.pointerId); refreshDir(); if (e.pointerId === stick.id) stick.on = false; };
   window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
-  window.addEventListener('blur', () => { pointers.clear(); refreshDir(); });
+  window.addEventListener('blur', () => { pointers.clear(); refreshDir(); stick.on = false; keysHeld.clear(); });
+  const keyMove = (k) => ({ ArrowLeft: 'l', a: 'l', A: 'l', ArrowRight: 'r', d: 'r', D: 'r', ArrowUp: 'u', w: 'u', W: 'u', ArrowDown: 'd', s: 'd', S: 'd' })[k];
   const keyDir = (k) => (k === 'ArrowLeft' || k === 'a' || k === 'A') ? -1 : (k === 'ArrowRight' || k === 'd' || k === 'D') ? 1 : 0;
   window.addEventListener('keydown', (e) => {
+    if (keyMove(e.key)) keysHeld.add(keyMove(e.key));
     if (e.repeat) return; unlockAudio();
     const d = keyDir(e.key);
     if (d) { input.taps.push({ x: d < 0 ? 40 : view.W - 40, y: view.H * 0.6, key: true }); pointers.set('k' + d, d); refreshDir(); }
     if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') input.pause = true;
   });
-  window.addEventListener('keyup', (e) => { const d = keyDir(e.key); if (d) { pointers.delete('k' + d); refreshDir(); } });
+  window.addEventListener('keyup', (e) => { if (keyMove(e.key)) keysHeld.delete(keyMove(e.key)); const d = keyDir(e.key); if (d) { pointers.delete('k' + d); refreshDir(); } });
   window.addEventListener('deviceorientation', (e) => {
     if (e.gamma == null) return;
     const land = Math.abs(window.orientation || 0) === 90;

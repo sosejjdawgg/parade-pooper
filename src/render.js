@@ -2,12 +2,12 @@
 import { VIEW, COLORS, BIOMES, VAPING, JUICE, IMMUNITY, PLAYER, SEA } from './config.js';
 import { ctx, view, rect, box, text, textO, textW, draw, drawDisc, face, SPR, hash, LIGHTHOUSE_LAMP_Y } from './gfx.js';
 import { G, S, DEV, orcaAt, vapes, enemies, hazards, clouds, parts, floaters, orbs, biomeAt, dangerAt, seaAt, leftAt, rightAt, playerY, metres } from './game.js';
-import { save, shopLvl } from './platform.js';
+import { save, shopLvl, stick, STICK_R, moveVector } from './platform.js';
 import { devOverlay } from './dev.js';
 
 const { BG, FG, GINGER } = COLORS, W = VIEW.W;
 export const BAR_H = 64;
-let PY = 0, D = 0, checker = null;
+let PY = 0, KY = 0, D = 0, checker = null;   // PY: the kayak's resting row; KY: where she is drawn (the camera can lead her)
 const sy = (wy) => PY - Math.round(wy - D);
 
 function getChecker() {
@@ -187,19 +187,23 @@ function drawEnemies() {
 }
 // killer whales: a blinking dotted warning along the path, then the pod sweeps through, surfacing and diving
 let shadowFill = null;
+function drawRot(s, x, y, a) {
+  if (!a) { draw(s, x, y); return; }
+  ctx.save(); ctx.translate(Math.round(x), Math.round(y)); ctx.rotate(a); ctx.drawImage(s, -(s.width >> 1), -(s.height >> 1)); ctx.restore();
+}
 function drawPods() {
   if (!G.pods || !G.pods.length) return;
   if (!shadowFill) shadowFill = ditherFill('#4a6478', 0.5);
   for (const pod of G.pods) {
-    const cx = G.camX + W / 2;
+    const cx = pod.ax, cy = pod.ay;
     if (pod.t < SEA.ORCA_WARN + 0.35) {                                    // the warning: ripples along the line, ! where they come from
       const on = ((pod.t * 8) | 0) & 1;
       for (let s = 0; s <= pod.L; s += 12) {
         const f = s / pod.L, ux = (pod.x1 - pod.x0) / pod.L, uy = (pod.y1 - pod.y0) / pod.L, b = Math.sin(f * Math.PI) * pod.arc;
-        const x = cx + pod.x0 + (pod.x1 - pod.x0) * f - uy * b, y = sy(G.dist + pod.y0 + (pod.y1 - pod.y0) * f + ux * b);
+        const x = cx + pod.x0 + (pod.x1 - pod.x0) * f - uy * b, y = sy(cy + pod.y0 + (pod.y1 - pod.y0) * f + ux * b);
         if (((s / 12) & 1) === on) rect(x - 3, y - 1, 6, 2, COLORS.ENEMY);
       }
-      const ex = Math.max(CX + 14, Math.min(CX + W - 14, cx + pod.x0)), ey = Math.max(40, Math.min(view.H - 90, sy(G.dist + pod.y0)));
+      const ex = Math.max(CX + 14, Math.min(CX + W - 14, cx + pod.x0)), ey = Math.max(40, Math.min(view.H - 90, sy(cy + pod.y0)));
       if (on) textO('!', ex, ey - 8, 4, COLORS.ENEMY, 0.5);
     }
     for (let i = pod.n - 1; i >= 0; i--) {
@@ -228,7 +232,7 @@ function drawFx() {
 
 /** mode: 'full' = everything, 'menu' = just water, banks and an idle kayak */
 export function drawWorld(mode = 'full') {
-  PY = playerY(); D = Math.round(G.dist); CX = mode === 'full' ? Math.round(G.camX || 0) : 0;
+  PY = playerY(); D = Math.round(G.dist + (mode === 'full' ? G.camY || 0 : 0)); KY = sy(G.dist); CX = mode === 'full' ? Math.round(G.camX || 0) : 0;
   const lo = D - (view.H - PY), hi = D + PY;
   rect(0, 0, W, view.H, BG);
   ctx.save();
@@ -243,21 +247,22 @@ export function drawWorld(mode = 'full') {
     drawLights(); drawPickups(); drawEnemies(); drawPods();
     for (const o of orbs) { const y = sy(o.wy); drawDisc(o.x, y, o.r, 1); drawDisc(o.x, y, o.r * 0.45, 0); }
   }
-  if (full && !G.dead) draw(SPR.kayakHalo[G.paddle], G.px, PY);   // keep her readable inside the fog: a black edge hugging her shape
+  const hd = Math.round((G.heading || 0) / (Math.PI / 16)) * (Math.PI / 16);     // 32 headings: crisp pixels, smooth enough to feel analog
+  if (full && !G.dead) drawRot(SPR.kayakHalo[G.paddle], G.px, KY, hd);   // keep her readable inside the fog: a black edge hugging her shape
   if (G.flipT > 0 && !G.dead) {                              // capsized: she spins
-    const k = SPR.kayak[G.paddle]; ctx.save(); ctx.translate(Math.round(G.px), PY); ctx.rotate((1 - G.flipT / 0.8) * Math.PI * 2); ctx.drawImage(k, -(k.width >> 1), -(k.height >> 1)); ctx.restore();
-  } else if (!G.dead && !(full && G.inv > 0 && ((G.t * 14) & 1))) draw(SPR.kayak[G.paddle], G.px, PY);
+    drawRot(SPR.kayak[G.paddle], G.px, KY, hd + (1 - G.flipT / 0.8) * Math.PI * 2);
+  } else if (!G.dead && !(full && G.inv > 0 && ((G.t * 14) & 1))) drawRot(SPR.kayak[G.paddle], G.px, KY, hd);
   if (full && !G.dead && shopLvl('immunity')) {             // political immunity: solid ring when ready, dots filling in while it recharges
     const R = IMMUNITY.RADIUS, cd = IMMUNITY.COOLDOWN[shopLvl('immunity') - 1];
-    if (G.shieldT <= 0) drawDisc(G.px, PY, R + (((G.t * 4) | 0) & 1), 3);
-    else { const n = Math.floor((1 - G.shieldT / cd) * 16); ctx.fillStyle = FG; for (let i = 0; i < n; i++) { const a = i / 16 * 6.283 - 1.571; ctx.fillRect(Math.round(G.px + Math.cos(a) * R), Math.round(PY + Math.sin(a) * R), 2, 2); } }
+    if (G.shieldT <= 0) drawDisc(G.px, KY, R + (((G.t * 4) | 0) & 1), 3);
+    else { const n = Math.floor((1 - G.shieldT / cd) * 16); ctx.fillStyle = FG; for (let i = 0; i < n; i++) { const a = i / 16 * 6.283 - 1.571; ctx.fillRect(Math.round(G.px + Math.cos(a) * R), Math.round(KY + Math.sin(a) * R), 2, 2); } }
   }
   if (full) drawHazards(true);
   drawFx();
   if (full && DEV.hitbox) {                                   // developer: show the real collision shapes
     const R = COLORS.ENEMY, ring = (x, y, r, c) => { ctx.strokeStyle = c; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(Math.round(x) + 0.5, Math.round(y) + 0.5, Math.max(1, r), 0, 6.283); ctx.stroke(); };
-    box(G.px - PLAYER.HIT_W, PY - PLAYER.HIT_H, PLAYER.HIT_W * 2, PLAYER.HIT_H * 2, R);
-    ring(G.px, PY, PLAYER.PICKUP_R, COLORS.VAPE); ring(G.px, PY, PLAYER.MAGNET_R * (S.magnet || 1), '#3a6a8a');
+    box(G.px - PLAYER.HIT_W, KY - PLAYER.HIT_H, PLAYER.HIT_W * 2, PLAYER.HIT_H * 2, R);
+    ring(G.px, KY, PLAYER.PICKUP_R, COLORS.VAPE); ring(G.px, KY, PLAYER.MAGNET_R * (S.magnet || 1), '#3a6a8a');
     for (let i = 0; i < enemies.n; i++) { const e = enemies.items[i]; ring(e.x, sy(e.wy), e.r, R); }
     for (let i = 0; i < hazards.n; i++) { const h = hazards.items[i]; if (h.hw) box(h.x - h.hw, sy(h.wy) - h.hh, h.hw * 2, h.hh * 2, GINGER); }
     for (const h of G.lights || []) ring(h.x, sy(h.wy), SEA.LIGHT_R, GINGER);
@@ -301,9 +306,38 @@ export function drawHud() {
   // pause button stays up top, out of the thumbs' way
   rect(W - 28, 6, 22, 22, BG); box(W - 28, 6, 22, 22, FG, 2); rect(W - 21, 12, 3, 10); rect(W - 16, 12, 3, 10);
   if (G.bannerT > 0 && !(G.bannerT < 0.8 && ((G.t * 12) & 1))) G.banner.split('\n').forEach((l, i) => textO(l, W / 2, H * 0.2 + i * 24, i ? 2 : fit(l, W, 3), FG, 0.5));
-  if (save.runs < 2 && G.t < 6 && !G.dead && ((G.t * 3) & 1)) {
+  drawStick();
+  if (save.runs < 2 && G.t < 6 && !G.dead && G.seaF < 0.5 && ((G.t * 3) & 1)) {
     textO('< TAP', 28, PY + 70, 2); textO('TAP >', W - 28, PY + 70, 2, FG, 1);
   }
   devOverlay();
+}
+/** the open-water analog stick: a dotted ring where your thumb landed, a knob that follows it,
+ *  and a ginger pointer showing which way she's paddling. Before you touch, a ghost of it pulses. */
+let stickA = 0;
+function drawStick() {
+  const sea = G.mode === 'play' && G.seaF > 0.5 && !G.dead;
+  stickA = Math.max(0, Math.min(1, stickA + (sea && stick.on ? 0.25 : -0.12)));
+  if (!sea) return;
+  const ghost = !stick.on && G.seaT < 8, a = stick.on ? stickA : ghost ? 0.5 + 0.5 * Math.sin(G.t * 4) : 0;
+  if (a <= 0.05 && !stick.on) return;
+  const R = STICK_R, ox = stick.on ? stick.ox : W / 2, oy = stick.on ? stick.oy : view.H - BAR_H - 70;
+  const mv = stick.on ? moveVector() : { x: Math.sin(G.t * 1.7) * 0.8, y: Math.cos(G.t * 1.7) * 0.8 };
+  const kx = ox + mv.x * R, ky = oy - mv.y * R, n = 28;
+  ctx.globalAlpha = Math.max(0.25, a);
+  ctx.fillStyle = BG;                                                                   // a clean dotted ring, nothing cloud-like
+  for (let i = 0; i < n; i++) { const t = i / n * 6.283; ctx.fillRect(Math.round(ox + Math.cos(t) * R) - 2, Math.round(oy + Math.sin(t) * R) - 2, 4, 4); }
+  for (let i = 0; i < n; i++) { const t = i / n * 6.283, big = i % 7 === 0; ctx.fillStyle = big ? GINGER : FG; ctx.fillRect(Math.round(ox + Math.cos(t) * R) - 1, Math.round(oy + Math.sin(t) * R) - 1, big ? 3 : 2, big ? 3 : 2); }
+  rect(ox - 4, oy, 9, 1, FG); rect(ox, oy - 4, 1, 9, FG);                                // centre mark
+  const m = Math.hypot(mv.x, mv.y);
+  if (m > 0.05) {                                                                       // ginger pointer on the rim
+    const ang = Math.atan2(-mv.y, mv.x);
+    for (let k = -2; k <= 2; k++) { const t = ang + k * 0.09; rect(Math.round(ox + Math.cos(t) * (R + 5)) - 2, Math.round(oy + Math.sin(t) * (R + 5)) - 2, 4, 4, GINGER); }
+    for (let s = 6; s < m * R; s += 5) rect(Math.round(ox + mv.x / m * s) - 1, Math.round(oy - mv.y / m * s) - 1, 2, 2, FG);   // the throw
+  }
+  drawDisc(kx, ky, 15, 0); drawDisc(kx, ky, 15, 3); drawDisc(kx, ky, 6, 1);              // the knob
+  rect(Math.round(kx) - 2, Math.round(ky) - 2, 4, 4, GINGER);
+  ctx.globalAlpha = 1;
+  if (ghost && ((G.t * 2) & 1)) textO('DRAG TO PADDLE', W / 2, oy + R + 12, 2, FG, 0.5);
 }
 export const PAUSE_RECT = { x: W - 48, y: 0, w: 48, h: 44 };   // generous: thumbs are big
