@@ -291,6 +291,39 @@ export function face(tier, mode) {
   return faces[key] = c;
 }
 
+
+/** a grand lighthouse, 46 x 150: finial, domed cap, glowing lantern room, railed gallery, a tall tapering
+ *  tower in ginger and white bands with slit windows, and a keeper's door on a stepped plinth */
+export const LIGHTHOUSE_LAMP_Y = 22;     // lamp centre, measured from the sprite's top (after the outline)
+function makeLighthouse() {
+  const Wd = 44, Ht = 148, cx = 22, [c, g] = mk(Wd, Ht);
+  const P = (x, y, w, h, col = FG) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+  P(cx, 0, 1, 4); P(cx - 1, 3, 3, 2);                                     // finial
+  for (let y = 5; y < 13; y++) { const hw = Math.round(2 + (y - 5) * 1.05); P(cx - hw, y, hw * 2 + 1, 1); }   // dome
+  P(cx - 3, 7, 7, 1, BG); P(cx - 5, 10, 11, 1, BG);                       // dome ribs
+  P(cx - 10, 13, 21, 2);                                                  // cap rim
+  P(cx - 9, 15, 19, 14, BG); P(cx - 9, 15, 1, 14); P(cx + 9, 15, 1, 14);  // lantern room glass
+  P(cx - 3, 15, 1, 14); P(cx + 3, 15, 1, 14);                             // mullions
+  P(cx - 7, 17, 15, 10, GINGER); P(cx - 4, 19, 9, 6, '#ffd27a'); P(cx - 2, 20, 5, 4, FG);   // the lamp, burning
+  P(cx - 3, 15, 1, 14); P(cx + 3, 15, 1, 14);
+  P(cx - 13, 29, 27, 3);                                                  // gallery deck
+  for (let x = cx - 13; x <= cx + 13; x += 3) P(x, 32, 1, 4);             // railing posts
+  P(cx - 13, 32, 27, 1); P(cx - 14, 36, 29, 2);                           // rails + corbel
+  P(cx - 11, 38, 23, 2, BG);
+  // tower: tapers from 18 wide under the gallery to 32 at the foot, banded ginger and white
+  const top = 40, foot = 132;
+  for (let y = top; y < foot; y++) {
+    const hw = Math.round(9 + (y - top) / (foot - top) * 7), band = ((y - top) / 15 | 0) & 1;
+    P(cx - hw, y, hw * 2 + 1, 1, band ? GINGER : FG);
+    P(cx + hw - 2, y, 2, 1, band ? '#b8400f' : '#c8c8c8');                // shading down the right side
+  }
+  for (const wy of [50, 74, 98]) { P(cx - 1, wy, 3, 6, BG); P(cx - 2, wy - 1, 5, 1, BG); }   // slit windows
+  P(cx - 18, foot, 37, 4); P(cx - 21, foot + 4, 43, 4); P(cx - 22, foot + 8, 45, 8);          // stepped plinth
+  P(cx - 3, foot - 12, 7, 12, BG); P(cx - 2, foot - 13, 5, 1, BG); P(cx + 2, foot - 6, 1, 1, GINGER);   // door + knob
+  P(cx - 22, foot + 11, 45, 1, BG); P(cx - 18, foot + 3, 37, 1, BG);
+  return outlined(c);
+}
+
 export const SPR = {};
 export function buildSprites() {
   SPR.kayak = [makeKayak(0), makeKayak(1)];
@@ -308,10 +341,7 @@ export function buildSprites() {
     '...#...#.....', '..#...#......', '...#...#.....', '....#...#....', '.............', '###########..', '#bbbbbbbbb#..',
     '#bbbbbbbbb#..', '###########.#', '###########..#', '###########..#', '###########.#.', '###########...',
     '.#########....']);
-  SPR.lighthouse = doubled(art([                                        // out at sea. It is not a vape shop
-    '.....ooo.....', '....ooooo....', '...#######...', '....#x#x#....', '....#x#x#....', '...#######...', '....#####....',
-    '....#####....', '....xxxxx....', '....xxxxx....', '...#######...', '...#######...', '...xxxxxxx...', '...xxxxxxx...',
-    '..#########..', '..#########..', '..#xx###xx#..', '.###########.', '.###########.', '#############']));
+  SPR.lighthouse = makeLighthouse();                                    // out at sea. It is not a vape shop
   SPR.heart = art(['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'], false);
   SPR.heartEmpty = art(['.##.##.', '#..#..#', '#.....#', '.#...#.', '..#.#..', '...#...'], false);
   SPR.swan = art([

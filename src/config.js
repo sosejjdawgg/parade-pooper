@@ -123,7 +123,7 @@ export const SEA = {
   LIGHT_SIDE: [180, 460],     // and sideways
   LIGHT_R: 44,                // paddle this close to visit
   LIGHT_DMG: 0.1,             // +10% damage to every weapon per lighthouse visited
-  BEAM_LEN: 1100, BEAM_SPREAD: 0.075,
+  BEAM_LEN: 1200, BEAM_SPREAD: 0.11,
 };
 
 export const IMMUNITY = { COOLDOWN: [10, 8, 5, 3, 2], RADIUS: 21 };

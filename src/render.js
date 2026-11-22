@@ -1,6 +1,6 @@
 // Draws the world and the in-run HUD. Three colours only: black, white, ginger.
 import { VIEW, COLORS, BIOMES, VAPING, JUICE, IMMUNITY, PLAYER, SEA } from './config.js';
-import { ctx, view, rect, box, text, textO, textW, draw, drawDisc, face, SPR, hash } from './gfx.js';
+import { ctx, view, rect, box, text, textO, textW, draw, drawDisc, face, SPR, hash, LIGHTHOUSE_LAMP_Y } from './gfx.js';
 import { G, vapes, enemies, hazards, clouds, parts, floaters, orbs, biomeAt, dangerAt, seaAt, leftAt, rightAt, playerY, metres } from './game.js';
 import { save, shopLvl } from './platform.js';
 
@@ -145,7 +145,7 @@ function drawLights() {
   const L = G.lights; if (!L.length) return;
   if (!beamFill) beamFill = [ditherFill(FG, 0.25), ditherFill(FG, 0.5)];
   for (let i = 0; i < L.length; i++) {
-    const h = L[i], nx = L[i + 1], y = sy(h.wy), ly = y - 34;
+    const h = L[i], nx = L[i + 1], y = sy(h.wy), top = y + 10 - SPR.lighthouse.height, ly = top + 1 + LIGHTHOUSE_LAMP_Y;
     if (nx) {
       const a = Math.atan2(-(nx.wy - h.wy), nx.x - h.x);
       for (let k = 0; k < 2; k++) {
@@ -155,10 +155,12 @@ function drawLights() {
         ctx.closePath(); ctx.fill();
       }
     }
-    if (y < -90 || y > view.H + 60 || h.x < CX - 60 || h.x > CX + W + 60) continue;
-    drawDisc(h.x, y + 14, 26, 2); drawDisc(h.x, y + 14, 18, 1);        // the rock it stands on
-    draw(SPR.lighthouse, h.x, y - 10);
-    if (h.visited) textO(':(', h.x, y + 34, 1, FG, 0.5);
+    if (y < -40 || top > view.H + 40 || h.x < CX - 80 || h.x > CX + W + 80) continue;
+    drawDisc(h.x, y + 14, 46, 2); drawDisc(h.x, y + 12, 36, 1);                 // surf and rock
+    for (let k = 0; k < 9; k++) { const a = k / 9 * 6.283 + h.x, rr = 18 + (hash(k * 31 + (h.wy | 0)) * 10 | 0); rect(h.x + Math.cos(a) * rr - 4, y + 10 + Math.sin(a) * rr * 0.6 - 3, 8, 6, BG); rect(h.x + Math.cos(a) * rr - 3, y + 10 + Math.sin(a) * rr * 0.6 - 2, 6, 3, FG); }
+    if (((G.t * 3) | 0) & 1) drawDisc(h.x, ly, 16, 3);                    // the lamp pulses
+    draw(SPR.lighthouse, h.x, top + SPR.lighthouse.height / 2);
+    if (h.visited) textO(':(', h.x, y + 30, 2, FG, 0.5);
   }
 }
 function drawPickups() {
