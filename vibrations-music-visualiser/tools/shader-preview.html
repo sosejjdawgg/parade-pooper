@@ -1,0 +1,119 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Vibrations shader preview</title>
+<style>html,body{margin:0;background:#000;overflow:hidden}canvas{display:block}</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+// Desktop preview of the Android render pipeline (same GLSL files).
+// Query: ?scene=haze&palette=0&t=12&w=540&h=960&bass=0.6&kick=0.8&sym=0&bloom=0.6&animate=1
+const Q = new URLSearchParams(location.search);
+const num = (k, d) => (Q.has(k) ? parseFloat(Q.get(k)) : d);
+const W = num('w', 540), H = num('h', 960);
+const cv = document.getElementById('c');
+cv.width = W; cv.height = H;
+const gl = cv.getContext('webgl2', { preserveDrawingBuffer: true });
+gl.getExtension('EXT_color_buffer_float');
+const A = '../app/src/main/assets/';
+const get = (p) => fetch(A + p).then((r) => { if (!r.ok) throw new Error(p); return r.text(); });
+
+function compile(type, src) {
+  const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s) + '\n' + src.split('\n').map((l, i) => (i + 1) + ': ' + l).join('\n'));
+  return s;
+}
+function program(vs, fs) {
+  const p = gl.createProgram();
+  gl.attachShader(p, compile(gl.VERTEX_SHADER, '#version 300 es\n' + vs));
+  gl.attachShader(p, compile(gl.FRAGMENT_SHADER, '#version 300 es\n' + fs));
+  gl.linkProgram(p);
+  if (!gl.getProgramParameter(p, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(p));
+  p.u = (n) => gl.getUniformLocation(p, n);
+  return p;
+}
+function fbo(w, h) {
+  const t = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, t);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA16F, w, h, 0, gl.RGBA, gl.HALF_FLOAT, null);
+  for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
+  const f = gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER, f);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, t, 0);
+  return { t, f, w, h };
+}
+const hex = (s) => [1, 3, 5].map((i) => parseInt(s.substr(i, 2), 16) / 255);
+
+(async () => {
+  try {
+    const scenes = JSON.parse(await get('scenes.json'));
+    const palettes = JSON.parse(await get('palettes.json'));
+    const sid = Q.get('scene') || 'haze';
+    const meta = scenes.find((s) => s.id === sid);
+    const pal = palettes[num('palette', 0) | 0];
+    const vs = await get('shaders/post/fullscreen.vert');
+    const sceneP = program(vs, (await get('shaders/common.glsl')) + '\n' + (await get('shaders/scenes/' + sid + '.glsl')));
+    const downP = program(vs, await get('shaders/post/down.frag'));
+    const blurP = program(vs, await get('shaders/post/blur.frag'));
+    const compP = program(vs, await get('shaders/post/composite.frag'));
+    const sc = num('scale', meta.scale);
+    const sw = Math.round(W * sc), sh = Math.round(H * sc);
+    const S = fbo(sw, sh), B1 = fbo(W >> 2, H >> 2), B1b = fbo(W >> 2, H >> 2), B2 = fbo(W >> 3, H >> 3), B2b = fbo(W >> 3, H >> 3);
+    const textTex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, textTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+    const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+    const draw = (target, w, h) => { gl.bindFramebuffer(gl.FRAMEBUFFER, target); gl.viewport(0, 0, w, h); gl.drawArrays(gl.TRIANGLES, 0, 3); };
+    const tex = (unit, t) => { gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t); };
+
+    let t0 = performance.now();
+    function frame() {
+      const t = Q.get('animate') ? num('t', 0) + (performance.now() - t0) / 1000 : num('t', 0);
+      const beat = (t * 2) % 1; // 120 bpm
+      const kick = Q.has('kick') ? num('kick', 0) : Math.exp(-beat / 0.2);
+      const bass = Q.has('bass') ? num('bass', 0) : 0.3 + 0.5 * kick;
+      gl.useProgram(sceneP);
+      gl.uniform2f(sceneP.u('uRes'), sw, sh);
+      gl.uniform1f(sceneP.u('uTime'), t % 240);
+      gl.uniform1f(sceneP.u('uPeriod'), num('period', 240));
+      gl.uniform1f(sceneP.u('uLevel'), num('level', 0.45));
+      gl.uniform1f(sceneP.u('uBass'), bass);
+      gl.uniform1f(sceneP.u('uMid'), num('mid', 0.4));
+      gl.uniform1f(sceneP.u('uHigh'), num('high', 0.3));
+      gl.uniform1f(sceneP.u('uKick'), kick);
+      gl.uniform1f(sceneP.u('uKickAge'), Q.has('kickAge') ? num('kickAge', 0.2) : beat * 0.5);
+      gl.uniform1f(sceneP.u('uEnergy'), 0.4);
+      const spec = []; for (let i = 0; i < 32; i++) spec.push(Math.max(0, 0.75 - i / 45 + 0.2 * Math.sin(i * 1.7 + num('specT', t) * 3)) * (i < 4 ? 0.6 + 0.4 * kick : 1));
+      gl.uniform1fv(sceneP.u('uSpec'), spec);
+      gl.uniform3fv(sceneP.u('uPal'), pal.colors.flatMap(hex));
+      gl.uniform1i(sceneP.u('uSym'), num('sym', 0) | 0);
+      gl.uniform1f(sceneP.u('uSymRot'), 0);
+      draw(S.f, sw, sh);
+      // bloom
+      gl.useProgram(downP); tex(0, S.t); gl.uniform1i(downP.u('uTex'), 0);
+      gl.uniform2f(downP.u('uTexel'), 1 / sw, 1 / sh); gl.uniform1f(downP.u('uKnee'), 1); draw(B1.f, B1.w, B1.h);
+      gl.useProgram(blurP); gl.uniform1i(blurP.u('uTex'), 0);
+      tex(0, B1.t); gl.uniform2f(blurP.u('uDir'), 1 / B1.w, 0); draw(B1b.f, B1.w, B1.h);
+      tex(0, B1b.t); gl.uniform2f(blurP.u('uDir'), 0, 1 / B1.h); draw(B1.f, B1.w, B1.h);
+      gl.useProgram(downP); tex(0, B1.t); gl.uniform2f(downP.u('uTexel'), 1 / B1.w, 1 / B1.h); gl.uniform1f(downP.u('uKnee'), 0); draw(B2.f, B2.w, B2.h);
+      gl.useProgram(blurP);
+      tex(0, B2.t); gl.uniform2f(blurP.u('uDir'), 1 / B2.w, 0); draw(B2b.f, B2.w, B2.h);
+      tex(0, B2b.t); gl.uniform2f(blurP.u('uDir'), 0, 1 / B2.h); draw(B2.f, B2.w, B2.h);
+      gl.useProgram(compP);
+      tex(0, S.t); tex(1, B1.t); tex(2, B2.t); tex(3, textTex);
+      gl.uniform1i(compP.u('uScene'), 0); gl.uniform1i(compP.u('uBloom1'), 1); gl.uniform1i(compP.u('uBloom2'), 2); gl.uniform1i(compP.u('uText'), 3);
+      gl.uniform1f(compP.u('uBloomAmt'), num('bloom', 0.6));
+      gl.uniform1f(compP.u('uPunch'), pal.punch);
+      gl.uniform1f(compP.u('uGrain'), num('grain', 0.25));
+      gl.uniform1f(compP.u('uTextAlpha'), 0);
+      gl.uniform3f(compP.u('uTextColor'), 1, 1, 1);
+      gl.uniform1f(compP.u('uSeed'), (t * 60) % 97);
+      gl.uniform2f(compP.u('uRes'), W, H);
+      draw(null, W, H);
+      if (Q.get('animate')) requestAnimationFrame(frame); else { gl.finish(); document.title = 'ready'; }
+    }
+    frame();
+  } catch (e) { document.title = 'error'; document.body.setAttribute('data-error', String(e.message || e)); console.error(e); }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+[
+  {"name": "Pearl",   "colors": ["#07080d", "#7f93ba", "#cdb9de", "#fff4e6"], "punch": 0.0},
+  {"name": "Dusk",    "colors": ["#09060f", "#5a3a8f", "#e0785e", "#ffd9ab"], "punch": 0.2},
+  {"name": "Glacier", "colors": ["#03080c", "#23688a", "#8fdcd8", "#effffd"], "punch": 0.0},
+  {"name": "Ember",   "colors": ["#0a0504", "#8c2c12", "#ea8a2e", "#ffe3b3"], "punch": 0.3},
+  {"name": "Abyss",   "colors": ["#020409", "#0c2c5c", "#1f8aa0", "#a8f2ff"], "punch": 0.1},
+  {"name": "Rose",    "colors": ["#0b0609", "#9c4466", "#f0a6b8", "#fff1f4"], "punch": 0.0},
+  {"name": "Moss",    "colors": ["#040806", "#1c5a43", "#8cbc78", "#eaf6d4"], "punch": 0.1},
+  {"name": "Mono",    "colors": ["#050505", "#5e5e5e", "#b8b8b8", "#ffffff"], "punch": 0.4},
+  {"name": "Neon",    "colors": ["#05020a", "#ff2a8f", "#26dcff", "#f4f0ff"], "punch": 1.0},
+  {"name": "Acid",    "colors": ["#050704", "#b8ff2e", "#00b07a", "#f4ffe0"], "punch": 1.0},
+  {"name": "Solar",   "colors": ["#090510", "#ff5a00", "#ffcc00", "#fff8e8"], "punch": 0.9}
+]

@@ -1,0 +1,12 @@
+[
+  {"id": "haze",   "name": "Haze",   "kind": "light",     "scale": 0.6},
+  {"id": "silk",   "name": "Silk",   "kind": "fluid",     "scale": 0.75},
+  {"id": "motes",  "name": "Motes",  "kind": "particle",  "scale": 1.0},
+  {"id": "nebula", "name": "Nebula", "kind": "fluid",     "scale": 0.5},
+  {"id": "beams",  "name": "Beams",  "kind": "light",     "scale": 0.6},
+  {"id": "orb",    "name": "Orb",    "kind": "light",     "scale": 0.8},
+  {"id": "rings",  "name": "Rings",  "kind": "geometric", "scale": 1.0},
+  {"id": "prism",  "name": "Prism",  "kind": "geometric", "scale": 1.0},
+  {"id": "tide",   "name": "Tide",   "kind": "graphic",   "scale": 1.0},
+  {"id": "void",   "name": "Void",   "kind": "minimal",   "scale": 1.0}
+]

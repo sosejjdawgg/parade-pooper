@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!-- Adaptive icons need the -v26 qualifier for aapt even though minSdk is 30. -->
+    <issue id="ObsoleteSdkInt" severity="ignore" />
+    <!-- Views are built in code only. -->
+    <issue id="ViewConstructor" severity="ignore" />
+</lint>
