@@ -3,6 +3,10 @@
 //  Units: pixels (logical 360-wide screen), seconds, px/s unless noted.
 // ============================================================================
 
+export const VERSION = '0.2.0';
+// Developer options: tap the version number on the title screen, then enter this code.
+export const DEV_CODE = '1980';
+
 export const VIEW = {
   W: 360,            // logical width (fixed)
   H_MIN: 640,        // 9:16
@@ -280,6 +284,7 @@ export const FLAVOUR = {
     'A KAYAK IS NOT A SECOND HOME. PROBABLY.',
   ],
   CAUSES: {
+    dev: 'PULLED BY A DEVELOPER',
     barge: "RAMMED SOMEONE'S SECOND HOME", pier: 'HIT A LOW BRIDGE', gate: 'HIT A LOCK GATE', vortex: 'DOWN THE PLUGHOLE',
     debris: 'SUNK BY FLY-TIPPING', bank: 'HIT THE RED WALL', sandbar: 'RAN AGROUND', swan: 'A SWAN TOOK IT PERSONALLY', pap: 'PAPPED MID-PUFF',
     tumble: 'TUMBLEWEEDED', piranha: 'NIBBLED BY THE BACKBENCHES', mozzie: 'BITTEN TO BITS', croc: 'SNAPPED UP',

@@ -1,10 +1,11 @@
 // Draws the world and the in-run HUD. Three colours only: black, white, ginger.
 import { VIEW, COLORS, BIOMES, VAPING, JUICE, IMMUNITY, PLAYER, SEA } from './config.js';
 import { ctx, view, rect, box, text, textO, textW, draw, drawDisc, face, SPR, hash, LIGHTHOUSE_LAMP_Y } from './gfx.js';
-import { G, vapes, enemies, hazards, clouds, parts, floaters, orbs, biomeAt, dangerAt, seaAt, leftAt, rightAt, playerY, metres } from './game.js';
+import { G, S, DEV, vapes, enemies, hazards, clouds, parts, floaters, orbs, biomeAt, dangerAt, seaAt, leftAt, rightAt, playerY, metres } from './game.js';
 import { save, shopLvl } from './platform.js';
+import { devOverlay } from './dev.js';
 
-const { BG, FG } = COLORS, W = VIEW.W;
+const { BG, FG, GINGER } = COLORS, W = VIEW.W;
 export const BAR_H = 64;
 let PY = 0, D = 0, checker = null;
 const sy = (wy) => PY - Math.round(wy - D);
@@ -221,6 +222,14 @@ export function drawWorld(mode = 'full') {
   }
   if (full) drawHazards(true);
   drawFx();
+  if (full && DEV.hitbox) {                                   // developer: show the real collision shapes
+    const R = COLORS.ENEMY, ring = (x, y, r, c) => { ctx.strokeStyle = c; ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(Math.round(x) + 0.5, Math.round(y) + 0.5, Math.max(1, r), 0, 6.283); ctx.stroke(); };
+    box(G.px - PLAYER.HIT_W, PY - PLAYER.HIT_H, PLAYER.HIT_W * 2, PLAYER.HIT_H * 2, R);
+    ring(G.px, PY, PLAYER.PICKUP_R, COLORS.VAPE); ring(G.px, PY, PLAYER.MAGNET_R * (S.magnet || 1), '#3a6a8a');
+    for (let i = 0; i < enemies.n; i++) { const e = enemies.items[i]; ring(e.x, sy(e.wy), e.r, R); }
+    for (let i = 0; i < hazards.n; i++) { const h = hazards.items[i]; if (h.hw) box(h.x - h.hw, sy(h.wy) - h.hh, h.hw * 2, h.hh * 2, GINGER); }
+    for (const h of G.lights || []) ring(h.x, sy(h.wy), SEA.LIGHT_R, GINGER);
+  }
   if (full && G.burst > 22) {
     const n = Math.min(16, G.burst / 7) * JUICE.SPEED_FX, k = (G.t * 24) | 0;
     for (let i = 0; i < n; i++) rect(CX + hash(i * 13 + k * 7) * W, hash(i * 29 + k * 3) * view.H, 1, (20 + G.burst / 4) * JUICE.SPEED_FX);
@@ -263,5 +272,6 @@ export function drawHud() {
   if (save.runs < 2 && G.t < 6 && !G.dead && ((G.t * 3) & 1)) {
     textO('< TAP', 28, PY + 70, 2); textO('TAP >', W - 28, PY + 70, 2, FG, 1);
   }
+  devOverlay();
 }
 export const PAUSE_RECT = { x: W - 48, y: 0, w: 48, h: 44 };   // generous: thumbs are big

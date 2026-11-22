@@ -29,6 +29,8 @@ const pools = [vapes, enemies, hazards, clouds, parts, floaters];
 export const G = { mode: 'title', ph: [0, 0, 0], dist: 0, t: 0, bot: false };
 export const S = { area: 1, dmg: 1, cd: 1, dur: 1, magnet: 1, nudge: 1, xp: 1, cash: 1 };
 export const orbs = [];
+// developer options (see dev.js): switched on from the hidden developer menu
+export const DEV = { unlocked: false, god: false, oneHit: false, noSpawn: false, noHazards: false, hitbox: false, info: false, speed: 1, fps: 0 };
 
 const rnd = (a = 1, b) => b === undefined ? Math.random() * a : a + Math.random() * (b - a);
 const pick = (arr) => arr[(Math.random() * arr.length) | 0];
@@ -79,7 +81,7 @@ export function newRun() {
   G.mode = 'play';
 }
 const plvl = (id) => G.passives[id] || 0;
-function calcStats() {
+export function calcStats() {
   S.area = 1 + plvl('lungs') * PASSIVES.lungs.per;
   S.dmg = 1 + (G.lighthouses || 0) * SEA.LIGHT_DMG;
   S.cd = Math.pow(1 - PASSIVES.chain.per, plvl('chain'));
@@ -97,13 +99,14 @@ export function wp(id) {
 }
 
 // ---- spawning helpers ---------------------------------------------------------
-function addPickup(kind, x, wy) {
+export function addPickup(kind, x, wy) {
   const v = vapes.spawn(); if (!v) return;
   v.kind = kind; v.wy = wy; v.x = clamp(x, leftAt(wy) + 10, rightAt(wy) - 10);
   v.age = 0; v.ang = rnd(6.28); v.mag = false;
 }
 const addVape = (x, wy, big) => addPickup(big || Math.random() < PICKUPS.BIG_CHANCE ? 'big' : 'vape', x, wy);
 function addHazard(type, x, wy, hw, hh, extra) {
+  if (DEV.noHazards) return null;
   const h = hazards.spawn(); if (!h) return null;
   h.type = type; h.x = x; h.wy = wy; h.hw = hw; h.hh = hh; h.vx = 0; h.fake = false; h.seed = (Math.random() * 1e6) | 0; h.len = 0; h.side = 0;
   if (extra) Object.assign(h, extra);
@@ -127,7 +130,7 @@ function addCloud(kind, x, wy, vx, vwy, r0, r1, life, dmg, tick) {
   c.dmg = dmg; c.tick = tick; c.tickT = 0; c.id = ++G.cloudId;
   if (kind === 'puff') { if (c.hit) c.hit.clear(); else c.hit = new Set(); }   // a puff damages each enemy once
 }
-function addEnemy(type, x, wy, behind) {
+export function addEnemy(type, x, wy, behind) {
   const e = enemies.spawn(); if (!e) return;
   const d = ENEMIES[type];
   e.type = type; e.wy = wy; e.x = clamp(x, leftAt(wy) + d.r + 2, rightAt(wy) - d.r - 2);
@@ -280,7 +283,7 @@ function seaType() {
   return 'swan';
 }
 /** a point just off screen in direction `a` (a > 0 = ahead), so enemies arrive from every side */
-function seaSpot(a) {
+export function seaSpot(a) {
   const dx = Math.cos(a), dy = Math.sin(a), hx = VIEW.W / 2 + 30, ahead = playerY() + 30, behind = view.H - playerY() + 30;
   const t = Math.min(hx / Math.max(1e-3, Math.abs(dx)), (dy > 0 ? ahead : behind) / Math.max(1e-3, Math.abs(dy)));
   return [G.camX + VIEW.W / 2 + dx * t, G.dist + dy * t];
@@ -301,7 +304,7 @@ function updateLights() {
   const L = G.lights;
   if (!L.length) {
     if (G.dist / WORLD.PX_PER_M < BIOMES.SEA_AT) return;
-    L.push({ x: G.px + rnd(-50, 50), wy: (BIOMES.SEA_AT + BIOMES.BLEND + SEA.LIGHT_FIRST_M) * WORLD.PX_PER_M, visited: false });
+    L.push({ x: G.px + rnd(-50, 50), wy: Math.max((BIOMES.SEA_AT + BIOMES.BLEND + SEA.LIGHT_FIRST_M) * WORLD.PX_PER_M, G.dist + 600), visited: false });
   }
   while (L[L.length - 1].wy < G.dist + 3200) {
     const p = L[L.length - 1];
@@ -317,6 +320,23 @@ function updateLights() {
   }
 }
 
+// ---- developer shortcuts (dev.js) -------------------------------------------------------
+/** teleport to a distance: clears the river around you and rebuilds it from there */
+export function devJump(m) {
+  for (const p of [enemies, hazards, clouds, vapes]) p.n = 0;
+  orbs.length = 0;
+  Object.assign(G, { dist: m * WORLD.PX_PER_M, chunkN: 2, seaT: 0, wave: 0, waveT: 6, lights: [], camX: 0, pvx: 0, burst: 0, slow: 1, biomeIdx: -1 });
+  G.genY = G.dist + 300; G.px = centreAt(G.dist); G.danger = dangerAt(G.dist); G.seaF = seaAt(G.dist); G.inv = Math.max(G.inv, 1);
+}
+/** paddle straight to the next lighthouse you haven't visited */
+export function devNextLight() {
+  const h = G.lights.find((l) => !l.visited && l.wy > G.dist - 40); if (!h) return false;
+  enemies.n = 0; G.dist = h.wy - 90; G.genY = Math.max(G.genY, G.dist + 300); G.px = h.x; G.camX = G.px - VIEW.W / 2; return true;
+}
+/** a full ring of enemies, closing in from every side */
+export function devRing(type, n) { const a0 = rnd(6.283); for (let i = 0; i < n; i++) { const [x, wy] = seaSpot(a0 + i / n * 6.283); addEnemy(type, x, wy, true); } }
+export function devKill() { const g = G.god, d = DEV.god; G.god = DEV.god = false; G.inv = 0; die('dev'); G.god = g; DEV.god = d; }
+
 // ---- player actions ---------------------------------------------------------------
 export function nudge(dir) {
   if (G.mode !== 'play' || G.dead) return;
@@ -324,16 +344,16 @@ export function nudge(dir) {
   G.paddle ^= 1;
   addPart(G.px - dir * 9, G.dist - 4, -dir * 40, G.speed - 30, 0.3); addPart(G.px - dir * 10, G.dist - 8, -dir * 60, G.speed - 50, 0.25);
 }
-function hurt(n, cause) {
+export function hurt(n, cause) {
   if (G.inv > 0 || G.dead) return;
-  if (G.god) { G.hits = (G.hits || 0) + 1; G.inv = 0.5; return; }
+  if (G.god || DEV.god) { G.hits = (G.hits || 0) + 1; G.inv = 0.5; return; }
   G.hp -= n * PLAYER.HIT_DMG; G.hurtT = 0.7; G.inv = PLAYER.INVULN_HIT; G.shake = JUICE.SHAKE_HIT; G.flash = 0.12; sfx.hurt();
   burst(G.px, G.dist, 14, 120);
   if (G.hp <= 0) die(cause);
 }
-function die(cause) {
+export function die(cause) {
   if (G.dead) return;
-  if (G.god) { if (G.inv <= 0) { G.crashes = (G.crashes || 0) + 1; G.inv = 1; } return; }
+  if (G.god || DEV.god) { if (G.inv <= 0) { G.crashes = (G.crashes || 0) + 1; G.inv = 1; } return; }
   G.dead = true; G.deadT = 0; G.cause = cause; G.hp = 0;
   G.hitstop = JUICE.HITSTOP_DEATH; G.shake = JUICE.SHAKE_DEATH; G.flash = 0.2; sfx.death();
   for (let i = 0; i < 70; i++) { const a = rnd(6.28), s = rnd(20, 260); addPart(G.px + rnd(-6, 6), G.dist + rnd(-14, 14), Math.cos(a) * s, Math.sin(a) * s, rnd(0.4, 1.3), pick([2, 2, 3, 4])); }
@@ -343,7 +363,7 @@ function die(cause) {
   save.cash += total; save.runs++; save.best = Math.max(save.best, G.vapes); save.bestDist = Math.max(save.bestDist, m);
   writeSave();
 }
-function gainXp(x) {
+export function gainXp(x) {
   G.xp += x * S.xp;
   while (G.xp >= G.xpNeed) { G.xp -= G.xpNeed; G.level++; G.xpNeed = XP.need(G.level); G.pending++; }
 }
@@ -373,7 +393,7 @@ function collect(v) {
 }
 function damageEnemy(e, dmg) {
   if (e.dead) return;
-  dmg *= S.dmg; e.hp -= dmg; e.flash = 0.08;
+  dmg = DEV.oneHit ? 1e9 : dmg * S.dmg; e.hp -= dmg; e.flash = 0.08;
   if (floaters.n < 14) addFloater(Math.round(dmg), e.x, e.wy + e.r, 1);
   if (e.hp > 0) return;
   const d = ENEMIES[e.type];
@@ -717,7 +737,8 @@ export function update(dt) {
   const b = biomeAt(G.dist), bi = Math.round(b);
   if (bi !== G.biomeIdx) { G.biomeIdx = bi; G.banner = BIOMES.NAMES[bi]; G.bannerT = 3; }
   if (G.bannerT > 0) G.bannerT -= dt;
-  if (G.seaF > 0.5) seaSpawns(dt);
+  if (DEV.noSpawn) G.spawnT = 0;
+  else if (G.seaF > 0.5) seaSpawns(dt);
   else if (m > SPAWN.START_M) {
     G.spawnT += lerp3(SPAWN.RATE, b) * (1 + m / 1000 * SPAWN.RATE_GROWTH_PER_KM) * Math.sqrt(G.speed / PLAYER.SPEED_START)
       * Math.min(SPAWN.LEVEL_MAX, SPAWN.LEVEL_BASE + G.level * SPAWN.LEVEL_PER) * dt;

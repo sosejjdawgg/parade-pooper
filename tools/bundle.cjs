@@ -5,7 +5,7 @@
 //                                     WITHOUT music/river.mp3, which is a cover of a commercial song)
 const fs = require('fs'), path = require('path'), { execFileSync } = require('child_process');
 const root = path.resolve(__dirname, '..'), itch = process.argv.includes('--itch');
-const mods = ['config', 'gfx', 'platform', 'music', 'game', 'render', 'main'];
+const mods = ['config', 'gfx', 'platform', 'music', 'game', 'dev', 'render', 'main'];
 const imports = {};
 for (const m of mods) {
   const src = fs.readFileSync(path.join(root, 'src', m + '.js'), 'utf8').replace(/from '\.\/(\w+)\.js'/g, "from 'vc/$1'");

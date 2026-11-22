@@ -1,8 +1,9 @@
 // Boot, main loop and every menu screen (immediate-mode UI).
-import { VIEW, COLORS, SHOP, FLAVOUR, MUSIC, LEGAL } from './config.js';
+import { VIEW, COLORS, SHOP, FLAVOUR, MUSIC, LEGAL, VERSION } from './config.js';
 import { preloadMusic, musicFrame, musicState, openerFinished } from './music.js';
 import { ctx, view, resize, rect, box, text, textO, textW, wrap, draw, buildSprites, SPR, face } from './gfx.js';
-import { G, newRun, update, idle, nudge, choose, playerY, enemies, clouds, vapes, centreAt } from './game.js';
+import { G, DEV, newRun, update, idle, nudge, choose, playerY, enemies, clouds, vapes, centreAt } from './game.js';
+import { loadDev, openDev, devState, devCodeScreen, devScreen } from './dev.js';
 import { drawWorld, drawHud, dither, PAUSE_RECT } from './render.js';
 import { save, loadSave, writeSave, resetSave, shopLvl, sfx, input, initInput, requestTilt, getAC } from './platform.js';
 
@@ -29,6 +30,7 @@ function button(x, y, w, h, label, o = {}) {
 }
 function shade() { ctx.fillStyle = BG; for (let y = 0; y < view.H; y += 2) ctx.fillRect(0, y, W, 1); }
 function say(msg) { toast = msg; toastT = 2; }
+const ui = { button, panel, shade, say };
 
 // ---- screens ----------------------------------------------------------------------
 /** first-timers see the how-to-play screen before their first run */
@@ -51,6 +53,8 @@ function titleScreen() {
   if (save.best) textO('BEST ' + save.best + ' VAPES   ' + save.bestDist + 'M   £' + save.cash, W / 2, H * 0.9, 2, FG, 0.5);
   textO('NO STAMP DUTY PAYABLE ON KAYAKS.', W / 2, H * 0.79 + 34, 2, FG, 0.5);
   textO('A FREE, NON-COMMERCIAL PARODY. NOT AFFILIATED WITH ANYONE.', W / 2, H - 12, 1, FG, 0.5);
+  textO('V' + VERSION, W - 6, H - 26, 1, DEV.unlocked ? GINGER : FG, 1);            // secret: tap the version number
+  if (tapped(W - 70, H - 46, 70, 30)) openDev('title');
 }
 
 // ---- intro / how to play --------------------------------------------------------
@@ -233,6 +237,7 @@ function pauseScreen() {
   text('PAUSED', W / 2, y + 22, 6, FG, 0.5);
   if (button(60, y + 76, W - 120, 44, 'RESUME', { scale: 4, inv: true }) || input.pause) G.mode = 'play';
   if (button(60, y + 132, W - 120, 36, 'QUIT RUN')) { G.mode = 'title'; G.dead = false; }
+  if (DEV.unlocked && button(60, y + 210, W - 120, 30, 'DEV OPTIONS')) openDev('pause');
 }
 
 // ---- main loop ----------------------------------------------------------------------
@@ -241,6 +246,8 @@ function frame(ts) {
   const dt = Math.min(0.1, (ts - last) / 1000 || 0); last = ts;
   if (G.mode !== prevMode) { prevMode = G.mode; modeT = 0; acc = 0; }
   modeT += dt;
+  if (dt > 0) DEV.fps = DEV.fps ? DEV.fps * 0.95 + (1 / dt) * 0.05 : 60;
+  const devMenu = G.mode === 'dev' || G.mode === 'devcode', devTitle = devMenu && devState.from === 'title';
 
   if (G.mode === 'play') {
     for (const t of input.taps) {
@@ -249,10 +256,10 @@ function frame(ts) {
     }
     if (input.pause && !G.dead) { G.mode = 'pause'; input.pause = false; }   // consume it, or the pause screen reads it as 'resume'
     else {
-      acc += dt * FAST;
+      acc += dt * FAST * DEV.speed;
       while (acc >= STEP && G.mode === 'play') { update(STEP); acc -= STEP; }
     }
-  } else if (G.mode === 'title' || G.mode === 'shop' || G.mode === 'settings' || G.mode === 'legal' || G.mode === 'intro') idle(dt);
+  } else if (G.mode === 'title' || G.mode === 'shop' || G.mode === 'settings' || G.mode === 'legal' || G.mode === 'intro' || devTitle) idle(dt);
   else G.t += dt;
 
   if (G.bot) {      // headless balance runs
@@ -260,11 +267,11 @@ function frame(ts) {
     if (G.mode === 'dead') { (window.__runs = window.__runs || []).push({ ...G.result, cause: G.cause, t: G.t, weapons: { ...G.weapons }, evo: { ...G.evo } }); newRun(); G.bot = true; }
   }
 
-  const onTitle = G.mode === 'title' || G.mode === 'settings' || G.mode === 'legal' || G.mode === 'intro' || (G.mode === 'shop' && backTo === 'title');
+  const onTitle = devTitle || G.mode === 'title' || G.mode === 'settings' || G.mode === 'legal' || G.mode === 'intro' || (G.mode === 'shop' && backTo === 'title');
   try {   // audio must never be able to freeze the game
     musicFrame(!openerFinished() ? MUSIC.OPENER : onTitle ? 'menu' : MUSIC.BIOME_TRACKS[G.biomeIdx || 0], G.mode !== 'play' && G.mode !== 'title');
   } catch (err) { if (!musicErr) { musicErr = true; console.warn('music disabled:', err); } }
-  const menu = G.mode === 'title' || G.mode === 'settings' || G.mode === 'legal' || G.mode === 'intro' || (G.mode === 'shop');
+  const menu = devTitle || G.mode === 'title' || G.mode === 'settings' || G.mode === 'legal' || G.mode === 'intro' || (G.mode === 'shop');
   drawWorld(menu ? 'menu' : 'full');
   if (!menu) drawHud();
   if (G.mode === 'title') titleScreen();
@@ -275,24 +282,27 @@ function frame(ts) {
   else if (G.mode === 'legal') legalScreen();
   else if (G.mode === 'intro') introScreen();
   else if (G.mode === 'pause') pauseScreen();
+  else if (G.mode === 'devcode') devCodeScreen(ui);
+  else if (G.mode === 'dev') devScreen(ui);
   if (toastT > 0) { toastT -= dt; const tw = textW(toast, 2) + 20; rect(W / 2 - tw / 2, view.H - 96, tw, 22, FG); text(toast, W / 2, view.H - 90, 2, BG, 0.5); }
 
   input.taps.length = 0; input.pause = false;
 }
 
 function boot() {
-  loadSave(); resize(); buildSprites(); initInput(); preloadMusic();
+  loadSave(); loadDev(); resize(); buildSprites(); initInput(); preloadMusic();
   window.addEventListener('resize', resize);
   window.addEventListener('orientationchange', resize);
   document.addEventListener('visibilitychange', () => { if (document.hidden && G.mode === 'play' && !G.dead && !G.bot) G.mode = 'pause';
     const a = getAC(); if (a) { if (document.hidden) a.suspend(); else a.resume(); } });
   window.addEventListener('keydown', (e) => {
     if (G.mode === 'levelup' && modeT > 0.3 && '123'.includes(e.key)) choose(+e.key - 1);
+    if (e.key === '`') { if (G.mode === 'dev' || G.mode === 'devcode') G.mode = devState.from; else if (G.mode === 'title') openDev('title'); else if (G.mode === 'play' || G.mode === 'pause') openDev('pause'); }
     if ((e.key === 'Enter' || e.key === ' ') && modeT > 0.3 && (G.mode === 'title' || G.mode === 'dead')) { if (G.mode === 'title') play(); else newRun(); }
   });
   newRun(); G.mode = 'title'; G.banner = ''; G.inv = 0;
   if (params.get('bot')) { newRun(); G.bot = true; G.god = !!params.get('god'); G.hits = G.crashes = 0; }
-  window.__vc = { text, setFast: (n) => { FAST = n; }, musicState, G, save, newRun, enemies, clouds, vapes, SPR, face, centreAt };
+  window.__vc = { text, setFast: (n) => { FAST = n; }, musicState, G, save, newRun, enemies, clouds, vapes, SPR, face, centreAt, DEV };
   requestAnimationFrame(frame);
 }
 boot();
