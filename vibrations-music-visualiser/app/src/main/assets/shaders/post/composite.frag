@@ -8,6 +8,7 @@ uniform sampler2D uBloom2;
 uniform sampler2D uText;
 uniform float uBloomAmt;
 uniform float uPunch;     // 0 luminous (soft shoulder) .. 1 punchy (contrasty)
+uniform float uLinear;    // 1 = keep 0..1 values as-is (photos / artwork)
 uniform float uGrain;
 uniform float uTextAlpha;
 uniform vec3 uTextColor;
@@ -26,7 +27,7 @@ void main() {
     c += b * uBloomAmt;
     vec3 soft = 1.0 - exp(-c * 1.15);
     vec3 punchy = aces(c * 1.1);
-    c = mix(soft, punchy, uPunch);
+    c = mix(mix(soft, punchy, uPunch), clamp(c, 0.0, 1.0), uLinear);
     vec2 q = vUv - 0.5;
     c *= 1.0 - 0.28 * dot(q, q) * 1.6;
     float n = h12(vUv * uRes + uSeed) + h12(vUv * uRes * 1.37 - uSeed * 1.9) - 1.0;

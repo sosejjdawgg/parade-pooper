@@ -57,6 +57,9 @@ class PresetStore(context: Context, private val catalog: Catalog) {
     fun loadLook(): Look = prefs.getString("session_look", null)
         ?.let { runCatching { Look.fromJson(JSONObject(it), catalog) }.getOrNull() } ?: Look()
 
+    fun sessionPaletteName(): String? = prefs.getString("session_look", null)
+        ?.let { runCatching { JSONObject(it).optString("palette") }.getOrNull() }
+
     fun loadOutput(): Output = prefs.getString("session_output", null)
         ?.let { runCatching { Output.fromJson(JSONObject(it)) }.getOrNull() } ?: Output()
 

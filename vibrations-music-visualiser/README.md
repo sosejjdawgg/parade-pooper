@@ -7,6 +7,25 @@ It's soft and atmospheric by default, with crisp output when you export.
 
 This folder is self-contained so it can be moved to its own repository later.
 
+## Your artwork
+
+![Artwork modes](docs/artwork.jpg)
+
+Tap the **Art** button and add your own image: an album cover, a photo, a drawing, or a transparent PNG logo. You can also share an image to Vibrations from any app.
+
+- **Up-res**: the image is enlarged to the output size with Catmull-Rom bicubic resampling, then an edge-preserving smooth and contrast-adaptive sharpening pass cleans it up. **Save image 2× / 4×** exports the enhanced PNG (up to 4096 px) to `Pictures/Vibrations`. This is classical image processing, not AI super-resolution, so it makes small images crisper but won't invent detail.
+- **Ten art modes** (swipe left/right to change):
+  - **Neon**: the picture redrawn as glowing tubes along its contours, with light travelling through them and kicks flashing them.
+  - **Breathe**, **Liquid**, **Ripple** and **Split**: the picture itself pushed, melted, rippled or channel-split by the music.
+  - **Halftone** and **Print**: a printed dot screen, or a screen-print in palette inks.
+  - **Relief**: brightness becomes depth, under a moving light.
+  - **Dust**: the picture breaks into points of light.
+  - **Tunnel**: the picture framed inside itself, falling forward.
+- **Neon controls**: line weight, contour detail, and how much of the picture stays under the lines.
+- **Picture controls**: effect amount (dry/wet), fit (crop ↔ whole), palette colours (re-ink the art with any palette), and scene behind (any scene shows through transparent or dark areas).
+- **Art palette**: five colours taken from your image become an "Art" palette that every scene can use.
+- Symmetry, trails, glow, recording, loops and stills all work on artwork too.
+
 ## Features
 
 - **Ten scenes** covering light, fluid, particle, geometric, graphic and minimal styles: Haze (the default ambient field), Silk, Motes, Nebula, Beams, Orb, Rings, Prism, Tide and Void (near-empty, for minimal artwork). Scene changes crossfade.
@@ -60,6 +79,12 @@ node tools/render-previews.js out/ "scene=prism&palette=8&sym=6"  # specific loo
 node tools/compile-check.js                                      # compile-check every shader
 ```
 
+Art modes preview the same way. Point `PREVIEW_IMAGES` at a folder of test images and pass `art=<mode>&img=/ext/<file>`; `enhance`, `fit`, `amount`, `tint`, `behind`, `line`, `fill` and `detail` match the app's sliders:
+
+```bash
+PREVIEW_IMAGES=~/pics node tools/render-previews.js out/ "art=neon&img=/ext/cover.jpg&palette=8"
+```
+
 Preview query parameters: `scene`, `palette`, `t`, `w`, `h`, `bass`, `kick`, `kickAge`, `mid`, `high`, `level`, `sym`, `bloom`, `grain`, `period`, `animate=1`.
 
 To add a scene: write `vec3 scene(vec2 p)` in `assets/shaders/scenes/<id>.glsl` and add an entry to `scenes.json`. For loop-safe motion, drive all animation through `tph()`, `tdrift()` and `tloop()` from `common.glsl` rather than through `uTime` directly.
@@ -71,7 +96,7 @@ audio/   TrackPlayer (MediaExtractor → MediaCodec → AudioTrack), MicInput,
          AudioAnalyzer (2048-pt FFT, 32 log bands, auto-gain, spectral-flux kick detection,
          results kept on a timeline keyed by stream position), AudioRing (44.1 kHz stereo
          ring + resampler feeding the recorder, latency-compensated)
-gl/      VisualRenderer — scene → feedback (crossfade + trails) → bloom (¼, ⅛) →
+gl/      VisualRenderer — scene and/or artwork (up-res → edge map → art mode) → feedback (crossfade + trails) → bloom (¼, ⅛) →
          composite (tone map, grain/dither, text) → canvas → screen / encoder / PNG
 record/  ClipRecorder (Surface-input H.264 + AAC → MediaMuxer), MediaSaver (MediaStore)
 model/   Catalog (scenes/palettes JSON), Look/Output state, PresetStore

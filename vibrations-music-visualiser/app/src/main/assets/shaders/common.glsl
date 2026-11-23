@@ -97,6 +97,9 @@ vec2 symmetry(vec2 p) {
     return length(p) * vec2(cos(a), sin(a)) ;
 }
 
+float luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+
+#ifndef ART_PASS
 vec3 scene(vec2 p);
 
 void main() {
@@ -105,3 +108,4 @@ void main() {
     vec3 c = scene(p);
     fragColor = vec4(max(c, vec3(0.0)), 1.0);
 }
+#endif

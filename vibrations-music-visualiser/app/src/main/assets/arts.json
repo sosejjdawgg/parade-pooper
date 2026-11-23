@@ -1,0 +1,12 @@
+[
+  {"id": "still",    "name": "Breathe",  "desc": "the picture as-is, pushed in on kicks"},
+  {"id": "neon",     "name": "Neon",     "desc": "edges redrawn as glowing light"},
+  {"id": "liquid",   "name": "Liquid",   "desc": "flows like it's under moving water"},
+  {"id": "ripple",   "name": "Ripple",   "desc": "refraction rings roll out on kicks"},
+  {"id": "prism",    "name": "Split",    "desc": "colour channels pull apart on hits"},
+  {"id": "halftone", "name": "Halftone", "desc": "a printed dot screen that swells with bass"},
+  {"id": "print",    "name": "Print",    "desc": "screen-print in palette inks"},
+  {"id": "relief",   "name": "Relief",   "desc": "brightness becomes depth under a moving light"},
+  {"id": "dust",     "name": "Dust",     "desc": "breaks into light that scatters on hits"},
+  {"id": "tunnel",   "name": "Tunnel",   "desc": "framed inside itself, falling forward"}
+]

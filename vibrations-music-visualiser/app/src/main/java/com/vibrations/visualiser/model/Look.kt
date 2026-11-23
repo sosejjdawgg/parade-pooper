@@ -27,10 +27,21 @@ data class Look(
     val title: String = "",
     val subtitle: String = "",
     val textPlacement: TextPlacement = TextPlacement.BOTTOM_LEFT,
+    // artwork
+    val artOn: Boolean = false,
+    val artMode: Int = 1,          // Neon
+    val artFit: Float = 0f,        // 0 fill .. 1 fit
+    val artAmount: Float = 1f,     // dry/wet of the mode
+    val artTint: Float = 0f,       // 0 artwork colours .. 1 palette colours
+    val artBehind: Float = 0f,     // scene showing behind the art
+    val artLine: Float = 0.4f,     // neon line weight
+    val artFill: Float = 0.12f,    // neon: picture left under the lines
+    val artDetail: Float = 0.35f,  // neon: contour detail
+    val artEnhance: Boolean = true,
 ) {
     fun toJson(catalog: Catalog): JSONObject = JSONObject().apply {
         put("scene", catalog.scenes[scene].id)
-        put("palette", catalog.palettes[palette].name)
+        put("palette", catalog.palettes[palette.coerceIn(0, catalog.palettes.size - 1)].name)
         put("sensitivity", sensitivity.toDouble())
         put("symmetry", symmetry.name)
         put("trails", trails.toDouble())
@@ -42,6 +53,10 @@ data class Look(
         put("title", title)
         put("subtitle", subtitle)
         put("textPlacement", textPlacement.name)
+        put("artOn", artOn); put("artMode", catalog.arts[artMode].id)
+        put("artFit", artFit.toDouble()); put("artAmount", artAmount.toDouble()); put("artTint", artTint.toDouble())
+        put("artBehind", artBehind.toDouble()); put("artLine", artLine.toDouble()); put("artFill", artFill.toDouble())
+        put("artDetail", artDetail.toDouble()); put("artEnhance", artEnhance)
     }
 
     companion object {
@@ -61,6 +76,16 @@ data class Look(
                 title = o.optString("title", ""),
                 subtitle = o.optString("subtitle", ""),
                 textPlacement = enumOr(o.optString("textPlacement"), d.textPlacement),
+                artOn = o.optBoolean("artOn", false),
+                artMode = if (o.has("artMode")) catalog.artIndex(o.getString("artMode")) else d.artMode,
+                artFit = o.optDouble("artFit", d.artFit.toDouble()).toFloat(),
+                artAmount = o.optDouble("artAmount", d.artAmount.toDouble()).toFloat(),
+                artTint = o.optDouble("artTint", d.artTint.toDouble()).toFloat(),
+                artBehind = o.optDouble("artBehind", d.artBehind.toDouble()).toFloat(),
+                artLine = o.optDouble("artLine", d.artLine.toDouble()).toFloat(),
+                artFill = o.optDouble("artFill", d.artFill.toDouble()).toFloat(),
+                artDetail = o.optDouble("artDetail", d.artDetail.toDouble()).toFloat(),
+                artEnhance = o.optBoolean("artEnhance", true),
             )
         }
     }

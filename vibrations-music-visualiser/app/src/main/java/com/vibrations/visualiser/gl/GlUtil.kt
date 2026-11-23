@@ -88,6 +88,13 @@ class Target(val w: Int, val h: Int, val hdr: Boolean) {
         }
     }
 
+    /** Builds the mip chain (used for thick neon lines and soft art sampling). */
+    fun mipmap() {
+        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, tex)
+        GLES30.glGenerateMipmap(GLES30.GL_TEXTURE_2D)
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR_MIPMAP_LINEAR)
+    }
+
     fun bind() {
         GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, fbo)
         GLES30.glViewport(0, 0, w, h)

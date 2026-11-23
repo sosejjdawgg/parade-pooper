@@ -11,8 +11,11 @@ const extra = process.argv.slice(3);
 fs.mkdirSync(outDir, { recursive: true });
 
 const server = http.createServer((req, res) => {
-  const p = path.join(root, decodeURIComponent(req.url.split('?')[0]));
-  if (!p.startsWith(root) || !fs.existsSync(p)) { res.writeHead(404); return res.end(); }
+  const url = decodeURIComponent(req.url.split('?')[0]);
+  // /ext/<file> serves test images from $PREVIEW_IMAGES (kept outside the repo)
+  const base = url.startsWith('/ext/') && process.env.PREVIEW_IMAGES ? path.resolve(process.env.PREVIEW_IMAGES) : root;
+  const p = path.join(base, url.startsWith('/ext/') ? url.slice(4) : url);
+  if (!p.startsWith(base) || !fs.existsSync(p)) { res.writeHead(404); return res.end(); }
   res.writeHead(200); fs.createReadStream(p).pipe(res);
 }).listen(0, async () => {
   const port = server.address().port;
@@ -21,7 +24,7 @@ const server = http.createServer((req, res) => {
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const page = await browser.newPage({ viewport: { width: 540, height: 960 } });
   for (const q of jobs) {
-    const w = /w=(\d+)/.exec(q)?.[1] || 540, h = /h=(\d+)/.exec(q)?.[1] || 960;
+    const w = /(?:^|&)w=(\d+)/.exec(q)?.[1] || 540, h = /(?:^|&)h=(\d+)/.exec(q)?.[1] || 960;
     await page.setViewportSize({ width: +w, height: +h });
     await page.goto(`http://localhost:${port}/tools/shader-preview.html?${q}`);
     await page.waitForFunction(() => document.title === 'ready' || document.title === 'error', null, { timeout: 120000 });

@@ -35,6 +35,7 @@ import android.widget.TextView
 import com.vibrations.visualiser.audio.AudioEngine
 import com.vibrations.visualiser.gl.RecordableConfigChooser
 import com.vibrations.visualiser.gl.VisualRenderer
+import com.vibrations.visualiser.model.ArtStore
 import com.vibrations.visualiser.model.Aspect
 import com.vibrations.visualiser.model.Catalog
 import com.vibrations.visualiser.model.Look
@@ -64,13 +65,19 @@ class MainActivity : Activity(), AudioEngine.Listener, VisualRenderer.Events {
     companion object {
         private const val REQ_AUDIO_FILE = 11
         private const val REQ_MIC = 12
+        private const val REQ_IMAGE = 13
         private const val HIDE_DELAY = 4000L
     }
 
-    private enum class Sheet { SOURCE, LOOK, FRAME, PRESETS }
+    private enum class Sheet { SOURCE, ART, LOOK, FRAME, PRESETS }
 
     private lateinit var catalog: Catalog
     private lateinit var presets: PresetStore
+    private lateinit var artStore: ArtStore
+    private var artInfo = ""
+    private var artLoaded = false
+    private var artBusy = false
+    private lateinit var artButton: GlyphButton
     private lateinit var audio: AudioEngine
     private lateinit var renderer: VisualRenderer
     private lateinit var glView: GLSurfaceView
@@ -116,6 +123,7 @@ class MainActivity : Activity(), AudioEngine.Listener, VisualRenderer.Events {
 
         catalog = Catalog(this)
         presets = PresetStore(this, catalog)
+        artStore = ArtStore(this)
         look = presets.loadLook()
         output = presets.loadOutput()
         audio = AudioEngine(this).also { it.listener = this }
@@ -148,6 +156,7 @@ class MainActivity : Activity(), AudioEngine.Listener, VisualRenderer.Events {
         refreshUi()
         hideControls(animate = false)
         showHint()
+        if (artStore.hasArt) loadArtAsync(null)
         handleIncoming(intent)
     }
 
@@ -157,12 +166,13 @@ class MainActivity : Activity(), AudioEngine.Listener, VisualRenderer.Events {
     }
 
     private fun handleIncoming(intent: Intent?) {
-        val uri: Uri? = when (intent?.action) {
+        val uri: Uri = when (intent?.action) {
             Intent.ACTION_VIEW -> intent.data
             Intent.ACTION_SEND -> @Suppress("DEPRECATION") (intent.getParcelableExtra(Intent.EXTRA_STREAM) as? Uri)
             else -> null
-        }
-        if (uri != null) audio.loadTrack(uri)
+        } ?: return
+        val type = intent?.type ?: contentResolver.getType(uri) ?: ""
+        if (type.startsWith("image/")) loadArtAsync(uri) else audio.loadTrack(uri)
     }
 
     override fun onResume() {
@@ -246,6 +256,8 @@ class MainActivity : Activity(), AudioEngine.Listener, VisualRenderer.Events {
         topBar.addView(recInfo, Ui.lp().apply { marginEnd = dp(12f) })
         topBar.addView(playButton)
         topBar.addView(trackInfo, Ui.lp(0, -2, 1f))
+        lockButton = GlyphButton(this, Glyph.UNLOCK, "Lock scene") { toggleLock() }.apply { size = 38f }
+        topBar.addView(lockButton)
         root.addView(topBar, FrameLayout.LayoutParams(-1, -2, Gravity.TOP))
 
         // centre HUD for transient feedback
@@ -263,12 +275,9 @@ class MainActivity : Activity(), AudioEngine.Listener, VisualRenderer.Events {
         quickPalettes = HorizontalScrollView(this).apply {
             isHorizontalScrollBarEnabled = false
             visibility = View.GONE
-            val r = Ui.row(this@MainActivity)
-            catalog.palettes.forEachIndexed { i, p ->
-                r.addView(Swatch(this@MainActivity, p.colors, p.name) { update { it.copy(palette = i) }; poke() })
-            }
-            addView(r)
+            addView(Ui.row(this@MainActivity))
         }
+        rebuildQuickPalettes()
         controls.addView(quickPalettes, Ui.lp().apply { bottomMargin = dp(6f) })
 
         val sceneRow = Ui.row(this, Gravity.CENTER)
@@ -288,14 +297,14 @@ class MainActivity : Activity(), AudioEngine.Listener, VisualRenderer.Events {
         }
         sourceButton = GlyphButton(this, Glyph.AMBIENT, "Audio source") { toggleSheet(Sheet.SOURCE) }
         recButton = GlyphButton(this, Glyph.RECORD, "Record") { onRecordTap() }.apply { size = 58f }
-        lockButton = GlyphButton(this, Glyph.UNLOCK, "Lock scene") { toggleLock() }
+        artButton = GlyphButton(this, Glyph.ART, "Artwork") { toggleSheet(Sheet.ART) }
         bar.addView(sourceButton)
+        bar.addView(artButton)
         bar.addView(GlyphButton(this, Glyph.LOOK, "Look") { toggleSheet(Sheet.LOOK) })
-        bar.addView(GlyphButton(this, Glyph.FRAME, "Frame and output") { toggleSheet(Sheet.FRAME) })
         bar.addView(recButton, Ui.lp().apply { marginStart = dp(4f); marginEnd = dp(4f) })
         bar.addView(GlyphButton(this, Glyph.STILL, "Save still") { onStillTap() })
+        bar.addView(GlyphButton(this, Glyph.FRAME, "Frame and output") { toggleSheet(Sheet.FRAME) })
         bar.addView(GlyphButton(this, Glyph.PRESETS, "Presets") { toggleSheet(Sheet.PRESETS) })
-        bar.addView(lockButton)
         controls.addView(bar)
         root.addView(controls, FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM))
 
@@ -328,13 +337,24 @@ class MainActivity : Activity(), AudioEngine.Listener, VisualRenderer.Events {
         refreshUi()
     }
 
+    private fun rebuildQuickPalettes() {
+        val r = quickPalettes.getChildAt(0) as LinearLayout
+        r.removeAllViews()
+        catalog.palettes.forEachIndexed { i, p ->
+            r.addView(Swatch(this, p.colors, p.name) { update { it.copy(palette = i) }; poke() })
+        }
+    }
+
+    private val artActive get() = look.artOn && artLoaded
+
     private fun setOutput(o: Output) {
         output = o
         renderer.output = o
     }
 
     private fun refreshUi() {
-        sceneLabel.text = catalog.scenes[look.scene].name
+        sceneLabel.text = if (artActive) catalog.arts[look.artMode].name else catalog.scenes[look.scene].name
+        artButton.active = artActive
         lockButton.glyph = if (locked) Glyph.LOCK else Glyph.UNLOCK
         lockButton.active = locked
         sourceButton.glyph = when (audio.source) {
@@ -358,9 +378,16 @@ class MainActivity : Activity(), AudioEngine.Listener, VisualRenderer.Events {
     private fun stepScene(d: Int) {
         poke()
         if (locked) { showHud("Locked", "double-tap to unlock"); return }
-        val n = catalog.scenes.size
-        update { it.copy(scene = (it.scene + d + n) % n) }
-        showHud(catalog.scenes[look.scene].name, catalog.scenes[look.scene].kind)
+        if (artActive) {
+            // with artwork showing, swipes and arrows step through the art modes
+            val n = catalog.arts.size
+            update { it.copy(artMode = (it.artMode + d + n) % n) }
+            showHud(catalog.arts[look.artMode].name, catalog.arts[look.artMode].desc)
+        } else {
+            val n = catalog.scenes.size
+            update { it.copy(scene = (it.scene + d + n) % n) }
+            showHud(catalog.scenes[look.scene].name, catalog.scenes[look.scene].kind)
+        }
         refreshSheetOnChange?.invoke()
     }
 
@@ -628,6 +655,61 @@ class MainActivity : Activity(), AudioEngine.Listener, VisualRenderer.Events {
 
     override fun onRendererError(message: String) = runOnUiThread { showSnack(message) }
 
+    override fun onArtInfo(srcW: Int, srcH: Int, outW: Int, outH: Int, enhanced: Boolean) = runOnUiThread {
+        artInfo = if (outW > srcW) "$srcW × $srcH → $outW × $outH" + (if (enhanced) " · enhanced" else " · plain")
+        else "$srcW × $srcH · shown at $outW × $outH"
+        if (openSheet == Sheet.ART) rebuildOpenSheet()
+    }
+
+    // ---- artwork -----------------------------------------------------------------------------
+
+    private fun pickImage() {
+        val i = Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("image/*")
+        @Suppress("DEPRECATION") startActivityForResult(i, REQ_IMAGE)
+    }
+
+    /** Imports [uri] (or reloads the saved artwork when null) off the main thread. */
+    private fun loadArtAsync(uri: Uri?) {
+        if (artBusy) return
+        artBusy = true
+        if (uri != null) showHud("Loading artwork", "", 4000)
+        Thread {
+            val result = runCatching { if (uri != null) artStore.import(uri) else artStore.load() }
+            runOnUiThread {
+                artBusy = false
+                val loaded = result.getOrNull()
+                if (loaded == null) {
+                    if (uri != null) showSnack("Couldn't open that image" + (result.exceptionOrNull()?.message?.let { ": $it" } ?: ""))
+                    return@runOnUiThread
+                }
+                catalog.setArtPalette(loaded.palette)
+                rebuildQuickPalettes()
+                renderer.setArt(loaded.bitmap)
+                artLoaded = true
+                if (uri != null) {
+                    update { it.copy(artOn = true, palette = catalog.artPaletteIndex) }
+                    showHud(catalog.arts[look.artMode].name, "swipe to change art mode", 1600)
+                } else {
+                    if (presets.sessionPaletteName() == "Art") update { it.copy(palette = catalog.artPaletteIndex) }
+                    refreshUi()
+                }
+                if (openSheet == Sheet.ART) rebuildOpenSheet()
+            }
+        }.start()
+    }
+
+    private fun removeArt() {
+        artStore.clear()
+        renderer.setArt(null)
+        artLoaded = false
+        artInfo = ""
+        val usedArtPalette = look.palette == catalog.artPaletteIndex
+        catalog.setArtPalette(null)
+        rebuildQuickPalettes()
+        update { it.copy(artOn = false, palette = if (usedArtPalette) 0 else it.palette.coerceIn(0, catalog.palettes.size - 1)) }
+        rebuildOpenSheet()
+    }
+
     // ---- audio ----------------------------------------------------------------------------
 
     override fun onSourceChanged(source: AudioEngine.Source, title: String?) {
@@ -658,6 +740,7 @@ class MainActivity : Activity(), AudioEngine.Listener, VisualRenderer.Events {
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
         @Suppress("DEPRECATION") super.onActivityResult(requestCode, resultCode, data)
         if (requestCode == REQ_AUDIO_FILE && resultCode == RESULT_OK) data?.data?.let { audio.loadTrack(it) }
+        if (requestCode == REQ_IMAGE && resultCode == RESULT_OK) data?.data?.let { loadArtAsync(it) }
     }
 
     private fun startMicChecked() {
@@ -714,7 +797,7 @@ class MainActivity : Activity(), AudioEngine.Listener, VisualRenderer.Events {
         val prevScroll = (sheetHost.getChildAt(0) as? ScrollView)?.scrollY ?: 0
         val col = Ui.column(this).apply { setPadding(dp(20f), dp(10f), dp(20f), dp(18f)) }
         val head = Ui.row(this)
-        val title = when (s) { Sheet.SOURCE -> "Sound"; Sheet.LOOK -> "Look"; Sheet.FRAME -> "Frame & output"; Sheet.PRESETS -> "Presets" }
+        val title = when (s) { Sheet.SOURCE -> "Sound"; Sheet.ART -> "Artwork"; Sheet.LOOK -> "Look"; Sheet.FRAME -> "Frame & output"; Sheet.PRESETS -> "Presets" }
         head.addView(Ui.text(this, title, 20f, Ui.TEXT, Ui.light, 0.03f), Ui.lp(0, -2, 1f))
         head.addView(GlyphButton(this, Glyph.CLOSE, "Close") { closeSheet() })
         col.addView(head)
@@ -725,6 +808,7 @@ class MainActivity : Activity(), AudioEngine.Listener, VisualRenderer.Events {
             Sheet.LOOK -> buildLookSheet(col)
             Sheet.FRAME -> buildFrameSheet(col)
             Sheet.PRESETS -> buildPresetSheet(col)
+            Sheet.ART -> buildArtSheet(col)
         }
         scroll.addView(col)
         sheetHost.removeAllViews()
@@ -789,6 +873,71 @@ class MainActivity : Activity(), AudioEngine.Listener, VisualRenderer.Events {
                 setPadding(0, dp(14f), 0, 0); setLineSpacing(0f, 1.25f)
             })
         }
+    }
+
+    private fun buildArtSheet(col: LinearLayout) {
+        val actions = Ui.row(this)
+        actions.addView(Chip(this, if (artLoaded) "Replace image…" else "Add your image…") { pickImage() }, Ui.lp().apply { marginEnd = dp(8f) })
+        if (artLoaded) {
+            val show = Chip(this, "Show artwork") {}
+            show.setChecked(look.artOn)
+            show.setOnClickListener {
+                update { it.copy(artOn = !it.artOn) }
+                show.setChecked(look.artOn)
+                showHud(if (look.artOn) catalog.arts[look.artMode].name else catalog.scenes[look.scene].name)
+            }
+            actions.addView(show, Ui.lp().apply { marginEnd = dp(8f) })
+            actions.addView(GlyphButton(this, Glyph.TRASH, "Remove artwork") { removeArt() }.apply { size = 40f })
+        }
+        col.addView(hScroll(actions))
+        if (!artLoaded) {
+            col.addView(Ui.text(this, "Bring in a cover, photo, drawing or logo. It's enlarged and cleaned up for the output size, then played by the music: redraw it in neon, melt it, print it, scatter it. Transparent PNG logos outline cleanly.", 13f, Ui.TEXT_DIM).apply {
+                setPadding(dp(2f), dp(14f), 0, 0); setLineSpacing(0f, 1.25f)
+            })
+            return
+        }
+        if (artInfo.isNotEmpty()) col.addView(Ui.text(this, artInfo, 12f, Ui.TEXT_DIM).apply { setPadding(dp(2f), dp(10f), 0, 0) })
+
+        val cap = Ui.caption(this, "Mode · ${catalog.arts[look.artMode].desc}")
+        col.addView(cap)
+        val modeRow = Ui.row(this)
+        catalog.arts.forEachIndexed { i, m ->
+            val c = Chip(this, m.name) {
+                update { it.copy(artMode = i, artOn = true) }
+                rebuildOpenSheet()
+            }
+            c.setChecked(i == look.artMode)
+            modeRow.addView(c, Ui.lp().apply { marginEnd = dp(8f) })
+        }
+        col.addView(hScroll(modeRow))
+
+        col.addView(Ui.caption(this, "Up-res"))
+        val up = Ui.row(this)
+        up.addView(Segmented(this, listOf("Plain", "Enhanced"), if (look.artEnhance) 1 else 0) { i -> update { it.copy(artEnhance = i == 1) } })
+        col.addView(up)
+        val save = Ui.row(this).apply { setPadding(0, dp(8f), 0, 0) }
+        save.addView(Ui.text(this, "Save image", 13f, Ui.TEXT_DIM), Ui.lp().apply { marginEnd = dp(10f) })
+        for (f in listOf(2, 4)) save.addView(Chip(this, "${f}× PNG") {
+            showHud("Up-res ${f}×", "saving", 900)
+            glView.queueEvent { renderer.requestUpres(f) }
+        }, Ui.lp().apply { marginEnd = dp(8f) })
+        col.addView(save)
+
+        if (catalog.arts[look.artMode].id == "neon") {
+            col.addView(Ui.caption(this, "Neon"))
+            col.addView(LabeledSlider(this, "Line weight", 0f, 1f, look.artLine, { pct(it) }) { v -> update { it.copy(artLine = v) } })
+            col.addView(LabeledSlider(this, "Detail", 0f, 1f, look.artDetail, { pct(it) }) { v -> update { it.copy(artDetail = v) } })
+            col.addView(LabeledSlider(this, "Picture under lines", 0f, 1f, look.artFill, { pct(it) }) { v -> update { it.copy(artFill = v) } })
+        }
+
+        col.addView(Ui.caption(this, "Picture"))
+        col.addView(LabeledSlider(this, "Effect amount", 0f, 1f, look.artAmount, { pct(it) }) { v -> update { it.copy(artAmount = v) } })
+        col.addView(LabeledSlider(this, "Fit (crop ↔ whole)", 0f, 1f, look.artFit, { pct(it) }) { v -> update { it.copy(artFit = v) } })
+        col.addView(LabeledSlider(this, "Palette colours", 0f, 1f, look.artTint, { pct(it) }) { v -> update { it.copy(artTint = v) } })
+        col.addView(LabeledSlider(this, "Scene behind", 0f, 1f, look.artBehind, { pct(it) }) { v -> update { it.copy(artBehind = v) } })
+        col.addView(Ui.text(this, "\"Scene behind\" shows ${catalog.scenes[look.scene].name} through transparent or dark parts of the art. The Art palette is taken from your image; pick it in Look. Swipe left/right to change art mode.", 12f, Ui.TEXT_DIM).apply {
+            setPadding(dp(2f), dp(10f), 0, 0); setLineSpacing(0f, 1.25f)
+        })
     }
 
     private fun buildLookSheet(col: LinearLayout) {

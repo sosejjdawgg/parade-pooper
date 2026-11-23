@@ -8,6 +8,8 @@ const common = fs.readFileSync(path.join(A, 'common.glsl'), 'utf8');
 const jobs = [];
 for (const f of fs.readdirSync(path.join(A, 'post'))) if (f.endsWith('.frag')) jobs.push([f, fs.readFileSync(path.join(A, 'post', f), 'utf8')]);
 for (const f of fs.readdirSync(path.join(A, 'scenes'))) jobs.push([f, common + '\n' + fs.readFileSync(path.join(A, 'scenes', f), 'utf8')]);
+const artPre = '#define ART_PASS\n' + common + '\n' + fs.readFileSync(path.join(A, 'art/_main.glsl'), 'utf8') + '\n';
+for (const f of fs.readdirSync(path.join(A, 'art'))) if (!f.startsWith('_')) jobs.push(['art/' + f, artPre + fs.readFileSync(path.join(A, 'art', f), 'utf8')]);
 (async () => {
   const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'] });
   const p = await b.newPage();

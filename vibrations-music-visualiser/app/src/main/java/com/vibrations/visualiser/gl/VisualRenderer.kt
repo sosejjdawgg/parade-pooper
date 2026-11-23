@@ -55,6 +55,7 @@ class VisualRenderer(
         fun onLoopProgress(fraction: Float)
         fun onStillSaved(uri: Uri?, error: String?)
         fun onRendererError(message: String)
+        fun onArtInfo(srcW: Int, srcH: Int, outW: Int, outH: Int, enhanced: Boolean) {}
     }
 
     @Volatile var look = Look()
@@ -72,6 +73,12 @@ class VisualRenderer(
     private var compP: Program? = null
     private var blitP: Program? = null
     private var scenePrograms = arrayOfNulls<Program>(0)
+    private var artPrograms = arrayOfNulls<Program>(0)
+    private val brokenArts = HashSet<Int>()
+    private var upP: Program? = null
+    private var sharpP: Program? = null
+    private var edgeP: Program? = null
+    private lateinit var artPrefix: String
     private val brokenScenes = HashSet<Int>()
     private var hdr = false
     private var textTex = 0
@@ -87,6 +94,20 @@ class VisualRenderer(
     private var b2t: Target? = null
     private var canvas: Target? = null
 
+    // ---- artwork --------------------------------------------------------------
+    private val artLock = Object()
+    private var pendingArt: Bitmap? = null
+    private var pendingArtSet = false
+    private var artBitmap: Bitmap? = null
+    private var srcTex = 0
+    private var artA: Target? = null     // up-res'd artwork (mipmapped)
+    private var artE: Target? = null     // edge map (mipmapped)
+    private var artKey = ""
+    private var artOutA: Target? = null
+    private var artOutB: Target? = null
+    private var sceneTmp: Target? = null
+    private var upresRequest = 0
+
     private var screenW = 1
     private var screenH = 1
     var canvasW = 0; private set
@@ -100,8 +121,10 @@ class VisualRenderer(
     private var period = 240.0
     private var shownScene = -1
     private var shownSym = Symmetry.OFF
+    private var shownArt = -1
     private var prevScene = -1
     private var prevSym = Symmetry.OFF
+    private var prevArt = -1
     private var fade = 0f
     private val pal = FloatArray(12)
     private var punch = 0f
@@ -158,6 +181,13 @@ class VisualRenderer(
         blitP = Program(vs, loadAsset(context, "shaders/post/blit.frag"))
         scenePrograms = arrayOfNulls(catalog.scenes.size)
         brokenScenes.clear()
+        artPrograms = arrayOfNulls(catalog.arts.size)
+        brokenArts.clear()
+        artPrefix = "#define ART_PASS\n$common\n" + loadAsset(context, "shaders/art/_main.glsl") + "\n"
+        upP = Program(vs, loadAsset(context, "shaders/post/upscale.frag"))
+        sharpP = Program(vs, loadAsset(context, "shaders/post/sharpen.frag"))
+        edgeP = Program(vs, loadAsset(context, "shaders/post/edges.frag"))
+        srcTex = 0; artA = null; artE = null; artKey = ""; artOutA = null; artOutB = null; sceneTmp = null
         prewarm = 0
         val ext = GLES30.glGetString(GLES30.GL_EXTENSIONS) ?: ""
         hdr = ext.contains("GL_EXT_color_buffer_half_float") || ext.contains("GL_EXT_color_buffer_float")
@@ -254,6 +284,127 @@ class VisualRenderer(
         }
     }
 
+    private fun artProgram(i: Int): Program? {
+        if (i in brokenArts) return null
+        artPrograms[i]?.let { return it }
+        return try {
+            Program(vs, artPrefix + loadAsset(context, "shaders/art/${catalog.arts[i].id}.glsl")).also { artPrograms[i] = it }
+        } catch (e: Exception) {
+            Log.e("VisualRenderer", "art ${catalog.arts[i].id} failed", e)
+            brokenArts.add(i)
+            events.onRendererError("${catalog.arts[i].name} isn't supported on this device")
+            null
+        }
+    }
+
+    // ---- artwork ---------------------------------------------------------------------
+
+    /** Any thread. Null clears the artwork. The renderer takes ownership of the bitmap. */
+    fun setArt(bitmap: Bitmap?) {
+        synchronized(artLock) { pendingArt?.recycle(); pendingArt = bitmap; pendingArtSet = true }
+    }
+
+    val hasArt get() = artBitmap != null
+
+    private fun takePendingArt() {
+        synchronized(artLock) {
+            if (!pendingArtSet) return
+            artBitmap?.let { if (it != pendingArt) it.recycle() }
+            artBitmap = pendingArt
+            pendingArt = null; pendingArtSet = false
+        }
+        if (srcTex != 0) { GLES30.glDeleteTextures(1, intArrayOf(srcTex), 0); srcTex = 0 }
+        artKey = ""
+    }
+
+    private fun uploadSource(b: Bitmap) {
+        val t = IntArray(1)
+        GLES30.glGenTextures(1, t, 0)
+        srcTex = t[0]
+        GLES30.glBindTexture(GLES30.GL_TEXTURE_2D, srcTex)
+        GLUtils.texImage2D(GLES30.GL_TEXTURE_2D, 0, b, 0)
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_S, GLES30.GL_CLAMP_TO_EDGE)
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_WRAP_T, GLES30.GL_CLAMP_TO_EDGE)
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MAG_FILTER, GLES30.GL_LINEAR)
+        GLES30.glGenerateMipmap(GLES30.GL_TEXTURE_2D)
+        GLES30.glTexParameteri(GLES30.GL_TEXTURE_2D, GLES30.GL_TEXTURE_MIN_FILTER, GLES30.GL_LINEAR_MIPMAP_LINEAR)
+    }
+
+    /** Resamples the source into [out] (bicubic when enlarging) and optionally sharpens it. */
+    private fun upres(b: Bitmap, out: Target, enhance: Boolean, sharpen: Float) {
+        val up = out.w > b.width || out.h > b.height
+        val cubic = up && enhance
+        val mid = if (cubic) Target(out.w, out.h, false) else out
+        val u = upP!!
+        u.use(); bindTex(0, srcTex); u.i("uTex", 0)
+        u.f2("uSrcSize", b.width.toFloat(), b.height.toFloat()); u.f("uUp", if (cubic) 1f else 0f)
+        mid.bind(); draw()
+        if (cubic) {
+            val sp = sharpP!!
+            sp.use(); bindTex(0, mid.tex); sp.i("uTex", 0)
+            sp.f2("uTexel", 1f / out.w, 1f / out.h); sp.f("uStrength", sharpen)
+            out.bind(); draw()
+            mid.release()
+        }
+    }
+
+    /** (Re)builds the up-res'd art + edge map for the current canvas. Returns false if no art. */
+    private fun ensureArt(lk: Look): Boolean {
+        takePendingArt()
+        val b = artBitmap ?: return false
+        if (srcTex == 0) uploadSource(b)
+        val key = "$canvasW:$canvasH:${lk.artEnhance}:${b.width}x${b.height}"
+        if (key == artKey && artA != null) return true
+        artA?.release(); artE?.release()
+        val cover = max(canvasW.toFloat() / b.width, canvasH.toFloat() / b.height)
+        val s = min(cover, 4096f / max(b.width, b.height))
+        val tw = max(16, (b.width * s).roundToInt()); val th = max(16, (b.height * s).roundToInt())
+        val a = Target(tw, th, false)
+        upres(b, a, lk.artEnhance, 0.75f)
+        a.mipmap()
+        val e = Target(tw, th, false)
+        val lod = max(0f, (Math.log(max(tw, th) / 720.0) / Math.log(2.0)).toFloat())
+        val ep = edgeP!!
+        ep.use(); bindTex(0, a.tex); ep.i("uTex", 0)
+        val scale = 2f.pow(lod)
+        ep.f2("uTexel", scale / tw, scale / th); ep.f("uLod", lod)
+        e.bind(); draw()
+        e.mipmap()
+        artA = a; artE = e; artKey = key
+        events.onArtInfo(b.width, b.height, tw, th, s > 1.001f && lk.artEnhance)
+        return true
+    }
+
+    /** Saves the artwork enlarged by [factor] (capped at 4096 px) as a PNG. GL thread. */
+    fun requestUpres(factor: Int) { upresRequest = factor }
+
+    private fun saveUpres(factor: Int) {
+        val b = artBitmap ?: run { events.onStillSaved(null, "Add artwork first"); return }
+        if (srcTex == 0) uploadSource(b)
+        val s = min(factor.toFloat(), 4096f / max(b.width, b.height)).coerceAtLeast(1f)
+        val w = (b.width * s).roundToInt(); val h = (b.height * s).roundToInt()
+        val t = try { Target(w, h, false) } catch (e: Exception) { events.onStillSaved(null, "Not enough GPU memory for that size"); return }
+        upres(b, t, true, 0.85f)
+        val buf = ByteBuffer.allocateDirect(w * h * 4).order(ByteOrder.nativeOrder())
+        t.bind()
+        GLES30.glReadPixels(0, 0, w, h, GLES30.GL_RGBA, GLES30.GL_UNSIGNED_BYTE, buf)
+        GLES30.glBindFramebuffer(GLES30.GL_FRAMEBUFFER, 0)
+        t.release()
+        // rows were written top-first (bitmap order), so no flip is needed here
+        io.execute {
+            try {
+                buf.rewind()
+                val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                bmp.copyPixelsFromBuffer(buf)
+                val uri = MediaSaver.savePng(context, bmp, MediaSaver.stamp("Vibrations_upres_${w}x$h"))
+                bmp.recycle()
+                events.onStillSaved(uri, null)
+            } catch (e: Exception) {
+                events.onStillSaved(null, e.message ?: "Couldn't save image")
+            }
+        }
+    }
+
     // ---- frame -----------------------------------------------------------------
 
     override fun onDrawFrame(gl: GL10?) {
@@ -316,7 +467,8 @@ class VisualRenderer(
 
         updateAudio(dt, lk)
         updatePalette(dt, lk)
-        updateTransition(dt, lk)
+        val artReady = if (lk.artOn) ensureArt(lk) else { takePendingArt(); false }
+        updateTransition(dt, lk, if (artReady) lk.artMode.coerceIn(0, catalog.arts.size - 1) else -1)
         updateText(lk)
 
         renderPipeline(lk, dt)
@@ -328,11 +480,18 @@ class VisualRenderer(
             if (cap.frame >= cap.totalFrames) finishCapture()
         }
         if (stillRequested) { stillRequested = false; captureStill() }
+        if (upresRequest > 0) { val f = upresRequest; upresRequest = 0; saveUpres(f) }
 
         // Compile the remaining scenes gradually so switching is instant later.
-        if (frameCount > 45 && prewarm < scenePrograms.size && frameCount % 6 == 0L) {
-            if (scenePrograms[prewarm] == null) sceneProgram(prewarm)
-            prewarm++
+        if (frameCount > 45 && frameCount % 6 == 0L) {
+            if (prewarm < scenePrograms.size) {
+                if (scenePrograms[prewarm] == null) sceneProgram(prewarm)
+                prewarm++
+            } else if (artBitmap != null && prewarm < scenePrograms.size + artPrograms.size) {
+                val i = prewarm - scenePrograms.size
+                if (artPrograms[i] == null) artProgram(i)
+                prewarm++
+            }
         }
     }
 
@@ -382,15 +541,16 @@ class VisualRenderer(
         punch += (p.punch - punch) * k
     }
 
-    private fun updateTransition(dt: Float, lk: Look) {
+    private fun updateTransition(dt: Float, lk: Look, art: Int) {
         val scene = lk.scene.coerceIn(0, catalog.scenes.size - 1)
-        if (shownScene < 0) { shownScene = scene; shownSym = lk.symmetry }
-        if (scene != shownScene || lk.symmetry != shownSym) {
-            prevScene = shownScene; prevSym = shownSym
-            shownScene = scene; shownSym = lk.symmetry
+        if (shownScene < 0) { shownScene = scene; shownSym = lk.symmetry; shownArt = art }
+        if (scene != shownScene || lk.symmetry != shownSym || art != shownArt) {
+            prevScene = shownScene; prevSym = shownSym; prevArt = shownArt
+            shownScene = scene; shownSym = lk.symmetry; shownArt = art
             fade = 1f
-            // the two scene targets swap roles so the outgoing frame stays intact
+            // the target pairs swap roles so the outgoing frame stays intact
             val t = sceneA; sceneA = sceneB; sceneB = t
+            val o = artOutA; artOutA = artOutB; artOutB = o
         }
         if (fade > 0f) fade = max(0f, fade - dt / 0.9f)
     }
@@ -426,6 +586,11 @@ class VisualRenderer(
             return
         }
         p.use()
+        setCommon(p, target, sym)
+        draw()
+    }
+
+    private fun setCommon(p: Program, target: Target, sym: Symmetry) {
         val e = reactEnv * (1f - 0.55f * softAmt)
         p.f2("uRes", target.w.toFloat(), target.h.toFloat())
         p.f("uTime", sceneTime.toFloat())
@@ -444,16 +609,53 @@ class VisualRenderer(
         p.i("uSym", sym.shaderValue)
         val rot = if (output.loopMode) 0.0 else 2.0 * Math.PI * sceneTime / period
         p.f("uSymRot", rot.toFloat())
+    }
+
+    private fun canvasTarget(existing: Target?): Target {
+        if (existing != null && existing.w == canvasW && existing.h == canvasH && existing.hdr == hdr) return existing
+        existing?.release()
+        return Target(canvasW, canvasH, hdr)
+    }
+
+    /** Scene, or artwork (optionally over the scene), into a target. Returns the target used. */
+    private fun renderLayer(scene: Int, sym: Symmetry, art: Int, primary: Boolean, lk: Look): Target {
+        if (art < 0 || artA == null) {
+            val t = sceneTarget(if (primary) sceneA else sceneB, scene)
+            if (primary) sceneA = t else sceneB = t
+            renderScene(scene, sym, t)
+            return t
+        }
+        var behindTex = artA!!.tex
+        if (lk.artBehind > 0.01f) {
+            val t = sceneTarget(sceneTmp, scene)
+            sceneTmp = t
+            renderScene(scene, sym, t)
+            behindTex = t.tex
+        }
+        val out = canvasTarget(if (primary) artOutA else artOutB)
+        if (primary) artOutA = out else artOutB = out
+        out.bind()
+        val p = artProgram(art)
+        if (p == null) {
+            GLES30.glClearColor(pal[0], pal[1], pal[2], 1f); GLES30.glClear(GLES30.GL_COLOR_BUFFER_BIT)
+            return out
+        }
+        p.use()
+        setCommon(p, out, sym)
+        bindTex(0, artA!!.tex); bindTex(1, artE!!.tex); bindTex(2, behindTex)
+        p.i("uImage", 0); p.i("uEdge", 1); p.i("uScene", 2)
+        p.f2("uImgSize", artA!!.w.toFloat(), artA!!.h.toFloat())
+        p.f("uFit", lk.artFit); p.f("uAmount", lk.artAmount); p.f("uTint", lk.artTint)
+        p.f("uBehind", if (lk.artBehind > 0.01f) lk.artBehind else 0f)
+        p.f("uLine", lk.artLine); p.f("uFill", lk.artFill); p.f("uDetail", lk.artDetail)
         draw()
+        return out
     }
 
     private fun renderPipeline(lk: Look, dt: Float) {
-        sceneA = sceneTarget(sceneA, shownScene)
-        renderScene(shownScene, shownSym, sceneA!!)
-        if (fade > 0f && prevScene >= 0) {
-            sceneB = sceneTarget(sceneB, prevScene)
-            renderScene(prevScene, prevSym, sceneB!!)
-        }
+        val cur = renderLayer(shownScene, shownSym, shownArt, true, lk)
+        var prev: Target = cur
+        if (fade > 0f && prevScene >= 0) prev = renderLayer(prevScene, prevSym, prevArt, false, lk)
 
         // feedback: crossfade + trails
         val src = if (trailFlip) trail1!! else trail0!!
@@ -462,7 +664,7 @@ class VisualRenderer(
         dst.bind()
         val fb = feedbackP!!
         fb.use()
-        bindTex(0, sceneA!!.tex); bindTex(1, (sceneB ?: sceneA!!).tex); bindTex(2, src.tex)
+        bindTex(0, cur.tex); bindTex(1, prev.tex); bindTex(2, src.tex)
         fb.i("uCur", 0); fb.i("uPrev", 1); fb.i("uHist", 2)
         fb.f("uFade", if (prevScene >= 0) fade * fade * (3 - 2 * fade) else 0f)
         val frames = dt * 60f
@@ -493,7 +695,10 @@ class VisualRenderer(
         c.use()
         bindTex(0, dst.tex); bindTex(1, b1!!.tex); bindTex(2, b2!!.tex); bindTex(3, textTex)
         c.i("uScene", 0); c.i("uBloom1", 1); c.i("uBloom2", 2); c.i("uText", 3)
-        c.f("uBloomAmt", lk.glow * 1.1f)
+        // photos keep their own tones; neon and scenes get the full glow + tone curve
+        val photo = shownArt >= 0 && catalog.arts[shownArt].id != "neon"
+        c.f("uBloomAmt", lk.glow * 1.1f * (if (photo) 0.35f else 1f))
+        c.f("uLinear", if (photo) 0.9f else 0f)
         c.f("uPunch", punch)
         c.f("uGrain", lk.grain)
         c.f("uTextAlpha", if (lk.textOn) 0.92f else 0f)

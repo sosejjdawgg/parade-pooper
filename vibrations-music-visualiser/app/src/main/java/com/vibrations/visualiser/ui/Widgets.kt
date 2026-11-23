@@ -193,7 +193,7 @@ class Swatch(ctx: Context, private val colors: IntArray, val label: String, onTa
     }
 }
 
-enum class Glyph { MUSIC, MIC, AMBIENT, LOOK, FRAME, RECORD, STOP, STILL, PRESETS, LOCK, UNLOCK, PREV, NEXT, PLAY, PAUSE, CLOSE, SHARE, TRASH }
+enum class Glyph { ART, MUSIC, MIC, AMBIENT, LOOK, FRAME, RECORD, STOP, STILL, PRESETS, LOCK, UNLOCK, PREV, NEXT, PLAY, PAUSE, CLOSE, SHARE, TRASH }
 
 /** Line-drawn icon button. */
 @SuppressLint("ViewConstructor")
@@ -234,6 +234,14 @@ class GlyphButton(ctx: Context, glyph: Glyph, desc: String, onTap: () -> Unit) :
         }
         path.reset()
         when (glyph) {
+            Glyph.ART -> {
+                rect.set(cx - 9 * u, cy - 7.5f * u, cx + 9 * u, cy + 7.5f * u)
+                c.drawRoundRect(rect, 2.5f * u, 2.5f * u, stroke)
+                path.moveTo(cx - 9 * u, cy + 5 * u); path.lineTo(cx - 3 * u, cy - 1 * u); path.lineTo(cx + 1.5f * u, cy + 3.5f * u)
+                path.lineTo(cx + 4 * u, cy + 1 * u); path.lineTo(cx + 9 * u, cy + 6 * u)
+                c.drawPath(path, stroke)
+                c.drawCircle(cx + 4 * u, cy - 3.5f * u, 1.8f * u, fill)
+            }
             Glyph.MUSIC -> {
                 c.drawCircle(cx - 4 * u, cy + 5 * u, 3 * u, fill)
                 c.drawLine(cx - 1.2f * u, cy + 5 * u, cx - 1.2f * u, cy - 8 * u, stroke)
