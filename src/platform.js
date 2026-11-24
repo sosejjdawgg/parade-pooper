@@ -35,6 +35,30 @@ function hiss(dur, vol = 0.05, delay = 0) {
   s.buffer = noiseBuf; g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
   s.connect(g).connect(ac.destination); s.start(t); s.stop(t + dur + 0.02);
 }
+/** a clean phone beep: square wave, no slide, hard stop (the old Nokia speaker sound) */
+function beep(f, dur, vol = 0.045, delay = 0) {
+  if (!ac || !save.sound) return;
+  const t = ac.currentTime + delay, o = ac.createOscillator(), g = ac.createGain();
+  o.type = 'square'; o.frequency.setValueAtTime(f, t);
+  g.gain.setValueAtTime(vol, t); g.gain.setValueAtTime(vol, t + dur * 0.85); g.gain.linearRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(ac.destination); o.start(t); o.stop(t + dur + 0.01);
+}
+const seq = (notes, step, vol) => notes.forEach((f, i) => f && beep(f, step * 0.9, vol, i * step));
+/** the Snake boss's sounds, all phone beeps */
+export const nokia = {
+  key: () => beep(1397, 0.035, 0.03),                                   // keypad click
+  build: (k) => beep(523 * Math.pow(2, k / 12), 0.03, 0.03),            // the grid ticking outward, rising
+  slam: () => { beep(110, 0.22, 0.07); beep(165, 0.22, 0.05); beep(55, 0.3, 0.06, 0.05); },
+  ready: () => seq([880, 0, 880], 0.09, 0.05),
+  go: () => beep(1760, 0.28, 0.05),
+  eat: () => beep(1568, 0.05, 0.04),                                    // the snake gulps an egg
+  egg: () => seq([1319, 1976], 0.05, 0.05),                             // you grab one: bi-dip
+  slice: () => seq([1760, 1319, 988, 659], 0.04, 0.055),
+  cut: () => seq([220, 0, 220], 0.06, 0.06),                            // it ran into your tail: buzz-buzz
+  hiss: () => hiss(0.18, 0.03),                                         // it's coming for you
+  over: () => seq([784, 740, 698, 659, 622, 587, 554, 523, 0, 392], 0.07, 0.05),   // game over
+  win: () => seq([659, 784, 988, 0, 880, 988, 1319, 0, 1175, 1319, 1568, 1568], 0.075, 0.05),   // an original jingle
+};
 export const sfx = {
   vape: (combo) => tone(520 * Math.pow(2, Math.min(combo, 14) / 12), 0.07, 0.05),
   big: () => { tone(660, 0.08, 0.06); tone(990, 0.12, 0.06, 'square', 0, 0.07); },

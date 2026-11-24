@@ -35,6 +35,7 @@ function fadeOut() {
   curGain = curSrc = null;
 }
 function start(track) {
+  if (cur === MUSIC.OPENER && track && track !== MUSIC.OPENER) openerDone = true;   // a boss cut in: don't restart the opener after
   fadeOut();
   cur = track;
   if (!track) return;
@@ -47,7 +48,7 @@ function start(track) {
   for (let i = 1; i < curve.length; i++) g.gain.linearRampToValueAtTime(curve[i], t + dur * i / (curve.length - 1));
   started = true;
   g.connect(filter); curGain = g;
-  if (track === 'menu') { chip.gain = g; chip.next = t + 0.1; chip.step = 0; return; }
+  if (track === 'menu' || track === 'snake') { chip.gain = g; chip.next = t + 0.1; chip.step = 0; chip.tune = track; return; }
   const def = MUSIC.TRACKS[track], s = ac.createBufferSource();
   s.buffer = buffers[track];
   if (def.once) s.onended = () => { if (track === MUSIC.OPENER) openerDone = true; };
@@ -67,8 +68,9 @@ export function musicFrame(track, muffle) {
   const t = ac.currentTime;
   bus.gain.setTargetAtTime(save.sound ? (muffle ? MUSIC.VOLUME * MUSIC.MUFFLE_GAIN : MUSIC.VOLUME) : 0, t, 0.08);
   filter.frequency.setTargetAtTime(muffle ? MUSIC.MUFFLE_HZ : 20000, t, 0.1);
-  if (track !== cur && (!track || track === 'menu' || buffers[track])) start(track);
+  if (track !== cur && (!track || track === 'menu' || track === 'snake' || buffers[track])) start(track);
   if (cur === 'menu') chipSchedule();
+  else if (cur === 'snake') ringSchedule();
 }
 
 // ---- menu chiptune ---------------------------------------------------------------
@@ -110,6 +112,25 @@ let hatBuf = null;
 function hat(t, vol) {
   if (!hatBuf) { hatBuf = ac.createBuffer(1, 2205, 44100); const d = hatBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length); }
   const s = ac.createBufferSource(), g = ac.createGain(); s.buffer = hatBuf; g.gain.value = vol; s.connect(g).connect(chip.gain); s.start(t);
+}
+// ---- the Snake boss: an original ringtone-style loop. One square voice, like an old phone (they were
+// monophonic), staccato at 150 bpm in E minor, with a faint keypad-click pulse under it
+const RING = [
+  'E5', 0, 'G5', 'E5', 'B5', 0, 'A5', 'G5',  'F#5', 0, 'D5', 0, 'E5', 0, 0, 0,
+  'E5', 0, 'G5', 'E5', 'C6', 0, 'B5', 'A5',  'B5', 0, 'G5', 0, 'F#5', 0, 0, 0,
+  'B5', 'A5', 'G5', 0, 'A5', 'G5', 'F#5', 0, 'G5', 'F#5', 'E5', 0, 'D5', 0, 'E5', 0,
+  'G5', 0, 'F#5', 0, 'E5', 0, 'D#5', 0,      'E5', 0, 'B4', 0, 'E5', 0, 0, 0,
+];
+function ringSchedule() {
+  if (!chip.gain) return;
+  const step = 60 / 150 / 2;                                          // eighth notes
+  if (chip.next < ac.currentTime - 0.5) chip.next = ac.currentTime + 0.05;
+  while (chip.next < ac.currentTime + 0.25) {
+    const n = RING[chip.step % RING.length], t = chip.next;
+    if (n) voice('square', hz(n), t, step * 0.6, 0.06);                   // staccato, like a ringtone
+    if ((chip.step & 1) === 0) hat(t, chip.step % 4 === 0 ? 0.03 : 0.012);
+    chip.next += step; chip.step = (chip.step + 1) % RING.length;
+  }
 }
 function chipSchedule() {
   if (!chip.gain) return;

@@ -11,7 +11,7 @@
 import { COLORS, BOSS } from './config.js';
 import { G, enemies, clouds, vapes, hazards, orbs, burst, addFloater, addPart, die, hurt, calcStats } from './game.js';
 import { ctx, rect, box, text, textO, view, SPR } from './gfx.js';
-import { sfx } from './platform.js';
+import { sfx, nokia } from './platform.js';
 
 const SN = BOSS.SNAKE, LCD = BOSS.LCD;
 const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -42,7 +42,7 @@ export function startBoss(kind, light) {
   for (const o of orbs) addPart(o.x, o.wy, 0, 0, 0.35, o.r, 3);        // her orbiting storm clouds too: weapons rest during a duel
   orbs.length = 0; G.orbState = [];
   G.banner = ''; G.bannerT = 0; B.cue = 0;
-  G.flash = 0.2; G.shake = 6; sfx.nova();
+  G.flash = 0.2; G.shake = 6; nokia.slam();
 }
 
 const cx = (B, i) => B.x0 + (i + 0.5) * SN.CELL, cy = (B, j) => B.y0 + (j + 0.5) * SN.CELL;
@@ -102,6 +102,8 @@ function think(B) {
   const [pi, pj] = cellOf(B, G.px, G.dist);
   const near = Math.abs(pi - head[0]) + Math.abs(pj - head[1]);
   const hunt = !B.eggs.length || (near <= SN.AGGRO_CELLS && len >= (G.tailN || 0));    // confident: go for you
+  if (hunt && !B.hunting) nokia.hiss();
+  B.hunting = hunt;
   const targets = hunt && inside(B, pi, pj) ? [[pi, pj]] : B.eggs;
   let best = null, costly = null;
   for (const d of DIRS) {
@@ -126,8 +128,8 @@ function cut(B, ni, nj) {
   if (k >= 0) { const p = G.tailPos[k]; burst(p.x, p.wy, 14, 120, 0.4); addFloater('SACRIFICED!', p.x, p.wy + 16, 1); }
   G.tailN = Math.max(0, (G.tailN || 0) - 1);
   for (let c = 0; c < SN.CUT && B.cells.length; c++) { const s = B.cells.pop(); burst(cx(B, s[0]), cy(B, s[1]), 6, 90, 0.35); }
-  B.cuts++; B.stun = SN.STUN; B.grow = 0;
-  sfx.nova(); G.shake = Math.max(G.shake, 5);
+  B.cuts++; B.stun = SN.STUN; B.grow = 0; B.lumps = [];
+  nokia.cut(); G.shake = Math.max(G.shake, 5);
   addFloater('CUT OFF!', cx(B, ni), cy(B, nj) + 20, 2);
   if (B.cells.length <= SN.DIE_AT) win(B, 'CUT TO PIECES');
 }
@@ -136,14 +138,15 @@ function slice(B, k, p) {
   gone.forEach((s, i) => { burst(cx(B, s[0]), cy(B, s[1]), 5, 70 + i * 4, 0.4); addPart(cx(B, s[0]), cy(B, s[1]), 0, 0, 0.3, 8, 3); });
   burst(p.x, p.wy, 14, 130, 0.45); addFloater('SLICED! -' + gone.length, p.x, p.wy + 18, 2);
   G.tailN = Math.max(0, (G.tailN || 0) - 1); B.grow = 0; B.stun = SN.STUN * 0.6; B.sliceCd = SN.SLICE_CD; B.cuts++;
-  sfx.nova(); G.shake = Math.max(G.shake, 6);
+  B.lumps = (B.lumps || []).filter((k) => k < B.cells.length);
+  nokia.slice(); G.shake = Math.max(G.shake, 6);
   if (B.cells.length <= SN.DIE_AT) win(B, 'SLICED TO BITS');
 }
 function win(B, how) {
   if (B.phase === 'won') return;
   B.phase = 'won'; B.deadT = 0; B.how = how;
   G.banner = 'SNAKE DEFEATED!\n' + how; G.bannerT = 3.5;
-  sfx.big(); G.shake = 8; G.flash = 0.15; G.grinT = 3;
+  nokia.win(); G.shake = 8; G.flash = 0.15; G.grinT = 3;
 }
 
 export function updateBoss(dt) {
@@ -170,7 +173,7 @@ export function updateBoss(dt) {
   if (B.phase === 'won') {
     B.deadT += dt;
     if (B.cells.length && B.deadT > 0.06) {                                 // it comes apart segment by segment
-      B.deadT = 0; const s = B.cells.shift(); burst(cx(B, s[0]), cy(B, s[1]), 10, 130, 0.45, 3); addPart(cx(B, s[0]), cy(B, s[1]), 0, 0, 0.35, 10, 3); sfx.kill();
+      B.deadT = 0; const s = B.cells.shift(); burst(cx(B, s[0]), cy(B, s[1]), 10, 130, 0.45, 3); addPart(cx(B, s[0]), cy(B, s[1]), 0, 0, 0.35, 10, 3); nokia.key();
     }
     if (!B.cells.length && (B.endT = (B.endT || 0) + dt) > 1.4) {
       // the prize: every tail kayak paddles off with a vape, plus levels, cash and a full heal
@@ -185,10 +188,13 @@ export function updateBoss(dt) {
   }
   if (B.phase === 'intro') {
     // the arrival's sound and shake land on its beats
-    const beats = [[SN.T_GRID[0], () => sfx.ui()], [SN.T_WALL[0], () => sfx.puff()],
-      [SN.T_WALL[1], () => { sfx.nova(); sfx.hurt(); G.shake = 10; G.flash = 0.12; }],
-      ...[0, 1, 2, 3, 4, 5].map((k) => [SN.T_CARD[0] + 0.2 + k * 0.3, () => sfx.ui()]),
-      [SN.T_SNAKE, () => sfx.no()], [SN.T_READY, () => sfx.pick()], [SN.INTRO - 0.35, () => { sfx.level(); G.shake = 5; }]];
+    const g = SN.T_GRID, w = SN.T_WALL;
+    const beats = [...Array.from({ length: 10 }, (_, k) => [g[0] + (g[1] - g[0]) * k / 10, () => nokia.build(k)]),   // ticking outward, rising
+      ...Array.from({ length: 6 }, (_, k) => [w[0] + (w[1] - w[0]) * k / 6, () => nokia.key()]),                 // the sparks racing round
+      [w[1], () => { nokia.slam(); G.shake = 10; G.flash = 0.12; }],
+      ...[0, 1, 2, 3, 4, 5].map((k) => [SN.T_CARD[0] + 0.2 + k * 0.3, () => nokia.key()]),
+      ...Array.from({ length: SN.START_LEN }, (_, k) => [SN.T_SNAKE + k * 0.13, () => nokia.build(12 + k)]),   // the snake materialising
+      [SN.T_READY, () => nokia.ready()], [SN.INTRO - 0.35, () => { nokia.go(); G.shake = 5; }]];
     while (B.cue < beats.length && B.t >= beats[B.cue][0]) beats[B.cue++][1]();
     if (B.t >= SN.INTRO) B.phase = 'fight';
     return;
@@ -199,7 +205,7 @@ export function updateBoss(dt) {
     const [i, j] = B.eggs[e];
     if (Math.hypot(G.px - cx(B, i), G.dist - cy(B, j)) < SN.EGG_R) {
       B.eggs.splice(e, 1); G.tailN = (G.tailN || 0) + SN.PLAYER_EGG; spawnEgg(B);
-      addFloater('+1 TAIL', G.px, G.dist + 24, 2); burst(G.px, G.dist, 10, 90); sfx.big(); G.grinT = 1;
+      addFloater('+1 TAIL', G.px, G.dist + 24, 2); burst(G.px, G.dist, 10, 90); nokia.egg(); G.grinT = 1;
     }
   }
   // your tail is a blade: drag a kayak through the snake's body and you slice it there. Everything behind the
@@ -225,15 +231,16 @@ export function updateBoss(dt) {
       if (!m) { win(B, 'TRAPPED AND CRASHED'); break; }
       if (m.tail) { cut(B, m.ni, m.nj); break; }
       B.dir = m.d; B.cells.unshift([m.ni, m.nj]);
+      B.lumps = (B.lumps || []).map((k) => k + 1).filter((k) => k < B.cells.length);   // swallowed eggs travel down the body
       const egg = B.eggs.findIndex((e) => e[0] === m.ni && e[1] === m.nj);
-      if (egg >= 0) { B.eggs.splice(egg, 1); B.grow += SN.EGG_GROW; B.eaten++; spawnEgg(B); sfx.no(); addFloater('GULP', cx(B, m.ni), cy(B, m.nj) + 16, 1); }
+      if (egg >= 0) { B.eggs.splice(egg, 1); B.grow += SN.EGG_GROW; B.eaten++; spawnEgg(B); nokia.eat(); (B.lumps = B.lumps || []).push(0); addFloater('GULP', cx(B, m.ni), cy(B, m.nj) + 16, 1); }
       if (B.grow > 0) B.grow--; else B.cells.pop();
     }
   }
   // contact: the head is death, the body bites
   if (B.phase === 'fight' && G.dashT <= 0 && !G.dead) {
     const h = B.cells[0];
-    if (h && Math.hypot(G.px - cx(B, h[0]), G.dist - cy(B, h[1])) < SN.HEAD_R) { G.inv = 0; die('snake'); return; }
+    if (h && Math.hypot(G.px - cx(B, h[0]), G.dist - cy(B, h[1])) < SN.HEAD_R) { G.inv = 0; die('snake'); if (G.dead) nokia.over(); return; }
     for (let k = 1; k < B.cells.length; k++) {
       const s = B.cells[k], dx = G.px - cx(B, s[0]), dy = G.dist - cy(B, s[1]), d = Math.hypot(dx, dy);
       if (d < SN.BODY_R) { hurt(1, 'snake'); G.mvx = dx / (d || 1) * 220; G.mvy = dy / (d || 1) * 220; break; }
@@ -311,17 +318,22 @@ export function drawBossTop(sy) {
   const vis = B.phase === 'intro' ? Math.max(0, Math.min(B.cells.length, Math.floor((B.t - SN.T_SNAKE) / 0.13))) : B.cells.length;
   for (let k = B.cells.length - 1; k >= 0; k--) {
     if (k >= vis) continue;
-    const [i, j] = B.cells[k], x = Math.round(cx(B, i)), y = sy(cy(B, j));
-    rect(x - 7, y - 7, 14, 14, LCD.SNAKE_DARK);
-    rect(x - 6, y - 6, 12, 12, flash ? '#fff' : k ? LCD.SNAKE : LCD.HEAD);
-    if (k && (k & 1)) rect(x - 2, y - 2, 4, 4, LCD.SNAKE_DARK);
+    const [i, j] = B.cells[k], x = Math.round(cx(B, i)), y = sy(cy(B, j)), lump = k && B.lumps && B.lumps.includes(k) ? 2 : 0;
+    rect(x - 7 - lump, y - 7 - lump, 14 + lump * 2, 14 + lump * 2, LCD.SNAKE_DARK);                // a swallowed egg bulges as it travels down
+    rect(x - 6 - lump, y - 6 - lump, 12 + lump * 2, 12 + lump * 2, flash ? '#fff' : k ? LCD.SNAKE : LCD.HEAD);
+    if (lump) rect(x - 3, y - 3, 6, 6, '#f4f1e1');
+    else if (k && (k & 1)) rect(x - 2, y - 2, 4, 4, LCD.SNAKE_DARK);
   }
   const h = B.cells[0];
   if (h && vis) {
     const x = Math.round(cx(B, h[0])), y = sy(cy(B, h[1])), dx = B.dir[0], dy = -B.dir[1];
     const px = -dy, py = dx;                                        // perpendicular, for the two eyes
-    rect(x + dx * 2 + px * 3 - 1, y + dy * 2 + py * 3 - 1, 3, 3, '#000'); rect(x + dx * 2 - px * 3 - 1, y + dy * 2 - py * 3 - 1, 3, 3, '#000');
-    if (((B.t * 5) | 0) & 1) { rect(x + dx * 8 - (dx ? 0 : 1), y + dy * 8 - (dy ? 0 : 1), dx ? 5 : 2, dy ? 5 : 2, COLORS.ENEMY); }
+    const eye = B.hunting ? COLORS.ENEMY : '#000';                   // red eyes: it's hunting you
+    rect(x + dx * 2 + px * 3 - 1, y + dy * 2 + py * 3 - 1, 3, 3, eye); rect(x + dx * 2 - px * 3 - 1, y + dy * 2 - py * 3 - 1, 3, 3, eye);
+    const ahead = B.eggs.some((e) => e[0] === h[0] + B.dir[0] && e[1] === h[1] + B.dir[1]);
+    if (ahead) {                                                     // an egg right in front: the mouth opens, like the original
+      for (let k = 0; k < 4; k++) rect(x + dx * (6 - k) + px * (-k) - 1 + (dx < 0 ? 1 : 0), y + dy * (6 - k) + py * (-k) - 1 + (dy < 0 ? 1 : 0), dx ? 2 : k * 2 + 1, dy ? 2 : k * 2 + 1, LCD.FLOOR);
+    } else if (((B.t * 5) | 0) & 1) { rect(x + dx * 8 - (dx ? 0 : 1), y + dy * 8 - (dy ? 0 : 1), dx ? 5 : 2, dy ? 5 : 2, COLORS.ENEMY); }
   }
   // your tail: a line of Angies in kayaks following your wake
   for (const p of G.tailPos) {
@@ -356,6 +368,11 @@ export function bossHud(W) {
     if (!go || ((t * 10) | 0) & 1 || t < SN.INTRO) textO(s, W / 2, H * 0.3, sc, go ? LCD.HEAD : '#fff', 0.5);
   }
   if (B.phase === 'intro') return;
-  const s = 'SNAKE ' + B.cells.length + '   YOUR TAIL ' + (G.tailN || 0);
-  rect(W / 2 - 92, 36, 184, 16, '#000'); textO(s, W / 2, 40, 2, (G.tailN || 0) >= B.cells.length ? COLORS.GINGER : '#fff', 0.5);
+  // the score, on a little phone screen: green LCD, dark pixels
+  const ahead = (G.tailN || 0) >= B.cells.length, x0 = W / 2 - 100, y0 = 34;
+  rect(x0 - 3, y0 - 3, 206, 30, '#000'); rect(x0 - 1, y0 - 1, 202, 26, LCD.EDGE); rect(x0, y0, 200, 24, '#9bbc0f');
+  text('SNAKE', x0 + 6, y0 + 3, 1, LCD.SNAKE_DARK); text(String(B.cells.length).padStart(3, '0'), x0 + 6, y0 + 11, 2, LCD.SNAKE_DARK);
+  text('YOUR TAIL', x0 + 194, y0 + 3, 1, LCD.SNAKE_DARK, 1); text(String(G.tailN || 0).padStart(3, '0'), x0 + 194, y0 + 11, 2, LCD.SNAKE_DARK, 1);
+  text(ahead ? '>' : '<', W / 2, y0 + 8, 2, ahead ? '#306230' : '#0f380f', 0.5);
+  if (B.hunting && ((t * 4) | 0) & 1) text('HUNTING!', W / 2, y0 + 30, 1, COLORS.ENEMY, 0.5);
 }

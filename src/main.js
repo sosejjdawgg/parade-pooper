@@ -270,7 +270,7 @@ function frame(ts) {
 
   const onTitle = devTitle || G.mode === 'title' || G.mode === 'settings' || G.mode === 'legal' || G.mode === 'intro' || (G.mode === 'shop' && backTo === 'title');
   try {   // audio must never be able to freeze the game
-    musicFrame(!openerFinished() ? MUSIC.OPENER : onTitle ? 'menu' : MUSIC.BIOME_TRACKS[G.biomeIdx || 0], G.mode !== 'play' && G.mode !== 'title');
+    musicFrame(G.boss && G.boss.phase !== 'won' && !onTitle ? 'snake' : !openerFinished() ? MUSIC.OPENER : onTitle ? 'menu' : MUSIC.BIOME_TRACKS[G.biomeIdx || 0], G.mode !== 'play' && G.mode !== 'title');
   } catch (err) { if (!musicErr) { musicErr = true; console.warn('music disabled:', err); } }
   const menu = devTitle || G.mode === 'title' || G.mode === 'settings' || G.mode === 'legal' || G.mode === 'intro' || (G.mode === 'shop');
   drawWorld(menu ? 'menu' : 'full');
