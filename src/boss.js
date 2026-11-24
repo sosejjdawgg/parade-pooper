@@ -9,7 +9,7 @@
 // Its head is instant death. It is smart: it won't walk into a space too small for it, so you need a long
 // enough tail to box it in. Vapes are useless against it.
 import { COLORS, BOSS } from './config.js';
-import { G, enemies, clouds, vapes, hazards, burst, addFloater, addPart, die, hurt, calcStats } from './game.js';
+import { G, enemies, clouds, vapes, hazards, orbs, burst, addFloater, addPart, die, hurt, calcStats } from './game.js';
 import { ctx, rect, box, text, textO, view, SPR } from './gfx.js';
 import { sfx } from './platform.js';
 
@@ -39,6 +39,8 @@ export function startBoss(kind, light) {
   enemies.sweep(); clouds.n = 0; G.pods = []; G.shots = [];
   for (let i = 0; i < vapes.n; i++) { const v = vapes.items[i]; addPart(v.x, v.wy, 0, 0, 0.3, 4, 3); }   // the sea's vapes and whirlpools go too
   vapes.n = 0; hazards.n = 0;
+  for (const o of orbs) addPart(o.x, o.wy, 0, 0, 0.35, o.r, 3);        // her orbiting storm clouds too: weapons rest during a duel
+  orbs.length = 0; G.orbState = [];
   G.banner = ''; G.bannerT = 0; B.cue = 0;
   G.flash = 0.2; G.shake = 6; sfx.nova();
 }

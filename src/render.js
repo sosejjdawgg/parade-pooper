@@ -265,7 +265,7 @@ export function drawWorld(mode = 'full') {
   if (full) {
     drawBoss(sy); drawLights('base'); drawBossTop(sy); drawLights('top'); drawPickups(); drawEnemies(); drawPods();
     for (const sh of G.shots) { const y = sy(sh.wy); rect(sh.x - sh.vx * 0.05 - 2, y + sh.vy * 0.05 - 2, 4, 4, '#7a1010'); rect(sh.x - 5, y - 5, 10, 10, '#000'); rect(sh.x - 4, y - 4, 8, 8, COLORS.ENEMY); rect(sh.x - 2, y - 2, 4, 4, GINGER); rect(sh.x - 1, y - 1, 2, 2, FG); }   // HMRC shells
-    for (const o of orbs) { const y = sy(o.wy); drawDisc(o.x, y, o.r, 1); drawDisc(o.x, y, o.r * 0.45, 0); }
+    if (!G.boss) for (const o of orbs) { const y = sy(o.wy); drawDisc(o.x, y, o.r, 1); drawDisc(o.x, y, o.r * 0.45, 0); }
   }
   const hd = Math.round((G.heading || 0) / (Math.PI / 16)) * (Math.PI / 16);     // 32 headings: crisp pixels, smooth enough to feel analog
   if (full && !G.dead) drawRot(SPR.kayakHalo[G.paddle], G.px, KY, hd);   // keep her readable inside the fog: a black edge hugging her shape
