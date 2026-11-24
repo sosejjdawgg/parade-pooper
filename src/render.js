@@ -4,6 +4,7 @@ import { ctx, view, rect, box, text, textO, textW, draw, drawDisc, face, SPR, ha
 import { G, S, DEV, orcaAt, vapes, enemies, hazards, clouds, parts, floaters, orbs, biomeAt, dangerAt, seaAt, leftAt, rightAt, playerY, metres } from './game.js';
 import { save, shopLvl, stick, STICK_R, moveVector } from './platform.js';
 import { devOverlay } from './dev.js';
+import { drawBoss, drawBossTop, bossHud } from './boss.js';
 
 const { BG, FG, GINGER } = COLORS, W = VIEW.W;
 export const BAR_H = 64;
@@ -143,12 +144,15 @@ function drawClouds() {
 }
 // lighthouses: a fixed beam from each one points the way to the next (never explained: you work it out)
 let beamFill = null;
-function drawLights() {
+/** layer 'base': beams and the rocky island; layer 'top': the tower. Anything drawn between the two (the
+ *  boss's snake) passes behind the tower but over the ground at its foot */
+function drawLights(layer) {
   const L = G.lights; if (!L.length) return;
+  const base = layer !== 'top', tower = layer !== 'base';
   if (!beamFill) beamFill = [ditherFill(FG, 0.25), ditherFill(FG, 0.5)];
   for (let i = 0; i < L.length; i++) {
     const h = L[i], nx = L[i + 1], y = sy(h.wy), top = y + 10 - SPR.lighthouse.height, ly = top + 1 + LIGHTHOUSE_LAMP_Y;
-    if (nx) {
+    if (nx && base) {
       const a = Math.atan2(-(nx.wy - h.wy), nx.x - h.x);
       for (let k = 0; k < 2; k++) {
         const sp = SEA.BEAM_SPREAD * (k ? 0.45 : 1), len = SEA.BEAM_LEN * (k ? 0.7 : 1);
@@ -158,8 +162,11 @@ function drawLights() {
       }
     }
     if (y < -40 || top > VH + 40 || h.x < CX - 80 || h.x > CX + VW + 80) continue;
+    if (base) {
     drawDisc(h.x, y + 14, 46, 2); drawDisc(h.x, y + 12, 36, 1);                 // surf and rock
     for (let k = 0; k < 9; k++) { const a = k / 9 * 6.283 + h.x, rr = 18 + (hash(k * 31 + (h.wy | 0)) * 10 | 0); rect(h.x + Math.cos(a) * rr - 4, y + 10 + Math.sin(a) * rr * 0.6 - 3, 8, 6, BG); rect(h.x + Math.cos(a) * rr - 3, y + 10 + Math.sin(a) * rr * 0.6 - 2, 6, 3, FG); }
+    }
+    if (!tower) continue;
     if (((G.t * 3) | 0) & 1) drawDisc(h.x, ly, 16, 3);                    // the lamp pulses
     draw(SPR.lighthouse, h.x, top + SPR.lighthouse.height / 2);
     if (h.visited) textO(':(', h.x, y + 30, 2, FG, 0.5);
@@ -182,6 +189,7 @@ function drawEnemies() {
     const s = SPR[e.type], bob = e.type === 'mozzie' || e.type === 'gull' ? 0 : Math.round(Math.sin(G.t * 6 + e.seed) * 1);
     if (e.flash > 0) drawDisc(e.x, y, e.r + 2, 0);
     else if (e.type === 'puffer' && e.inflate > 0) { const k = e.r / 7; ctx.drawImage(s, Math.round(e.x - s.width * k / 2), Math.round(y + bob - s.height * k / 2), Math.round(s.width * k), Math.round(s.height * k)); }
+    else if (e.type === 'cutter') drawRot(s, e.x, y, Math.atan2(e.hx || 0, e.hy || 1));
     else if (e.type === 'gull') { ctx.save(); ctx.translate(Math.round(e.x), y); ctx.rotate(Math.atan2(-e.vwy, e.vx) - Math.PI / 2); ctx.drawImage(s, -(s.width >> 1), -(s.height >> 1)); ctx.restore(); }
     else draw(s, e.x, y + bob);
   }
@@ -210,10 +218,16 @@ function drawPods() {
     for (let i = pod.n - 1; i >= 0; i--) {
       const o = orcaAt(pod, i); if (!o) continue;
       const y = sy(o.wy);
-      ctx.save(); ctx.translate(Math.round(o.x), y); ctx.rotate(-o.ang);
-      if (o.up) { ctx.drawImage(SPR.orca, -(SPR.orca.width >> 1), -(SPR.orca.height >> 1)); }
-      else { ctx.fillStyle = shadowFill; ctx.fillRect(-30, -8, 60, 16); ctx.fillRect(-22, -11, 40, 22); }   // a dark shape just under the surface
+      const left = Math.cos(o.ang) < 0;
+      ctx.save(); ctx.translate(Math.round(o.x), y); ctx.rotate(-o.ang); if (left) ctx.scale(1, -1);   // side-on, belly always down
+      if (o.up) { const s = SPR.orca; ctx.drawImage(s, -(s.width >> 1), -(s.height >> 1)); }
+      else { ctx.fillStyle = shadowFill; ctx.fillRect(-34, -6, 68, 14); ctx.fillRect(-26, -9, 50, 20); }   // the dark shape under the surface...
       ctx.restore();
+      if (!o.up) {                                                      // ...and the fin slicing through it
+        const f = SPR.orcaFin; ctx.save(); ctx.translate(Math.round(o.x), y - 6); if (left) ctx.scale(-1, 1);
+        ctx.drawImage(f, -(f.width >> 1) + 4, -f.height); ctx.restore();
+        if (((G.t * 10 + i) | 0) & 1) rect(o.x - 10, y - 5, 20, 1, FG);           // a little bow wave
+      }
     }
   }
 }
@@ -249,7 +263,8 @@ export function drawWorld(mode = 'full') {
   if (full) { drawHazards(false); drawClouds(); }
   drawBanks(lo, hi);
   if (full) {
-    drawLights(); drawPickups(); drawEnemies(); drawPods();
+    drawBoss(sy); drawLights('base'); drawBossTop(sy); drawLights('top'); drawPickups(); drawEnemies(); drawPods();
+    for (const sh of G.shots) { const y = sy(sh.wy); rect(sh.x - sh.vx * 0.05 - 2, y + sh.vy * 0.05 - 2, 4, 4, '#7a1010'); rect(sh.x - 5, y - 5, 10, 10, '#000'); rect(sh.x - 4, y - 4, 8, 8, COLORS.ENEMY); rect(sh.x - 2, y - 2, 4, 4, GINGER); rect(sh.x - 1, y - 1, 2, 2, FG); }   // HMRC shells
     for (const o of orbs) { const y = sy(o.wy); drawDisc(o.x, y, o.r, 1); drawDisc(o.x, y, o.r * 0.45, 0); }
   }
   const hd = Math.round((G.heading || 0) / (Math.PI / 16)) * (Math.PI / 16);     // 32 headings: crisp pixels, smooth enough to feel analog
@@ -316,6 +331,7 @@ export function drawHud() {
   rect(W - 28, 6, 22, 22, BG); box(W - 28, 6, 22, 22, FG, 2); rect(W - 21, 12, 3, 10); rect(W - 16, 12, 3, 10);
   if (G.bannerT > 0 && !(G.bannerT < 0.8 && ((G.t * 12) & 1))) G.banner.split('\n').forEach((l, i) => textO(l, W / 2, H * 0.2 + i * 24, i ? 2 : fit(l, W, 3), FG, 0.5));
   drawStick();
+  bossHud(W);
   if (save.runs < 2 && G.t < 6 && !G.dead && G.seaF < 0.5 && ((G.t * 3) & 1)) {
     textO('< TAP', 28, PY + 70, 2); textO('TAP >', W - 28, PY + 70, 2, FG, 1);
   }
@@ -328,7 +344,7 @@ function drawStick() {
   const sea = G.mode === 'play' && G.seaF > 0.5 && !G.dead;
   stickA = Math.max(0, Math.min(1, stickA + (sea && stick.on ? 0.25 : -0.12)));
   if (!sea) return;
-  const ghost = !stick.on && G.seaT < 8, a = stick.on ? stickA : ghost ? 0.5 + 0.5 * Math.sin(G.t * 4) : 0;
+  const ghost = !stick.on && G.seaT < 8 && !G.boss, a = stick.on ? stickA : ghost ? 0.5 + 0.5 * Math.sin(G.t * 4) : 0;
   if (a <= 0.05 && !stick.on) return;
   const R = STICK_R, ox = stick.on ? stick.ox : W / 2, oy = stick.on ? stick.oy : view.H - BAR_H - 70;
   const mv = stick.on ? moveVector() : { x: Math.sin(G.t * 1.7) * 0.8, y: Math.cos(G.t * 1.7) * 0.8 };

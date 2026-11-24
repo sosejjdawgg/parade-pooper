@@ -129,7 +129,7 @@ function halo(src, grow) {
 }
 function doubled(src) { const [c, g] = mk(src.width * 2, src.height * 2); g.drawImage(src, 0, 0, c.width, c.height); return c; }
 /** '#' white, 'o' ginger, 'x' black, 'g' cash green, 'b' tea brown, anything else transparent */
-const ART = { o: GINGER, x: BG, g: CASH, b: TEA };
+const ART = { o: GINGER, x: BG, g: CASH, b: TEA, r: '#c8102e' };
 function art(rows, outline = true) {
   const [c, g] = mk(Math.max(...rows.map(r => r.length)), rows.length);
   rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) {
@@ -342,6 +342,32 @@ function makeOrca() {
   return outlined(c, FG);
 }
 
+/** a killer whale side-on, facing right, as everyone pictures one: glossy black, a tall dorsal fin, the white
+ *  patch behind the eye, white chin and belly sweeping back, a grey saddle and big tail flukes */
+function makeOrcaSide() {
+  const [c, g] = mk(46, 26), K = BG, Wh = FG, cy = 15;
+  const P = (x, y, w, h, col) => { g.fillStyle = col; g.fillRect(x, y, w, h); };
+  for (let x = 6; x < 44; x++) {                                         // body: a torpedo, rounder underneath
+    const f = (x - 6) / 38, up = Math.round(6.2 * Math.pow(Math.sin(Math.PI * Math.min(1, f * 1.05)), 0.62)), dn = Math.round(7 * Math.pow(Math.sin(Math.PI * f), 0.7));
+    if (up + dn > 0) P(x, cy - up, 1, up + dn + 1, K);
+  }
+  for (let r = 0; r < 11; r++) P(15 + Math.round(r * 0.45), cy - 16 + r, 1 + Math.round(r * 0.85), 1, K);   // tall dorsal fin, tip swept back
+  P(5, cy - 2, 4, 4, K); P(2, cy - 1, 4, 3, K); P(0, cy - 2, 3, 2, K); P(0, cy + 1, 4, 1, K);   // slim tail stock and flat flukes
+  P(29, cy + 6, 5, 3, K); P(31, cy + 9, 3, 2, K);                         // pectoral flipper
+  P(33, cy - 3, 6, 2, Wh); P(34, cy - 4, 4, 1, Wh);                       // the eye patch
+  P(37, cy + 3, 6, 2, Wh); P(32, cy + 5, 9, 1, Wh);                       // chin and throat
+  P(16, cy + 4, 12, 2, Wh); P(11, cy + 2, 6, 2, Wh); P(26, cy + 5, 5, 1, Wh);   // belly sweeping back to the flank
+  P(16, cy - 5, 9, 1, '#9aa7b0'); P(17, cy - 4, 7, 1, '#6d7a84');         // grey saddle behind the fin
+  P(42, cy - 1, 1, 1, Wh);                                                // a glint on the nose
+  return outlined(c, FG);
+}
+/** just the dorsal fin cutting the surface: what you see before it breaches */
+function makeOrcaFin() {
+  const [c, g] = mk(12, 12); g.fillStyle = BG;
+  for (let y = 0; y < 11; y++) { const w = Math.max(1, Math.round((y + 1) * 0.9)); g.fillRect(Math.round(y * 0.45), y, w, 1); }
+  return outlined(c, FG);
+}
+
 export const SPR = {};
 export function buildSprites() {
   SPR.kayak = [makeKayak(0), makeKayak(1)];
@@ -374,7 +400,12 @@ export function buildSprites() {
   SPR.puffer = art([                                                  // pufferfish: shrugs off most vape
     '.#..#..#..#.', '..#######...', '#.##x###x##.', '.##########.', '###########o', '.##########.', '#.#.#.#.###.', '..#######...', '.#..#..#..#.'], ENEMY);
   SPR.gull = art(['##.......##', '.##.....##.', '..##.#.##..', '...#####...', '....###....', '.....o.....'], ENEMY);
-  SPR.orca = doubled(makeOrca());                                       // big: these are killer whales, not ducks
+  SPR.orca = doubled(makeOrcaSide());                                   // big: these are killer whales, not ducks
+  SPR.orcaFin = doubled(makeOrcaFin());
+  SPR.cutter = doubled(art([                                              // HMRC cutter, bow up: grey hull, red band, a gun
+    '......#......', '.....###.....', '....#####....', '...#######...', '...#######...', '..#########..', '..###xxx###..', '..##x#x#x##..',
+    '..###xxx###..', '..#########..', '..rrrrrrrrr..', '..#########..', '..###xxx###..', '..##xx#xx##..', '..###xxx###..', '..#########..',
+    '..#########..', '..#x#####x#..', '...#######...', '...#######...', '....#####....'], ENEMY));
   SPR.croc = art([
     '...####...', '...#..#...', '...####...', '...####...', '..#x##x#..', '..######..', '.########.', '##########', '.########.',
     '.########.', '##########', '.########.', '..######..', '...####...', '...###....', '....##....', '....#.....'], ENEMY);

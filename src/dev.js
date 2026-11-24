@@ -4,7 +4,7 @@
 import { VERSION, DEV_CODE, WEAPONS, PASSIVES, EVOLUTIONS, SHOP, BIOMES, BANKS, SEA, ENEMIES, COLORS, VIEW } from './config.js';
 import { view, text, textO, rect, box } from './gfx.js';
 import {
-  G, S, DEV, newRun, calcStats, addEnemy, addPickup, gainXp, hurt, devJump, devNextLight, devRing, devKill, orcaPod, gullFlock,
+  G, S, DEV, newRun, calcStats, addEnemy, addPickup, gainXp, hurt, devJump, devNextLight, devRing, devKill, orcaPod, gullFlock, fleet, devBoss,
   enemies, clouds, vapes, hazards, metres, biomeAt,
 } from './game.js';
 import { save, writeSave, resetSave, sfx } from './platform.js';
@@ -118,9 +118,10 @@ export function devScreen(ui) {
     if (ui.button(123, y, 113, 26, 'ALL EVOS')) { ensureRun(); for (const id in EVOLUTIONS) { G.weapons[id] = WEAPONS[id].maxLvl; G.evo[id] = true; } calcStats(); ui.say('ALL EVOLUTIONS'); }
     if (ui.button(240, y, 114, 26, 'CLEAR')) { ensureRun(); G.weapons = { cloud: 1 }; G.passives = {}; G.evo = {}; calcStats(); ui.say('BUILD CLEARED'); }
   } else if (tab === 'SPAWN') {
-    for (const t in ENEMIES) if (t !== 'gull') runAct(t.toUpperCase() + ' X5', () => { for (let i = 0; i < 5; i++) addEnemy(t, G.px + (Math.random() - 0.5) * 120, G.dist + 220 + i * 24); });
+    for (const t in ENEMIES) if (t !== 'gull' && t !== 'cutter') runAct(t.toUpperCase() + ' X5', () => { for (let i = 0; i < 5; i++) addEnemy(t, G.px + (Math.random() - 0.5) * 120, G.dist + 220 + i * 24); });
     runAct('ORCA POD: SWEEP', () => orcaPod('sweep'), 'WHALES!'); runAct('ORCA POD: DIAGONAL', () => orcaPod('diag'), 'WHALES!');
     runAct('ORCA POD: CHARGE', () => orcaPod('charge'), 'WHALES!'); runAct('GULL FLOCK', () => gullFlock());
+    runAct('HMRC FLEET', () => fleet(), 'FLEET!'); runAct('BOSS: SNAKE', () => { if (!G.boss) devBoss(); }, 'SNAKE!');
     runAct('SURROUND RING X16', () => devRing('swan', 16), 'RING INCOMING');
     runAct('PIRANHA RING X24', () => devRing('piranha', 24), 'RING INCOMING');
     runAct('SEA WAVE NOW', () => { G.waveT = 0; }, G.seaF > 0.5 ? 'WAVE!' : 'WAVES ONLY RUN AT SEA');

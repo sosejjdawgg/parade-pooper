@@ -153,6 +153,29 @@ export const SEA = {
   VORTEX_CHANCE: 0.12,        // whirlpools out at sea, per chunk
 };
 
+// Lighthouse bosses (boss.js): each lighthouse at sea starts a fight, each a homage to a retro classic.
+export const BOSS = {
+  ORDER: ['snake'],                       // lighthouse 1, 2, 3...: only the first has a boss so far
+  LCD: { FLOOR: '#0e2a10', GRID: '#24502a', EDGE: '#8bac0f', SNAKE: '#9bbc0f', HEAD: '#c4e04a', SNAKE_DARK: '#0f380f' },
+  SNAKE: {
+    N: 26, CELL: 16,                      // a 26x26 grid round the lighthouse (its 2x2 middle is a wall)
+    START_LEN: 6, EGGS: 3,                // eggs on the board at once
+    TICK: 0.15, TICK_MIN: 0.085, TICK_PER_SEG: 0.0025,   // seconds per step: it speeds up as it grows
+    EGG_GROW: 1, PLAYER_EGG: 1,           // segments gained per egg (snake), kayaks gained per egg (you)
+    CUT: 3, STUN: 0.6, DIE_AT: 4,         // hitting your tail costs it 3 segments; at 4 or fewer it's finished
+    AGGRO_CELLS: 6,                       // it hunts you when you're this close and it's at least as long as your tail
+    EGG_R: 15, HEAD_R: 11, BODY_R: 10, TAIL_GAP: 17,
+    SLICE_FROM: 4, SLICE_R: 11, SLICE_CD: 0.35,   // your tail slices its body from the 5th segment back (the neck is guarded); one kayak per slice
+    INTRO: 2.5, REWARD_CASH: 50, REWARD_LEVELS: 3,
+  },
+};
+
+// HMRC cutters: gunboat fleets out at sea. They keep their distance, circle you and lob shells.
+export const SHIPS = {
+  FLEET_FIRST: 28, FLEET_EVERY: [18, 26], FLEET: [3, 6], FLEET_GROW: 60,   // +1 boat per this many seconds at sea
+  RANGE: 175, FIRE_EVERY: 2.2, SHELL_SPEED: 150, SHELL_LIFE: 3.2, SPREAD: 0.12,
+};
+
 export const IMMUNITY = { COOLDOWN: [10, 8, 5, 3, 2], RADIUS: 21 };
 
 // Late game: the banks turn red and hurt on contact, and extra hazards hug the sides.
@@ -189,6 +212,7 @@ export const ENEMIES = {
   // open sea only. resist: fraction of vape damage shrugged off
   puffer:  { hp: 16, r: 7, speed: 30, steer: 0,  mode: 'drift',  xp: 5, drop: 1, resist: 0.65 },   // puffs up when hit
   gull:    { hp: 6,  r: 5, speed: 190, steer: 0, mode: 'dive',   xp: 1, drop: 0.2 },                // dive-bombs in V flocks
+  cutter:  { hp: 90, r: 12, speed: 70, steer: 0, mode: 'ship',   xp: 14, drop: 1, big: true },      // HMRC gunboat: keeps its distance and shoots
 };
 
 export const SPAWN = {
@@ -310,7 +334,7 @@ export const FLAVOUR = {
     'A KAYAK IS NOT A SECOND HOME. PROBABLY.',
   ],
   CAUSES: {
-    dev: 'PULLED BY A DEVELOPER', orca: 'TOPPLED BY KILLER WHALES', puffer: 'SPIKED BY A PUFFERFISH', gull: 'DIVE-BOMBED BY GULLS',
+    dev: 'PULLED BY A DEVELOPER', snake: 'EATEN BY THE SNAKE', cutter: 'SHELLED BY HMRC', orca: 'TOPPLED BY KILLER WHALES', puffer: 'SPIKED BY A PUFFERFISH', gull: 'DIVE-BOMBED BY GULLS',
     barge: "RAMMED SOMEONE'S SECOND HOME", pier: 'HIT A LOW BRIDGE', gate: 'HIT A LOCK GATE', vortex: 'DOWN THE PLUGHOLE',
     debris: 'SUNK BY FLY-TIPPING', bank: 'HIT THE RED WALL', sandbar: 'RAN AGROUND', swan: 'A SWAN TOOK IT PERSONALLY', pap: 'PAPPED MID-PUFF',
     tumble: 'TUMBLEWEEDED', piranha: 'NIBBLED BY THE BACKBENCHES', mozzie: 'BITTEN TO BITS', croc: 'SNAPPED UP',

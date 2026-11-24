@@ -1,9 +1,10 @@
 // Simulation: canal, chunks, pickups, enemies, weapons, level-ups. No drawing here.
 import {
   VIEW, WORLD, PLAYER, ENGINE, XP, PICKUPS, BIOMES, HAZARDS, ENEMIES, SPAWN,
-  WEAPONS, PASSIVES, EVOLUTIONS, LEVELUP, REWARD, JUICE, VAPING, FLAVOUR, IMMUNITY, BANKS, RAM, SEA,
+  WEAPONS, PASSIVES, EVOLUTIONS, LEVELUP, REWARD, JUICE, VAPING, FLAVOUR, IMMUNITY, BANKS, RAM, SEA, SHIPS,
 } from './config.js';
 import { view } from './gfx.js';
+import { bossFor, startBoss, updateBoss, bossBotStick, bossBotDash } from './boss.js';
 import { save, shopLvl, writeSave, sfx, input, moveVector } from './platform.js';
 
 class Pool {
@@ -72,7 +73,7 @@ export function newRun() {
     weapons: { cloud: 1 + shopLvl('starter') }, passives: {}, evo: {},
     cd: { cloud: 0.5, trail: 0, nova: 1.5, rings: 0.5 }, orbA: 0, orbState: [], cloudId: 0,
     genY: 240, chunkN: 0, spawnT: 0, shake: 0, flash: 0, hitstop: 0, dead: false, deadT: 0,
-    banner: BIOMES.NAMES[0], bannerT: 2.5, seaF: 0, seaT: 0, waveT: 6, wave: 0, zoom: 1, dashT: 0, dashCd: 0, dashA: 0, mvx: 0, mvy: 0, heading: 0, camY: 0, far: 0, roamHint: 0, pickT: 0, inhX: 0, pods: [], orcaT: SEA.ORCA_FIRST, gullT: SEA.GULL_FIRST, flipT: 0, camX: 0, lights: [], lighthouses: 0, biomeIdx: 0, pending: 0, choices: null, cause: '', result: null, puffT: 0, vapeT: 2.5, dragT: 0, hurtT: 0, grinT: 0, shieldT: 0, danger: false, puffStats: {}, novaMore: 0, novaGapT: 0,
+    banner: BIOMES.NAMES[0], bannerT: 2.5, seaF: 0, seaT: 0, waveT: 6, wave: 0, zoom: 1, boss: null, tailN: 0, trail: [], tailPos: [], shots: [], fleetT: SHIPS.FLEET_FIRST, dashT: 0, dashCd: 0, dashA: 0, mvx: 0, mvy: 0, heading: 0, camY: 0, far: 0, roamHint: 0, pickT: 0, inhX: 0, pods: [], orcaT: SEA.ORCA_FIRST, gullT: SEA.GULL_FIRST, flipT: 0, camX: 0, lights: [], lighthouses: 0, biomeIdx: 0, pending: 0, choices: null, cause: '', result: null, puffT: 0, vapeT: 2.5, dragT: 0, hurtT: 0, grinT: 0, shieldT: 0, danger: false, puffStats: {}, novaMore: 0, novaGapT: 0,
   });
   G.ph = [rnd(6.28), rnd(6.28), rnd(6.28)];
   G.px = centreAt(0);
@@ -117,10 +118,10 @@ export function addPart(x, wy, vx, vwy, life, size = 2, spr = 0) {
   const p = parts.spawn(); if (!p) return;
   p.x = x; p.wy = wy; p.vx = vx; p.vwy = vwy; p.age = 0; p.life = life; p.size = size; p.spr = spr;
 }
-function burst(x, wy, n, speed, life = 0.4, size = 2) {
+export function burst(x, wy, n, speed, life = 0.4, size = 2) {
   for (let i = 0; i < n; i++) { const a = rnd(6.28), s = rnd(0.3, 1) * speed; addPart(x, wy, Math.cos(a) * s, Math.sin(a) * s + G.speed, rnd(0.5, 1) * life, size); }
 }
-function addFloater(txt, x, wy, scale = 1) {
+export function addFloater(txt, x, wy, scale = 1) {
   const f = floaters.spawn(); if (!f) return;
   f.txt = txt; f.x = x + rnd(-4, 4); f.wy = wy; f.age = 0; f.life = 0.7; f.scale = scale;
 }
@@ -145,6 +146,7 @@ export function addEnemy(type, x, wy, behind) {
   e.r = d.r; e.chasing = !!behind; e.vx = (Math.random() < 0.5 ? -1 : 1) * d.steer; e.seed = rnd(100);
   e.ox = rnd(-9, 9); e.oy = rnd(-12, 12); e.novaId = -1; e.flash = 0; e.puffs = 0; e.chaseT = 0; e.gaveUp = false;
   e.ang = Math.atan2(G.dist - wy, G.px - e.x); e.inflate = 0; e.vwy = 0;
+  e.orbit = Math.random() < 0.5 ? -1 : 1; e.hx = 0; e.hy = 1; e.fireT = 1.5;
   return e;
 }
 
@@ -316,8 +318,26 @@ function seaSpawns(dt) {
     const [x, wy] = seaSpot(rnd(6.283)), n = 3 + ((Math.random() * 4) | 0);
     for (let i = 0; i < n; i++) addVape(x + rnd(-16, 16), wy + rnd(-16, 16));
   }
+  G.fleetT -= dt;
+  if (G.fleetT <= 0) { G.fleetT = rnd(SHIPS.FLEET_EVERY[0], SHIPS.FLEET_EVERY[1]); fleet(); }
   G.gullT -= dt;
   if (G.gullT <= 0) { gullFlock(); G.gullT = rnd(SEA.GULL_EVERY[0], SEA.GULL_EVERY[1]); }
+}
+/** an HMRC fleet: a line of cutters steaming in from one side */
+export function fleet(n) {
+  n = n || Math.min(SHIPS.FLEET[1], SHIPS.FLEET[0] + Math.floor(G.seaT / SHIPS.FLEET_GROW));
+  const a = rnd(6.283), [x, wy] = seaSpot(a), px = -Math.sin(a), py = Math.cos(a);
+  for (let i = 0; i < n; i++) { const k = i - (n - 1) / 2, e = addEnemy('cutter', x + px * k * 46, wy + py * k * 46, true); if (e) { e.fireT = 1 + i * 0.35; e.orbit = Math.random() < 0.5 ? -1 : 1; e.hx = 0; e.hy = 1; } }
+  G.banner = 'HMRC FLEET!'; G.bannerT = 2; sfx.no();
+}
+function updateShots(dt) {
+  for (const s of G.shots) {
+    s.life -= dt; s.x += s.vx * dt; s.wy += s.vy * dt;
+    if (!G.dead && Math.abs(s.x - G.px) < 4 + PLAYER.HIT_W && Math.abs(s.wy - G.dist) < 4 + PLAYER.HIT_H) {
+      if (G.dashT <= 0 && G.inv <= 0) { hurt(1, 'cutter'); burst(s.x, s.wy, 10, 110); } s.life = 0;
+    }
+  }
+  G.shots = G.shots.filter((s) => s.life > 0);
 }
 /** a V of gulls appears ahead and dive-bombs the spot where you are now */
 export function gullFlock() {
@@ -372,9 +392,11 @@ function updatePods(dt) {
 }
 function updateLights() {
   const L = G.lights;
+  if (G.boss) return;
   if (!L.length) {
     if (G.dist / WORLD.PX_PER_M < BIOMES.SEA_AT) return;
-    L.push({ x: G.px + rnd(-50, 50), wy: Math.max((BIOMES.SEA_AT + BIOMES.BLEND + SEA.LIGHT_FIRST_M) * WORLD.PX_PER_M, G.dist + 600), visited: false });
+    const wy = Math.max((BIOMES.SEA_AT + BIOMES.BLEND + SEA.LIGHT_FIRST_M) * WORLD.PX_PER_M, G.dist + 600);
+    L.push({ x: centreAt(wy) - rnd(200, 250), wy, visited: false });          // the first one: off to the left as the sea opens
   }
   while (L[L.length - 1].wy < G.dist + 3200) {
     const p = L[L.length - 1], wy = p.wy + rnd(SEA.LIGHT_GAP_M[0], SEA.LIGHT_GAP_M[1]) * WORLD.PX_PER_M;
@@ -387,6 +409,8 @@ function updateLights() {
   for (const h of L) {
     if (h.visited || Math.abs(h.x - G.px) > SEA.LIGHT_R || Math.abs(h.wy - G.dist) > SEA.LIGHT_R) continue;
     h.visited = true; G.lighthouses++; calcStats();
+    const boss = bossFor(G.lighthouses - 1);
+    if (boss && !G.boss) { startBoss(boss, h); continue; }                    // a lighthouse with a guardian
     G.banner = "AWHHH, THIS ISN'T A VAPE SHOP :(\nLET'S TRY THE NEXT ONE"; G.bannerT = 4;
     addFloater('+' + Math.round(SEA.LIGHT_DMG * 100) + '% DAMAGE', h.x, h.wy + 30, 2);
     burst(h.x, h.wy, 18, 120, 0.5); sfx.big(); G.shake = Math.max(G.shake, 3);
@@ -408,6 +432,7 @@ export function devNextLight() {
 }
 /** a full ring of enemies, closing in from every side */
 export function devRing(type, n) { const a0 = rnd(6.283); for (let i = 0; i < n; i++) { const [x, wy] = seaSpot(a0 + i / n * 6.283); addEnemy(type, x, wy, true); } }
+export function devBoss() { const h = { x: G.px, wy: G.dist + 140, visited: true }; G.lights.push(h); startBoss('snake', h); }
 export function devKill() { const g = G.god, d = DEV.god; G.god = DEV.god = false; G.inv = 0; die('dev'); G.god = g; DEV.god = d; }
 
 // ---- player actions ---------------------------------------------------------------
@@ -650,7 +675,20 @@ function updateEnemies(dt) {
     const dx = G.px + e.ox - e.x, dwy = G.dist + e.oy - e.wy, dist = Math.hypot(dx, dwy) || 1;
     if (e.flash > 0) e.flash -= dt;
     if (G.seaF > 0.5) {                                                   // at sea everything homes in, from every side
-      if (d.mode === 'dive') {                                            // gulls: committed to a straight dive
+      if (d.mode === 'ship') {                                            // cutters: hold range, circle, fire
+        const want = dist > SHIPS.RANGE + 20 ? 1 : dist < SHIPS.RANGE - 20 ? -0.7 : 0, sp = d.speed * (1 + G.seaT * SEA.SPEED_GROWTH);
+        const vx = (dx / dist * want - dwy / dist * e.orbit * 0.8) * sp, vy = (dwy / dist * want + dx / dist * e.orbit * 0.8) * sp;
+        e.x += vx * dt; e.wy += vy * dt;
+        const hl = Math.hypot(vx, vy); if (hl > 5) { e.hx += (vx / hl - e.hx) * Math.min(1, dt * 3); e.hy += (vy / hl - e.hy) * Math.min(1, dt * 3); }
+        e.fireT -= dt;
+        if (e.fireT <= 0 && dist < SHIPS.RANGE * 2.2 && !G.boss) {
+          e.fireT = SHIPS.FIRE_EVERY * rnd(0.8, 1.2);
+          const t = dist / SHIPS.SHELL_SPEED, ax = G.px + G.mvx * t * 0.6 - e.x, ay = G.dist + G.mvy * t * 0.6 - e.wy, al = Math.hypot(ax, ay) || 1;
+          const sa = Math.atan2(ax, ay) + rnd(-SHIPS.SPREAD, SHIPS.SPREAD);
+          G.shots.push({ x: e.x, wy: e.wy, vx: Math.sin(sa) * SHIPS.SHELL_SPEED, vy: Math.cos(sa) * SHIPS.SHELL_SPEED, life: SHIPS.SHELL_LIFE });
+          burst(e.x, e.wy, 4, 60, 0.25); if (al < 400) sfx.puff();
+        }
+      } else if (d.mode === 'dive') {                                            // gulls: committed to a straight dive
         e.x += e.vx * dt; e.wy += e.vwy * dt;
         if (dist > 700 && (e.vx * dx + e.vwy * dwy) < 0) { e.dead = true; continue; }   // flown past and away
       } else {
@@ -787,12 +825,12 @@ export function update(dt) {
   if (roam) {
     // open water: 360-degree paddling. The stick sets a target velocity; she glides towards it
     if (!G.roamHint) { G.roamHint = 1; G.mvx = G.pvx; G.mvy = G.speed; calcStats(); }   // hand over from the river
-    let mv = G.bot ? botStick() : moveVector();
+    let mv = G.bot ? (G.boss ? bossBotStick() : botStick()) : moveVector();
     if (save.tilt && !G.bot && !mv.x) mv = { x: clamp(input.tilt / PLAYER.TILT_FULL_DEG, -1, 1), y: mv.y };
     const top = SEA.ROAM_SPEED * S.nudge * G.slow + G.burst * 0.6, m = Math.min(1, Math.hypot(mv.x, mv.y));
     const thr = m > SEA.JOY_DEAD ? SEA.JOY_MIN + (1 - SEA.JOY_MIN) * Math.pow((m - SEA.JOY_DEAD) / (1 - SEA.JOY_DEAD), SEA.JOY_CURVE) : 0;
     G.dashCd = Math.max(0, G.dashCd - dt);
-    if ((input.dash || (G.bot && G.dashCd <= 0 && botWantsDash())) && G.dashCd <= 0) {            // DASH
+    if ((input.dash || (G.bot && G.dashCd <= 0 && (G.boss ? bossBotDash() : botWantsDash()))) && G.dashCd <= 0) {            // DASH
       G.dashT = SEA.DASH_T; G.dashCd = SEA.DASH_CD;
       G.dashA = m > SEA.JOY_DEAD ? Math.atan2(mv.x, mv.y) : G.heading;
       burst(G.px, G.dist, 12, 140, 0.35); sfx.puff(); G.shake = Math.max(G.shake, 2);
@@ -837,8 +875,12 @@ export function update(dt) {
     if (G.danger) { hurt(1, 'bank'); G.pvx = (leftSide ? 1 : -1) * BANKS.PUSH; }
   }
   const lead = (v) => clamp(v * SEA.CAM_LEAD, -SEA.CAM_LEAD_MAX, SEA.CAM_LEAD_MAX) * G.seaF, ck = Math.min(1, dt * SEA.CAM_FOLLOW);
-  G.camX += ((G.px - VIEW.W / 2) * G.seaF + lead(roam ? G.mvx : 0) - G.camX) * ck;   // follows her at sea, looking ahead
-  G.camY += (lead(roam ? G.mvy - SEA.CURRENT : 0) - G.camY) * ck;
+  if (G.boss) {                                                             // a duel: frame the whole arena
+    G.camX += (G.boss.light.x - VIEW.W / 2 - G.camX) * ck; G.camY += (G.boss.light.wy - G.dist - G.camY) * ck;
+  } else {
+    G.camX += ((G.px - VIEW.W / 2) * G.seaF + lead(roam ? G.mvx : 0) - G.camX) * ck;   // follows her at sea, looking ahead
+    G.camY += (lead(roam ? G.mvy - SEA.CURRENT : 0) - G.camY) * ck;
+  }
   if (G.inv > 0) G.inv -= dt;
   if (G.shieldT > 0) G.shieldT -= dt;
   if (!G.danger && dangerAt(G.dist)) { G.danger = true; G.banner = "RED WALL: DON'T TOUCH!"; G.bannerT = 4; }
@@ -860,6 +902,7 @@ export function update(dt) {
   if (bi !== G.biomeIdx) { G.biomeIdx = bi; G.banner = BIOMES.NAMES[bi]; G.bannerT = 3; }
   if (G.bannerT > 0) G.bannerT -= dt;
   if (DEV.noSpawn) G.spawnT = 0;
+  else if (G.boss) G.spawnT = 0;                                           // a duel: the sea holds its breath
   else if (G.seaF > 0.5) seaSpawns(dt);
   else if (m > SPAWN.START_M) {
     G.spawnT += lerp3(SPAWN.RATE, b) * (1 + m / 1000 * SPAWN.RATE_GROWTH_PER_KM) * Math.sqrt(G.speed / PLAYER.SPEED_START)
@@ -868,9 +911,11 @@ export function update(dt) {
   }
 
   updateLights();
+  if (G.boss) updateBoss(dt);
+  if (G.shots.length) updateShots(dt);
   if (G.pods.length) updatePods(dt);
   if (G.flipT > 0) G.flipT -= dt;
-  updateWeapons(dt);
+  if (!G.boss) updateWeapons(dt);                                          // vapes are useless against a boss
   updateClouds(dt);
   updateEnemies(dt);
   updateHazards(dt);
