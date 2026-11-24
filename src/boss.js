@@ -9,8 +9,8 @@
 // Its head is instant death. It is smart: it won't walk into a space too small for it, so you need a long
 // enough tail to box it in. Vapes are useless against it.
 import { COLORS, BOSS } from './config.js';
-import { G, enemies, clouds, burst, addFloater, addPart, die, hurt, calcStats } from './game.js';
-import { ctx, rect, textO, SPR } from './gfx.js';
+import { G, enemies, clouds, vapes, hazards, burst, addFloater, addPart, die, hurt, calcStats } from './game.js';
+import { ctx, rect, box, text, textO, view, SPR } from './gfx.js';
 import { sfx } from './platform.js';
 
 const SN = BOSS.SNAKE, LCD = BOSS.LCD;
@@ -37,8 +37,10 @@ export function startBoss(kind, light) {
   // the sea goes quiet for the duel
   for (let i = 0; i < enemies.n; i++) { const e = enemies.items[i]; burst(e.x, e.wy, 4, 60, 0.3); e.dead = true; }
   enemies.sweep(); clouds.n = 0; G.pods = []; G.shots = [];
-  G.banner = 'LIGHTHOUSE BOSS 1: SNAKE\nEAT EGGS. GROW A TAIL. CUT HIM OFF.'; G.bannerT = SN.INTRO + 0.5;
-  sfx.level(); G.shake = 6;
+  for (let i = 0; i < vapes.n; i++) { const v = vapes.items[i]; addPart(v.x, v.wy, 0, 0, 0.3, 4, 3); }   // the sea's vapes and whirlpools go too
+  vapes.n = 0; hazards.n = 0;
+  G.banner = ''; G.bannerT = 0; B.cue = 0;
+  G.flash = 0.2; G.shake = 6; sfx.nova();
 }
 
 const cx = (B, i) => B.x0 + (i + 0.5) * SN.CELL, cy = (B, j) => B.y0 + (j + 0.5) * SN.CELL;
@@ -179,7 +181,16 @@ export function updateBoss(dt) {
     }
     return;
   }
-  if (B.phase === 'intro') { if (B.t >= SN.INTRO) B.phase = 'fight'; return; }
+  if (B.phase === 'intro') {
+    // the arrival's sound and shake land on its beats
+    const beats = [[SN.T_GRID[0], () => sfx.ui()], [SN.T_WALL[0], () => sfx.puff()],
+      [SN.T_WALL[1], () => { sfx.nova(); sfx.hurt(); G.shake = 10; G.flash = 0.12; }],
+      ...[0, 1, 2, 3, 4, 5].map((k) => [SN.T_CARD[0] + 0.2 + k * 0.3, () => sfx.ui()]),
+      [SN.T_SNAKE, () => sfx.no()], [SN.T_READY, () => sfx.pick()], [SN.INTRO - 0.35, () => { sfx.level(); G.shake = 5; }]];
+    while (B.cue < beats.length && B.t >= beats[B.cue][0]) beats[B.cue++][1]();
+    if (B.t >= SN.INTRO) B.phase = 'fight';
+    return;
+  }
 
   // eggs: whoever gets there first
   for (let e = B.eggs.length - 1; e >= 0; e--) {
@@ -253,15 +264,40 @@ export function bossBotDash() {
 export function drawBoss(sy) {
   const B = G.boss; if (!B) return;
   const C = SN.CELL, W = B.N * C, x0 = Math.round(B.x0), top = sy(B.y0 + W), bot = sy(B.y0);
-  // a Nokia-green LCD floor with a faint cell grid, inside a chunky bezel
-  rect(x0 - 8, top - 8, W + 16, W + 16, '#000'); rect(x0 - 6, top - 6, W + 12, W + 12, LCD.EDGE); rect(x0 - 2, top - 2, W + 4, W + 4, '#000');
-  rect(x0, top, W, W, LCD.FLOOR);
+  const t = B.t, prog = (a) => Math.max(0, Math.min(1, (t - a[0]) / (a[1] - a[0])));
+  const grid = prog(SN.T_GRID), wall = prog(SN.T_WALL), N = B.N, mid = (N - 1) / 2, maxR = Math.hypot(mid, mid) + 1;
+  // the grid: cell by cell, rippling out from the lighthouse, the leading edge burning bright
+  if (grid >= 1) rect(x0, top, W, W, LCD.FLOOR);
+  else for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+    const d = Math.hypot(i - mid, j - mid) / maxR - grid; if (d > 0) continue;
+    rect(x0 + i * C, sy(B.y0 + (j + 1) * C), C - (d > -0.06 ? 2 : 0), C - (d > -0.06 ? 2 : 0), d > -0.06 ? LCD.HEAD : LCD.FLOOR);
+  }
   ctx.fillStyle = LCD.GRID;
-  for (let i = 0; i <= B.N; i++) for (let j = 0; j <= B.N; j++) ctx.fillRect(x0 + i * C - 1, sy(B.y0 + j * C) - 1, 2, 2);
+  for (let i = 0; i <= N; i++) for (let j = 0; j <= N; j++) if (grid >= 1 || Math.hypot(i - mid - 0.5, j - mid - 0.5) / maxR < grid) ctx.fillRect(x0 + i * C - 1, sy(B.y0 + j * C) - 1, 2, 2);
+  // the border: racing round the edge from opposite corners, then slamming shut
+  if (wall <= 0) return;
+  const slam = t >= SN.T_WALL[1] && t < SN.T_WALL[1] + 0.25, col = slam ? '#fff' : LCD.EDGE;
+  if (wall >= 1) { rect(x0 - 8, top - 8, W + 16, 6, '#000'); rect(x0 - 8, top + W + 2, W + 16, 6, '#000'); rect(x0 - 8, top - 8, 6, W + 16, '#000'); rect(x0 + W + 2, top - 8, 6, W + 16, '#000');
+    rect(x0 - 6, top - 6, W + 12, 4, col); rect(x0 - 6, top + W + 2, W + 12, 4, col); rect(x0 - 6, top - 6, 4, W + 12, col); rect(x0 + W + 2, top - 6, 4, W + 12, col);
+    if (slam) for (let k = 0; k < 4; k++) rect(x0 - 10 - k * 6, top - 10 - k * 6, W + 20 + k * 12, 1, '#fff');
+    return; }
+  const P = 2 * W * wall;                                       // each runner covers half the perimeter
+  const run = (sx, sy0, dirs) => {
+    let left = P, x = sx, y = sy0;
+    for (const [dx, dy] of dirs) {
+      const seg = Math.min(left, W); if (seg <= 0) break;
+      const ex = x + dx * seg, ey = y + dy * seg;
+      rect(Math.min(x, ex) - 2, Math.min(y, ey) - 2, Math.abs(ex - x) + 4, Math.abs(ey - y) + 4, LCD.EDGE);
+      left -= seg; x = ex; y = ey;
+    }
+    rect(x - 5, y - 5, 10, 10, '#fff'); rect(x - 2, y - 2, 4, 4, COLORS.GINGER);     // the spark
+  };
+  run(x0 - 4, top - 4, [[1, 0], [0, 1]]); run(x0 + W + 4, top + W + 4, [[-1, 0], [0, -1]]);
 }
 /** everything that moves, drawn over the lighthouse so nothing hides behind the tower */
 export function drawBossTop(sy) {
   const B = G.boss; if (!B) return;
+  if (B.phase === 'intro' && B.t < SN.T_GRID[1]) return;                  // nothing until the grid is built
   // eggs: speckled, wobbling
   for (const [i, j] of B.eggs) {
     const x = Math.round(cx(B, i)), y = sy(cy(B, j)) + Math.round(Math.sin(B.t * 6 + i) * 1);
@@ -270,14 +306,16 @@ export function drawBossTop(sy) {
   }
   // the snake: chunky LCD blocks, a head with eyes and a flicking tongue
   const flash = B.stun > 0 && ((B.t * 16) & 1);
+  const vis = B.phase === 'intro' ? Math.max(0, Math.min(B.cells.length, Math.floor((B.t - SN.T_SNAKE) / 0.13))) : B.cells.length;
   for (let k = B.cells.length - 1; k >= 0; k--) {
+    if (k >= vis) continue;
     const [i, j] = B.cells[k], x = Math.round(cx(B, i)), y = sy(cy(B, j));
     rect(x - 7, y - 7, 14, 14, LCD.SNAKE_DARK);
     rect(x - 6, y - 6, 12, 12, flash ? '#fff' : k ? LCD.SNAKE : LCD.HEAD);
     if (k && (k & 1)) rect(x - 2, y - 2, 4, 4, LCD.SNAKE_DARK);
   }
   const h = B.cells[0];
-  if (h) {
+  if (h && vis) {
     const x = Math.round(cx(B, h[0])), y = sy(cy(B, h[1])), dx = B.dir[0], dy = -B.dir[1];
     const px = -dy, py = dx;                                        // perpendicular, for the two eyes
     rect(x + dx * 2 + px * 3 - 1, y + dy * 2 + py * 3 - 1, 3, 3, '#000'); rect(x + dx * 2 - px * 3 - 1, y + dy * 2 - py * 3 - 1, 3, 3, '#000');
@@ -292,6 +330,30 @@ export function drawBossTop(sy) {
 /** a strip under the banner: who's longer is who's winning */
 export function bossHud(W) {
   const B = G.boss; if (!B || B.phase === 'won') return;
+  const t = B.t, H = view.H;
+  if (B.phase === 'intro' && t >= SN.T_CARD[0] && t < SN.T_CARD[1]) {
+    // NEW ZONE, NEW RULES: a card that writes itself, line by line
+    ctx.fillStyle = '#000'; for (let y = 0; y < H; y += 2) ctx.fillRect(0, y, W, 1);
+    const k = t - SN.T_CARD[0], out = SN.T_CARD[1] - t, slide = Math.round(Math.max(0, 1 - k * 5) * -60 + Math.max(0, 1 - out * 5) * 60);
+    const y0 = Math.round(H * 0.24) + slide, w = W - 40;
+    rect(20, y0, w, 250, '#000'); box(20, y0, w, 250, LCD.EDGE, 3); box(26, y0 + 6, w - 12, 238, LCD.GRID, 1);
+    text('LIGHTHOUSE 1 - NEW ZONE', W / 2, y0 + 16, 2, COLORS.GINGER, 0.5);
+    textO('SNAKE', W / 2, y0 + 34, 8, LCD.SNAKE, 0.5);
+    text("YOU'RE LOCKED IN. NEW RULES:", W / 2, y0 + 82, 2, '#fff', 0.5);
+    const rules = [['EAT EGGS: GROW A TAIL', '#f4f1e1'], ['DRAG YOUR TAIL THROUGH HIM', LCD.HEAD], ['EACH SLICE COSTS ONE KAYAK', LCD.HEAD],
+      ['HIS HEAD IS INSTANT DEATH', COLORS.ENEMY], ["VAPES DON'T WORK IN HERE", '#9aa7b0'], ['DASH TO SLIP PAST HIM', '#fff']];
+    rules.forEach(([s, c], i) => {
+      const at = 0.2 + i * 0.3; if (k < at) return;
+      const n = Math.min(s.length, Math.floor((k - at) * 60)), y = y0 + 104 + i * 22;
+      rect(34, y + 1, 8, 8, c); text(s.slice(0, n), 50, y, 2, c);
+    });
+    return;
+  }
+  if (t >= SN.T_READY && t < SN.INTRO + 0.6) {
+    const go = t >= SN.INTRO - 0.35, s = go ? 'GO!' : 'READY...', sc = go ? 10 : 5;
+    if (!go || ((t * 10) | 0) & 1 || t < SN.INTRO) textO(s, W / 2, H * 0.3, sc, go ? LCD.HEAD : '#fff', 0.5);
+  }
+  if (B.phase === 'intro') return;
   const s = 'SNAKE ' + B.cells.length + '   YOUR TAIL ' + (G.tailN || 0);
   rect(W / 2 - 92, 36, 184, 16, '#000'); textO(s, W / 2, 40, 2, (G.tailN || 0) >= B.cells.length ? COLORS.GINGER : '#fff', 0.5);
 }

@@ -236,6 +236,7 @@ const CHUNKS = {
 };
 function seaChunk() {
   const len = 260;
+  if (G.boss) { G.genY += len; return; }                                   // nothing drifts into a boss arena
   for (let k = 0; k < SEA.VAPE_CLUSTERS; k++) {
     const cx = G.px + rnd(-420, 420), wy = G.genY + rnd(len), n = 3 + ((Math.random() * 4) | 0);
     for (let i = 0; i < n; i++) addVape(cx + rnd(-16, 16), wy + rnd(-22, 22));

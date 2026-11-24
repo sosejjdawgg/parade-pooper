@@ -166,7 +166,10 @@ export const BOSS = {
     AGGRO_CELLS: 6,                       // it hunts you when you're this close and it's at least as long as your tail
     EGG_R: 15, HEAD_R: 11, BODY_R: 10, TAIL_GAP: 17,
     SLICE_FROM: 4, SLICE_R: 11, SLICE_CD: 0.35,   // your tail slices its body from the 5th segment back (the neck is guarded); one kayak per slice
-    INTRO: 2.5, REWARD_CASH: 50, REWARD_LEVELS: 3,
+    INTRO: 5.2, REWARD_CASH: 50, REWARD_LEVELS: 3,
+    // the arrival, in seconds: the grid builds out from the lighthouse, the border races round and slams shut,
+    // the rules card writes itself, the snake materialises, READY... GO!
+    T_GRID: [0.15, 1.25], T_WALL: [1.1, 1.85], T_CARD: [1.95, 4.35], T_SNAKE: 2.5, T_READY: 4.35,
   },
 };
 
