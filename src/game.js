@@ -31,7 +31,8 @@ export const G = { mode: 'title', ph: [0, 0, 0], dist: 0, t: 0, bot: false };
 export const S = { area: 1, dmg: 1, cd: 1, dur: 1, magnet: 1, nudge: 1, xp: 1, cash: 1 };
 export const orbs = [];
 // developer options (see dev.js): switched on from the hidden developer menu
-export const DEV = { unlocked: false, god: false, oneHit: false, noSpawn: false, noHazards: false, hitbox: false, info: false, speed: 1, fps: 0 };
+export const DEV = { unlocked: false, god: false, oneHit: false, noSpawn: false, noHazards: false, hitbox: false, info: false, speed: 1, fps: 0,
+  infDash: false, noWhales: false, noFleets: false, noGulls: false };
 
 const rnd = (a = 1, b) => b === undefined ? Math.random() * a : a + Math.random() * (b - a);
 const pick = (arr) => arr[(Math.random() * arr.length) | 0];
@@ -312,6 +313,7 @@ function seaSpawns(dt) {
     G.banner = 'WAVE ' + G.wave; G.bannerT = 2; sfx.level();
   }
   G.orcaT -= dt;
+  if (G.orcaT <= 0 && DEV.noWhales) G.orcaT = 5;
   if (G.orcaT <= 0) { orcaPod(); G.orcaT = Math.max(SEA.ORCA_EVERY_MIN, rnd(SEA.ORCA_EVERY[0], SEA.ORCA_EVERY[1]) - G.seaT * 0.02); }
   G.pickT -= dt;
   if (G.pickT <= 0) {                     // vapes turn up all around you, not just ahead
@@ -320,8 +322,10 @@ function seaSpawns(dt) {
     for (let i = 0; i < n; i++) addVape(x + rnd(-16, 16), wy + rnd(-16, 16));
   }
   G.fleetT -= dt;
+  if (G.fleetT <= 0 && DEV.noFleets) G.fleetT = 5;
   if (G.fleetT <= 0) { G.fleetT = rnd(SHIPS.FLEET_EVERY[0], SHIPS.FLEET_EVERY[1]); fleet(); }
   G.gullT -= dt;
+  if (G.gullT <= 0 && DEV.noGulls) G.gullT = 5;
   if (G.gullT <= 0) { gullFlock(); G.gullT = rnd(SEA.GULL_EVERY[0], SEA.GULL_EVERY[1]); }
 }
 /** an HMRC fleet: a line of cutters steaming in from one side */
@@ -433,6 +437,11 @@ export function devNextLight() {
 }
 /** a full ring of enemies, closing in from every side */
 export function devRing(type, n) { const a0 = rnd(6.283); for (let i = 0; i < n; i++) { const [x, wy] = seaSpot(a0 + i / n * 6.283); addEnemy(type, x, wy, true); } }
+/** paddle right up to the first lighthouse (the Snake's) */
+export function devFirstLight() {
+  devJump(BIOMES.SEA_AT + BIOMES.BLEND + 5); G.seaF = 1; updateLights(); const h = G.lights[0];
+  if (h) { G.px = h.x; G.dist = h.wy - 120; G.camX = G.px - VIEW.W / 2; G.mvx = G.mvy = 0; }
+}
 export function devBoss() { const h = { x: G.px, wy: G.dist + 140, visited: true }; G.lights.push(h); startBoss('snake', h); }
 export function devKill() { const g = G.god, d = DEV.god; G.god = DEV.god = false; G.inv = 0; die('dev'); G.god = g; DEV.god = d; }
 
@@ -835,6 +844,7 @@ export function update(dt) {
       G.dashT = SEA.DASH_T; G.dashCd = SEA.DASH_CD;
       G.dashA = m > SEA.JOY_DEAD ? Math.atan2(mv.x, mv.y) : G.heading;
       burst(G.px, G.dist, 12, 140, 0.35); sfx.puff(); G.shake = Math.max(G.shake, 2);
+      if (DEV.infDash) G.dashCd = 0;
     }
     input.dash = false;
     if (G.dashT > 0) {

@@ -4,13 +4,14 @@
 import { VERSION, DEV_CODE, WEAPONS, PASSIVES, EVOLUTIONS, SHOP, BIOMES, BANKS, SEA, ENEMIES, COLORS, VIEW } from './config.js';
 import { view, text, textO, rect, box } from './gfx.js';
 import {
-  G, S, DEV, newRun, calcStats, addEnemy, addPickup, gainXp, hurt, devJump, devNextLight, devRing, devKill, orcaPod, gullFlock, fleet, devBoss,
+  G, S, DEV, newRun, calcStats, addEnemy, addPickup, gainXp, hurt, devJump, devNextLight, devRing, devKill, orcaPod, gullFlock, fleet, devBoss, devFirstLight,
   enemies, clouds, vapes, hazards, metres, biomeAt,
 } from './game.js';
-import { save, writeSave, resetSave, sfx } from './platform.js';
+import { save, writeSave, resetSave, sfx, nokia } from './platform.js';
+import { bossDev } from './boss.js';
 
 const { FG, BG, GINGER } = COLORS, W = VIEW.W;
-const KEY = 'vapekayak.dev', PERSIST = ['unlocked', 'god', 'oneHit', 'noSpawn', 'noHazards', 'hitbox', 'info', 'speed'];
+const KEY = 'vapekayak.dev', PERSIST = ['unlocked', 'god', 'oneHit', 'noSpawn', 'noHazards', 'hitbox', 'info', 'speed', 'infDash', 'noWhales', 'noFleets', 'noGulls'];
 export function loadDev() { try { Object.assign(DEV, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch { /* private mode */ } }
 function saveDev() { try { const o = {}; for (const k of PERSIST) o[k] = DEV[k]; localStorage.setItem(KEY, JSON.stringify(o)); } catch { /* ignore */ } }
 
@@ -47,7 +48,7 @@ export function devCodeScreen(ui) {
 }
 
 // ---- the menu ---------------------------------------------------------------------------
-const TABS = ['RUN', 'BUILD', 'SPAWN', 'WORLD', 'SAVE', 'DEBUG'];
+const TABS = ['RUN', 'BUILD', 'SPAWN', 'WORLD', 'SEA', 'BOSS', 'SAVE', 'DEBUG'];
 const SPEEDS = [0.25, 0.5, 1, 2, 4, 8];
 const SFX = ['vape', 'big', 'cash', 'puff', 'nova', 'kill', 'heal', 'hurt', 'level', 'pick', 'ui', 'no', 'buy', 'death'];
 
@@ -56,7 +57,7 @@ export function devScreen(ui) {
   rect(0, 0, W, H, BG);
   text('DEV OPTIONS', 10, 10, 3, GINGER);
   text('V' + VERSION + (inRun() ? '  IN RUN ' + metres() + 'M' : '  NO RUN'), W - 10, 14, 1, FG, 1);
-  TABS.forEach((t, i) => { if (ui.button(6 + (i % 3) * 117, 32 + ((i / 3) | 0) * 30, 113, 26, t, { inv: devState.tab === i })) devState.tab = i; });
+  TABS.forEach((t, i) => { if (ui.button(6 + (i % 4) * 87, 32 + ((i / 4) | 0) * 30, 84, 26, t, { inv: devState.tab === i })) devState.tab = i; });
   const top = 100, bottom = H - 50;
   rect(0, top - 6, W, 1, FG);
 
@@ -89,6 +90,8 @@ export function devScreen(ui) {
     runAct('CLEAR HAZARDS', () => { hazards.n = 0; }, 'HAZARDS CLEARED');
     runAct('SHIELD READY', () => { G.shieldT = 0; });
     runAct('MAX BOOST', () => { G.burst = 200; });
+    toggle('INFINITE DASH', 'infDash');
+    runAct('DASH READY', () => { G.dashCd = 0; });
     act('NEW RUN', () => { newRun(); devState.from = 'pause'; G.mode = 'dev'; }, 'NEW RUN STARTED');
     act('DIE NOW', () => { ensureRun(); G.mode = 'play'; devKill(); }, null);
   } else if (tab === 'BUILD') {
@@ -121,7 +124,7 @@ export function devScreen(ui) {
     for (const t in ENEMIES) if (t !== 'gull' && t !== 'cutter') runAct(t.toUpperCase() + ' X5', () => { for (let i = 0; i < 5; i++) addEnemy(t, G.px + (Math.random() - 0.5) * 120, G.dist + 220 + i * 24); });
     runAct('ORCA POD: SWEEP', () => orcaPod('sweep'), 'WHALES!'); runAct('ORCA POD: DIAGONAL', () => orcaPod('diag'), 'WHALES!');
     runAct('ORCA POD: CHARGE', () => orcaPod('charge'), 'WHALES!'); runAct('GULL FLOCK', () => gullFlock());
-    runAct('HMRC FLEET', () => fleet(), 'FLEET!'); runAct('BOSS: SNAKE', () => { if (!G.boss) devBoss(); }, 'SNAKE!');
+    runAct('HMRC FLEET', () => fleet(), 'FLEET!');
     runAct('SURROUND RING X16', () => devRing('swan', 16), 'RING INCOMING');
     runAct('PIRANHA RING X24', () => devRing('piranha', 24), 'RING INCOMING');
     runAct('SEA WAVE NOW', () => { G.waveT = 0; }, G.seaF > 0.5 ? 'WAVE!' : 'WAVES ONLY RUN AT SEA');
@@ -138,6 +141,31 @@ export function devScreen(ui) {
     runAct('SEA: +5 MIN', () => { G.seaT += 300; }, 'SEA CLOCK +5 MIN (TOUGHER ENEMIES)');
     runAct('+1 LIGHTHOUSE', () => { G.lighthouses++; calcStats(); }, 'DAMAGE X' + (1 + ((G.lighthouses || 0) + 1) * SEA.LIGHT_DMG).toFixed(1));
     runAct('RESET LIGHTHOUSES', () => { G.lighthouses = 0; calcStats(); });
+  } else if (tab === 'SEA') {
+    runAct('FIRST LIGHTHOUSE', () => devFirstLight(), "PADDLE IN: SNAKE'S LIGHTHOUSE");
+    runAct('OPEN SEA', () => devJump(BIOMES.SEA_AT + BIOMES.BLEND + 10), 'OPEN SEA');
+    runAct('NEXT LIGHTHOUSE', () => { if (!devNextLight()) ui.say('NO LIGHTHOUSE AHEAD'); });
+    runAct('SEA WAVE NOW', () => { G.waveT = 0; });
+    runAct('WHALES NOW', () => { G.orcaT = 0; }); runAct('FLEET NOW', () => fleet());
+    runAct('GULLS NOW', () => gullFlock()); runAct('CLEAR SHELLS', () => { G.shots = []; });
+    toggle('NO WHALES', 'noWhales'); toggle('NO FLEETS', 'noFleets');
+    toggle('NO GULLS', 'noGulls');
+    runAct('SEA CLOCK +60S', () => { G.seaT += 60; }, 'SEA CLOCK +60S (TOUGHER)');
+    runAct('SEA CLOCK RESET', () => { G.seaT = 0; G.wave = 0; });
+  } else if (tab === 'BOSS') {
+    const has = !!G.boss;
+    runAct(has ? 'BOSS RUNNING' : 'START SNAKE', () => { if (!G.boss) devBoss(); }, has ? null : 'SNAKE!');
+    runAct('SKIP INTRO', () => bossDev.skipIntro());
+    runAct('HIT HIM (-1 LIFE)', () => bossDev.hit());
+    runAct('WIN NOW', () => bossDev.win());
+    runAct('PHASE 1: CALM', () => bossDev.phase(0)); runAct('PHASE 2: ANGRY', () => bossDev.phase(1));
+    runAct('PHASE 3: WALLS DOWN', () => bossDev.phase(2)); runAct('SMASH WALLS', () => bossDev.smash());
+    runAct('+5 TAIL KAYAKS', () => bossDev.tail(5)); runAct('-5 TAIL KAYAKS', () => bossDev.tail(-5));
+    runAct('SNAKE +5 LONG', () => bossDev.grow(5)); runAct('EGG SHOWER', () => bossDev.eggs());
+    runAct((has && G.boss.frozen) ? 'UNFREEZE SNAKE' : 'FREEZE SNAKE', () => bossDev.freeze());
+    runAct('LEAVE BOSS', () => bossDev.quit(), 'BOSS ABANDONED');
+    runAct('TEST NOKIA SOUNDS', () => { const k = Object.keys(nokia); const n = k[devState.nk = ((devState.nk || 0) + 1) % k.length]; nokia[n](0); ui.say('NOKIA: ' + n.toUpperCase()); });
+    text(bossDev.info(), 10, bottom - 14, 1, GINGER);
   } else if (tab === 'SAVE') {
     act('+£100 WALLET', () => { save.cash += 100; writeSave(); }, 'WALLET £' + (save.cash + 100));
     act('+£1000 WALLET', () => { save.cash += 1000; writeSave(); }, 'WALLET £' + (save.cash + 1000));
@@ -168,6 +196,9 @@ export function devScreen(ui) {
       line('LV ' + G.level + '  XP ' + Math.round(G.xp) + '/' + G.xpNeed + '  HP ' + Math.round(G.hp) + '/' + G.maxHp + '  SPEED ' + Math.round(G.speed));
       line('DMG X' + S.dmg.toFixed(2) + '  AREA X' + S.area.toFixed(2) + '  CD X' + S.cd.toFixed(2) + '  DUR X' + S.dur.toFixed(2));
       line('WAVE ' + (G.wave || 0) + '  SEA TIME ' + Math.round(G.seaT || 0) + 'S  LIGHTHOUSES ' + (G.lighthouses || 0) + '  KILLS ' + G.kills);
+      line('ROAM V ' + Math.round(G.mvx || 0) + ',' + Math.round(G.mvy || 0) + '  HEADING ' + Math.round((G.heading || 0) * 57.3) + '  ZOOM ' + (G.zoom || 1).toFixed(2) + '  DASH CD ' + (G.dashCd || 0).toFixed(1));
+      line('PODS ' + (G.pods || []).length + '  SHELLS ' + (G.shots || []).length + '  NEXT: WAVE ' + Math.round(G.waveT || 0) + 'S WHALES ' + Math.round(G.orcaT || 0) + 'S FLEET ' + Math.round(G.fleetT || 0) + 'S');
+      line('BOSS: ' + bossDev.info());
     }
   }
   const back = inRun() ? 'BACK TO RUN' : 'BACK TO TITLE';
@@ -181,8 +212,9 @@ export function devOverlay() {
     'FPS ' + Math.round(DEV.fps) + '  ' + metres() + 'M  B' + biomeAt(G.dist).toFixed(2) + (G.seaF > 0 ? ' SEA' + G.seaF.toFixed(2) : ''),
     'EN ' + enemies.n + ' CL ' + clouds.n + ' PU ' + vapes.n + ' HZ ' + hazards.n,
     'DMG X' + S.dmg.toFixed(2) + ' SPD ' + Math.round(G.speed) + (G.wave ? ' WAVE ' + G.wave : '') + (G.lighthouses ? ' LH ' + G.lighthouses : ''),
-    (DEV.god ? 'GOD ' : '') + (DEV.oneHit ? '1HIT ' : '') + (DEV.noSpawn ? 'NOSPAWN ' : '') + (DEV.noHazards ? 'NOHAZ ' : '') + (DEV.speed !== 1 ? 'X' + DEV.speed : ''),
+    (G.boss ? bossDev.info() : G.seaF > 0.5 ? 'ZOOM ' + (G.zoom || 1).toFixed(2) + ' DASH ' + (G.dashCd || 0).toFixed(1) + ' PODS ' + G.pods.length + ' SHELLS ' + G.shots.length : ''),
+    (DEV.god ? 'GOD ' : '') + (DEV.oneHit ? '1HIT ' : '') + (DEV.noSpawn ? 'NOSPAWN ' : '') + (DEV.noHazards ? 'NOHAZ ' : '') + (DEV.infDash ? 'INFDASH ' : '') + (DEV.noWhales ? 'NOWHALE ' : '') + (DEV.noFleets ? 'NOFLEET ' : '') + (DEV.speed !== 1 ? 'X' + DEV.speed : ''),
   ];
-  rect(0, 0, 196, lines.length * 10 + 6, BG);
-  lines.forEach((l, i) => textO(l, 4, 4 + i * 10, 1, i === 3 ? GINGER : FG));
+  rect(0, 0, 250, lines.length * 10 + 6, BG);
+  lines.forEach((l, i) => textO(l, 4, 4 + i * 10, 1, i === lines.length - 1 ? GINGER : FG));
 }

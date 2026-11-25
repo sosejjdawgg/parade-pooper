@@ -271,6 +271,7 @@ export function updateBoss(dt) {
   }
   // the snake moves on its own clock, faster the longer it gets
   if (B.stun > 0) B.stun -= dt;
+  else if (B.frozen) { /* developer: frozen in place */ }
   else {
     B.tickT += dt;
     const tick = Math.max(SN.TICK_MIN, SN.TICK - B.cells.length * SN.TICK_PER_SEG) * SN.HIT_SPEED[anger(B)];
@@ -300,6 +301,30 @@ export function updateBoss(dt) {
     }
   }
 }
+
+// ---- developer shortcuts (dev.js BOSS tab) ------------------------------------------------
+export const bossDev = {
+  skipIntro() { const B = G.boss; if (B && B.phase === 'intro') { B.t = SN.INTRO; B.cue = 999; B.phase = 'fight'; } },
+  hit() { const B = G.boss; if (B && B.phase === 'fight') { B.inv = 0; hit(B, 'DEVELOPER HIT'); } },
+  phase(lv) {                                                      // 0 calm, 1 angry, 2 furious (walls down)
+    const B = G.boss; if (!B || B.phase === 'won') return;
+    if (B.phase === 'intro') this.skipIntro();
+    B.hp = SN.HP - lv; B.inv = 0;
+    if (B.hp <= SN.BREAK_AT && !B.wrap) breakWalls(B); else if (B.hp > SN.BREAK_AT) { B.wrap = false; B.breakT = -1; }
+  },
+  smash() { const B = G.boss; if (B && !B.wrap) breakWalls(B); },
+  tail(n) { G.tailN = Math.max(0, (G.tailN || 0) + n); },
+  grow(n) { const B = G.boss; if (B) B.grow += n; },
+  eggs() { const B = G.boss; if (B) for (let k = 0; k < 6; k++) spawnEgg(B); },
+  freeze() { const B = G.boss; if (B) B.frozen = !B.frozen; return B && B.frozen; },
+  win() { const B = G.boss; if (!B) return; if (B.phase === 'intro') this.skipIntro(); B.hp = 1; B.inv = 0; hit(B, 'DEVELOPER WIN'); },
+  quit() { if (!G.boss) return; G.boss = null; G.tailN = 0; G.tailPos = []; G.trail = []; },
+  info() {
+    const B = G.boss; if (!B) return 'NO BOSS';
+    return B.kind.toUpperCase() + ' ' + B.phase.toUpperCase() + '  LIVES ' + B.hp + '/' + SN.HP + '  LEN ' + B.cells.length + '  TAIL ' + (G.tailN || 0) +
+      '  ' + (B.wrap ? 'WRAP ' : '') + (B.hunting ? 'HUNT ' : '') + (B.frozen ? 'FROZEN' : '');
+  },
+};
 
 /** open-water autopilot during the boss: race for eggs, keep clear of the head */
 export function bossBotStick() {
