@@ -26,6 +26,7 @@ export function startBoss(kind, light) {
   const B = G.boss = {
     kind, t: 0, phase: 'intro', light, N, x0: light.x - N * C / 2, y0: light.wy - N * C / 2,
     cells: [], dir: [1, 0], tickT: 0, stun: 0, eggs: [], grow: 0, deadT: 0, cuts: 0, eaten: 0,
+    hp: SN.HP, inv: 0, wrap: false, breakT: -1, hitT: -9,
   };
   // the snake starts in the far corner from you, heading along the wall
   const youRight = G.px > light.x, youUp = G.dist > light.wy, L = SN.START_LEN;
@@ -47,6 +48,16 @@ export function startBoss(kind, light) {
 
 const cx = (B, i) => B.x0 + (i + 0.5) * SN.CELL, cy = (B, j) => B.y0 + (j + 0.5) * SN.CELL;
 const inside = (B, i, j) => i >= 0 && j >= 0 && i < B.N && j < B.N;
+/** the next cell in a direction: off the edge is a wall, until he smashes the walls; then it wraps round */
+function nb(B, i, j, d) {
+  const ni = i + d[0], nj = j + d[1];
+  if (B.wrap) return [(ni + B.N) % B.N, (nj + B.N) % B.N];
+  return inside(B, ni, nj) ? [ni, nj] : null;
+}
+/** shortest separation along one axis: across the seam once the arena wraps */
+function wd(B, a) { const W = B.N * SN.CELL; if (B.wrap) { a = ((a % W) + W * 1.5) % W - W / 2; } return a; }
+const sep = (B, x1, y1, x2, y2) => Math.hypot(wd(B, x1 - x2), wd(B, y1 - y2));
+const anger = (B) => SN.HP - B.hp;                                          // 0 calm, 1 angry, 2 furious
 const isLight = (B, i, j) => (i === B.N / 2 - 1 || i === B.N / 2) && (j === B.N / 2 - 1 || j === B.N / 2);
 function cellOf(B, x, wy) { return [Math.floor((x - B.x0) / SN.CELL), Math.floor((wy - B.y0) / SN.CELL)]; }
 
@@ -76,9 +87,9 @@ function bfs(B, g, i, j, targets) {
   for (let h = 0; h < q.length; h++) {
     const c = q[h]; if (T.has(c)) return dist[c];
     const ci = c % N, cj = (c / N) | 0;
-    for (const [dx, dy] of DIRS) {
-      const ni = ci + dx, nj = cj + dy; if (!inside(B, ni, nj)) continue;
-      const n = nj * N + ni; if (dist[n] >= 0 || (g[n] && !T.has(n))) continue;
+    for (const d of DIRS) {
+      const c2 = nb(B, ci, cj, d); if (!c2) continue;
+      const n = c2[1] * N + c2[0]; if (dist[n] >= 0 || (g[n] && !T.has(n))) continue;
       dist[n] = dist[c] + 1; q.push(n);
     }
   }
@@ -89,9 +100,9 @@ function room(B, g, i, j, cap) {
   const N = B.N, seen = new Uint8Array(N * N), q = [j * N + i]; seen[q[0]] = 1;
   for (let h = 0; h < q.length && q.length < cap; h++) {
     const c = q[h], ci = c % N, cj = (c / N) | 0;
-    for (const [dx, dy] of DIRS) {
-      const ni = ci + dx, nj = cj + dy; if (!inside(B, ni, nj)) continue;
-      const n = nj * N + ni; if (seen[n] || g[n]) continue; seen[n] = 1; q.push(n);
+    for (const d of DIRS) {
+      const c2 = nb(B, ci, cj, d); if (!c2) continue;
+      const n = c2[1] * N + c2[0]; if (seen[n] || g[n]) continue; seen[n] = 1; q.push(n);
     }
   }
   return q.length;
@@ -99,18 +110,21 @@ function room(B, g, i, j, cap) {
 
 function think(B) {
   const g = grid(B), head = B.cells[0], len = B.cells.length;
+  const lv = anger(B), N = B.N, look = SN.LOOK[lv];
   const [pi, pj] = cellOf(B, G.px, G.dist);
-  const near = Math.abs(pi - head[0]) + Math.abs(pj - head[1]);
-  const hunt = !B.eggs.length || (near <= SN.AGGRO_CELLS && len >= (G.tailN || 0));    // confident: go for you
+  const near = Math.abs(wd(B, (pi - head[0]) * SN.CELL)) / SN.CELL + Math.abs(wd(B, (pj - head[1]) * SN.CELL)) / SN.CELL;
+  const hunt = !B.eggs.length || lv >= 2 || (near <= SN.HIT_AGGRO[lv] && (lv > 0 || len >= (G.tailN || 0)));   // calm: only when confident
   if (hunt && !B.hunting) nokia.hiss();
   B.hunting = hunt;
-  const targets = hunt && inside(B, pi, pj) ? [[pi, pj]] : B.eggs;
+  // angry, he aims where you're going, not where you are; furious, he'll use the seams to cut you off
+  let [ti, tj] = cellOf(B, G.px + G.mvx * look, G.dist + G.mvy * look);
+  if (B.wrap) { ti = (ti % N + N) % N; tj = (tj % N + N) % N; } else { ti = Math.max(0, Math.min(N - 1, ti)); tj = Math.max(0, Math.min(N - 1, tj)); }
+  const targets = hunt ? [[ti, tj]] : B.eggs;
   let best = null, costly = null;
   for (const d of DIRS) {
     if (d[0] === -B.dir[0] && d[1] === -B.dir[1]) continue;                             // no reversing, it's Snake
-    const ni = head[0] + d[0], nj = head[1] + d[1];
-    if (!inside(B, ni, nj)) continue;
-    const v = g[nj * B.N + ni];
+    const c2 = nb(B, head[0], head[1], d); if (!c2) continue;
+    const [ni, nj] = c2, v = g[nj * B.N + ni];
     if (v === 1 || v === 2) continue;
     if (v === 3) { costly = costly || { d, ni, nj }; continue; }
     const safe = room(B, g, ni, nj, len * 3 + 20) >= len + 2;
@@ -127,20 +141,47 @@ function cut(B, ni, nj) {
   G.tailPos.forEach((p, i) => { const d = Math.hypot(p.x - cx(B, ni), p.wy - cy(B, nj)); if (d < bd) { bd = d; k = i; } });
   if (k >= 0) { const p = G.tailPos[k]; burst(p.x, p.wy, 14, 120, 0.4); addFloater('SACRIFICED!', p.x, p.wy + 16, 1); }
   G.tailN = Math.max(0, (G.tailN || 0) - 1);
-  for (let c = 0; c < SN.CUT && B.cells.length; c++) { const s = B.cells.pop(); burst(cx(B, s[0]), cy(B, s[1]), 6, 90, 0.35); }
-  B.cuts++; B.stun = SN.STUN; B.grow = 0; B.lumps = [];
+  for (let c = 0; c < SN.CUT && B.cells.length > SN.SLICE_FROM; c++) { const s = B.cells.pop(); burst(cx(B, s[0]), cy(B, s[1]), 6, 90, 0.35); }
+  B.cuts++; B.grow = 0; B.lumps = [];
   nokia.cut(); G.shake = Math.max(G.shake, 5);
   addFloater('CUT OFF!', cx(B, ni), cy(B, nj) + 20, 2);
-  if (B.cells.length <= SN.DIE_AT) win(B, 'CUT TO PIECES');
+  hit(B, 'CUT TO PIECES');
 }
 function slice(B, k, p) {
   const gone = B.cells.splice(k);
   gone.forEach((s, i) => { burst(cx(B, s[0]), cy(B, s[1]), 5, 70 + i * 4, 0.4); addPart(cx(B, s[0]), cy(B, s[1]), 0, 0, 0.3, 8, 3); });
   burst(p.x, p.wy, 14, 130, 0.45); addFloater('SLICED! -' + gone.length, p.x, p.wy + 18, 2);
-  G.tailN = Math.max(0, (G.tailN || 0) - 1); B.grow = 0; B.stun = SN.STUN * 0.6; B.sliceCd = SN.SLICE_CD; B.cuts++;
+  G.tailN = Math.max(0, (G.tailN || 0) - 1); B.grow = 0; B.sliceCd = SN.SLICE_CD; B.cuts++;
   B.lumps = (B.lumps || []).filter((k) => k < B.cells.length);
   nokia.slice(); G.shake = Math.max(G.shake, 6);
-  if (B.cells.length <= SN.DIE_AT) win(B, 'SLICED TO BITS');
+  hit(B, 'SLICED TO BITS');
+}
+/** a hit: one life gone. He comes back faster and angrier; on his last life he smashes the walls */
+function hit(B, how) {
+  if (B.inv > 0 || B.phase !== 'fight') return;
+  B.hp--; B.inv = SN.HIT_INV; B.stun = SN.STUN; B.hitT = B.t;
+  const h = B.cells[0];
+  if (h) addFloater(B.hp > 0 ? 'HIT! ' + B.hp + ' LEFT' : 'FINISHED!', cx(B, h[0]), cy(B, h[1]) + 24, 2);
+  G.shake = Math.max(G.shake, 9); G.flash = 0.1;
+  if (B.hp <= 0) { win(B, how); return; }
+  nokia.cut(); setTimeout(() => nokia.hiss(), 250);
+  if (B.hp === SN.BREAK_AT) breakWalls(B);
+  else { G.banner = "HE'S ANGRY NOW\nFASTER. SMARTER. HUNTING YOU."; G.bannerT = 2.5; }
+}
+/** the final phase: the walls shatter and the arena wraps round, left to right and top to bottom */
+function breakWalls(B) {
+  B.wrap = true; B.breakT = 0;
+  const C = SN.CELL, W = B.N * C;
+  for (let k = 0; k < 80; k++) {                                  // the border bursts into pixels
+    const side = k & 3, f = Math.random();
+    const x = side === 0 ? B.x0 + f * W : side === 1 ? B.x0 + W : side === 2 ? B.x0 + f * W : B.x0;
+    const y = side === 0 ? B.y0 + W : side === 1 ? B.y0 + f * W : side === 2 ? B.y0 : B.y0 + f * W;
+    const out = [[0, 1], [1, 0], [0, -1], [-1, 0]][side];
+    addPart(x, y, out[0] * (60 + Math.random() * 140) + (Math.random() - 0.5) * 60, out[1] * (60 + Math.random() * 140) + (Math.random() - 0.5) * 60, 0.6 + Math.random() * 0.6, 3);
+  }
+  nokia.slam(); setTimeout(() => nokia.over(), 120);
+  G.shake = 14; G.flash = 0.2;
+  G.banner = "HE'S SMASHED THE WALLS!\nTHE EDGES WRAP ROUND NOW"; G.bannerT = 3.5;
 }
 function win(B, how) {
   if (B.phase === 'won') return;
@@ -154,20 +195,28 @@ export function updateBoss(dt) {
   B.t += dt;
   // keep her inside the arena
   const C = SN.CELL, x1 = B.x0 + B.N * C, y1 = B.y0 + B.N * C;
-  if (G.px < B.x0 + 8) { G.px = B.x0 + 8; G.mvx = Math.max(0, G.mvx); } else if (G.px > x1 - 8) { G.px = x1 - 8; G.mvx = Math.min(0, G.mvx); }
-  if (G.dist < B.y0 + 8) { G.dist = B.y0 + 8; G.mvy = Math.max(0, G.mvy); } else if (G.dist > y1 - 8) { G.dist = y1 - 8; G.mvy = Math.min(0, G.mvy); }
+  if (B.wrap) {                                                   // the walls are gone: off one edge, on at the other
+    const W = B.N * C;
+    if (G.px < B.x0) G.px += W; else if (G.px >= x1) G.px -= W;
+    if (G.dist < B.y0) G.dist += W; else if (G.dist >= y1) G.dist -= W;
+  } else {
+    if (G.px < B.x0 + 8) { G.px = B.x0 + 8; G.mvx = Math.max(0, G.mvx); } else if (G.px > x1 - 8) { G.px = x1 - 8; G.mvx = Math.min(0, G.mvx); }
+    if (G.dist < B.y0 + 8) { G.dist = B.y0 + 8; G.mvy = Math.max(0, G.mvy); } else if (G.dist > y1 - 8) { G.dist = y1 - 8; G.mvy = Math.min(0, G.mvy); }
+  }
+  if (B.inv > 0) B.inv -= dt;
+  if (B.breakT >= 0) B.breakT += dt;
   // your tail: kayaks spaced along your wake, like Snake
   const tr = G.trail, last = tr[tr.length - 1];
-  if (Math.hypot(G.px - last.x, G.dist - last.wy) > 2) tr.push({ x: G.px, wy: G.dist });
+  if (sep(B, G.px, G.dist, last.x, last.wy) > 2) tr.push({ x: G.px, wy: G.dist });
   const need = ((G.tailN || 0) + 2) * SN.TAIL_GAP;
   let acc = 0, k = 1, prev = { x: G.px, wy: G.dist }; G.tailPos = [];
   for (let i = tr.length - 1; i >= 0 && k <= (G.tailN || 0); i--) {
-    const p = tr[i], d = Math.hypot(prev.x - p.x, prev.wy - p.wy); acc += d;
-    while (acc >= k * SN.TAIL_GAP && k <= G.tailN) { G.tailPos.push({ x: p.x, wy: p.wy, a: Math.atan2(prev.x - p.x, prev.wy - p.wy) }); k++; }
+    const p = tr[i], d = sep(B, prev.x, prev.wy, p.x, p.wy); acc += d;
+    while (acc >= k * SN.TAIL_GAP && k <= G.tailN) { G.tailPos.push({ x: p.x, wy: p.wy, a: Math.atan2(wd(B, prev.x - p.x), wd(B, prev.wy - p.wy)) }); k++; }
     prev = p;
   }
   let total = 0, cutAt = 0;                                        // forget wake older than the tail needs
-  for (let i = tr.length - 1; i > 0; i--) { total += Math.hypot(tr[i].x - tr[i - 1].x, tr[i].wy - tr[i - 1].wy); if (total > need + 40) { cutAt = i - 1; break; } }
+  for (let i = tr.length - 1; i > 0; i--) { total += sep(B, tr[i].x, tr[i].wy, tr[i - 1].x, tr[i - 1].wy); if (total > need + 40) { cutAt = i - 1; break; } }
   if (cutAt > 0) tr.splice(0, cutAt);
 
   if (B.phase === 'won') {
@@ -211,12 +260,12 @@ export function updateBoss(dt) {
   // your tail is a blade: drag a kayak through the snake's body and you slice it there. Everything behind the
   // cut falls away, and that kayak is sacrificed
   B.sliceCd = Math.max(0, (B.sliceCd || 0) - dt);
-  if (B.sliceCd <= 0 && G.tailPos.length && B.cells.length > SN.DIE_AT) {
+  if (B.sliceCd <= 0 && B.inv <= 0 && G.tailPos.length && B.cells.length > SN.SLICE_FROM) {
     outer: for (let t = 0; t < G.tailPos.length; t++) {
       const p = G.tailPos[t];
       for (let k = SN.SLICE_FROM; k < B.cells.length; k++) {
         const s = B.cells[k];
-        if (Math.hypot(p.x - cx(B, s[0]), p.wy - cy(B, s[1])) < SN.SLICE_R) { slice(B, k, p); break outer; }
+        if (sep(B, p.x, p.wy, cx(B, s[0]), cy(B, s[1])) < SN.SLICE_R) { slice(B, k, p); break outer; }
       }
     }
   }
@@ -224,11 +273,15 @@ export function updateBoss(dt) {
   if (B.stun > 0) B.stun -= dt;
   else {
     B.tickT += dt;
-    const tick = Math.max(SN.TICK_MIN, SN.TICK - B.cells.length * SN.TICK_PER_SEG);
+    const tick = Math.max(SN.TICK_MIN, SN.TICK - B.cells.length * SN.TICK_PER_SEG) * SN.HIT_SPEED[anger(B)];
     while (B.tickT >= tick && B.phase === 'fight' && B.stun <= 0) {
       B.tickT -= tick;
       const m = think(B);
-      if (!m) { win(B, 'TRAPPED AND CRASHED'); break; }
+      if (!m) {                                                   // boxed in: he crashes, it costs him a life, and he turns round
+        B.cells.reverse(); const a = B.cells[0], b = B.cells[1]; if (b) B.dir = [a[0] - b[0], a[1] - b[1]];
+        if (Math.abs(B.dir[0]) > 1 || Math.abs(B.dir[1]) > 1) B.dir = [-Math.sign(B.dir[0]), -Math.sign(B.dir[1])];
+        addFloater('CRASHED!', cx(B, a[0]), cy(B, a[1]) + 20, 2); hit(B, 'TRAPPED AND CRASHED'); break;
+      }
       if (m.tail) { cut(B, m.ni, m.nj); break; }
       B.dir = m.d; B.cells.unshift([m.ni, m.nj]);
       B.lumps = (B.lumps || []).map((k) => k + 1).filter((k) => k < B.cells.length);   // swallowed eggs travel down the body
@@ -240,9 +293,9 @@ export function updateBoss(dt) {
   // contact: the head is death, the body bites
   if (B.phase === 'fight' && G.dashT <= 0 && !G.dead) {
     const h = B.cells[0];
-    if (h && Math.hypot(G.px - cx(B, h[0]), G.dist - cy(B, h[1])) < SN.HEAD_R) { G.inv = 0; die('snake'); if (G.dead) nokia.over(); return; }
+    if (h && sep(B, G.px, G.dist, cx(B, h[0]), cy(B, h[1])) < SN.HEAD_R) { G.inv = 0; die('snake'); if (G.dead) nokia.over(); return; }
     for (let k = 1; k < B.cells.length; k++) {
-      const s = B.cells[k], dx = G.px - cx(B, s[0]), dy = G.dist - cy(B, s[1]), d = Math.hypot(dx, dy);
+      const s = B.cells[k], dx = wd(B, G.px - cx(B, s[0])), dy = wd(B, G.dist - cy(B, s[1])), d = Math.hypot(dx, dy);
       if (d < SN.BODY_R) { hurt(1, 'snake'); G.mvx = dx / (d || 1) * 220; G.mvy = dy / (d || 1) * 220; break; }
     }
   }
@@ -286,6 +339,19 @@ export function drawBoss(sy) {
   // the border: racing round the edge from opposite corners, then slamming shut
   if (wall <= 0) return;
   const slam = t >= SN.T_WALL[1] && t < SN.T_WALL[1] + 0.25, col = slam ? '#fff' : LCD.EDGE;
+  if (B.wrap) {                                                   // smashed: a broken, flickering edge you can cross
+    const on = ((t * 8) | 0) & 1;
+    for (let k = 0; k < B.N; k++) {
+      if (((k + (on ? 1 : 0)) % 3) === 0) continue;
+      const c = (k + ((t * 6) | 0)) % 4 ? LCD.EDGE : '#fff';
+      rect(x0 + k * C + 2, top - 5, C - 4, 2, c); rect(x0 + k * C + 2, top + W + 3, C - 4, 2, c);
+      rect(x0 - 5, top + k * C + 2, 2, C - 4, c); rect(x0 + W + 3, top + k * C + 2, 2, C - 4, c);
+    }
+    const a = ((t * 3) | 0) & 1 ? COLORS.GINGER : LCD.HEAD, m = W / 2;                 // wrap arrows on every side
+    for (const [ax, ay, dx, dy] of [[x0 - 12, top + m, -1, 0], [x0 + W + 12, top + m, 1, 0], [x0 + m, top - 12, 0, -1], [x0 + m, top + W + 12, 0, 1]])
+      for (let k = 0; k < 4; k++) rect(ax + dx * k * 2 - (dy ? k : 0) - 1, ay + dy * k * 2 - (dx ? k : 0) - 1, dy ? k * 2 + 2 : 2, dx ? k * 2 + 2 : 2, a);
+    return;
+  }
   if (wall >= 1) { rect(x0 - 8, top - 8, W + 16, 6, '#000'); rect(x0 - 8, top + W + 2, W + 16, 6, '#000'); rect(x0 - 8, top - 8, 6, W + 16, '#000'); rect(x0 + W + 2, top - 8, 6, W + 16, '#000');
     rect(x0 - 6, top - 6, W + 12, 4, col); rect(x0 - 6, top + W + 2, W + 12, 4, col); rect(x0 - 6, top - 6, 4, W + 12, col); rect(x0 + W + 2, top - 6, 4, W + 12, col);
     if (slam) for (let k = 0; k < 4; k++) rect(x0 - 10 - k * 6, top - 10 - k * 6, W + 20 + k * 12, 1, '#fff');
@@ -314,13 +380,14 @@ export function drawBossTop(sy) {
     rect(x - 2, y - 2, 1, 1, LCD.SNAKE_DARK); rect(x + 1, y + 1, 1, 1, LCD.SNAKE_DARK); rect(x - 1, y + 3, 1, 1, LCD.SNAKE_DARK);
   }
   // the snake: chunky LCD blocks, a head with eyes and a flicking tongue
-  const flash = B.stun > 0 && ((B.t * 16) & 1);
+  const lv = anger(B), body = [LCD.SNAKE, '#e0b83a', ((B.t * 6) | 0) & 1 ? '#ff5a3c' : '#d83a2a'][lv], headC = [LCD.HEAD, '#ffd75a', '#ff8a5a'][lv];
+  const flash = (B.stun > 0 || B.inv > 0) && ((B.t * 16) & 1);
   const vis = B.phase === 'intro' ? Math.max(0, Math.min(B.cells.length, Math.floor((B.t - SN.T_SNAKE) / 0.13))) : B.cells.length;
   for (let k = B.cells.length - 1; k >= 0; k--) {
     if (k >= vis) continue;
     const [i, j] = B.cells[k], x = Math.round(cx(B, i)), y = sy(cy(B, j)), lump = k && B.lumps && B.lumps.includes(k) ? 2 : 0;
     rect(x - 7 - lump, y - 7 - lump, 14 + lump * 2, 14 + lump * 2, LCD.SNAKE_DARK);                // a swallowed egg bulges as it travels down
-    rect(x - 6 - lump, y - 6 - lump, 12 + lump * 2, 12 + lump * 2, flash ? '#fff' : k ? LCD.SNAKE : LCD.HEAD);
+    rect(x - 6 - lump, y - 6 - lump, 12 + lump * 2, 12 + lump * 2, flash ? '#fff' : k ? body : headC);
     if (lump) rect(x - 3, y - 3, 6, 6, '#f4f1e1');
     else if (k && (k & 1)) rect(x - 2, y - 2, 4, 4, LCD.SNAKE_DARK);
   }
@@ -334,6 +401,13 @@ export function drawBossTop(sy) {
     if (ahead) {                                                     // an egg right in front: the mouth opens, like the original
       for (let k = 0; k < 4; k++) rect(x + dx * (6 - k) + px * (-k) - 1 + (dx < 0 ? 1 : 0), y + dy * (6 - k) + py * (-k) - 1 + (dy < 0 ? 1 : 0), dx ? 2 : k * 2 + 1, dy ? 2 : k * 2 + 1, LCD.FLOOR);
     } else if (((B.t * 5) | 0) & 1) { rect(x + dx * 8 - (dx ? 0 : 1), y + dy * 8 - (dy ? 0 : 1), dx ? 5 : 2, dy ? 5 : 2, COLORS.ENEMY); }
+  }
+  // across a seam you're on both sides at once, so you can see where you'll come out
+  if (B.wrap) {
+    const Wd = B.N * SN.CELL, k = SPR.kayak[G.paddle], gx = G.px - B.x0 < 26 ? Wd : B.x0 + Wd - G.px < 26 ? -Wd : 0, gy = G.dist - B.y0 < 26 ? Wd : B.y0 + Wd - G.dist < 26 ? -Wd : 0;
+    ctx.globalAlpha = 0.55;
+    for (const [ox, oy] of [[gx, 0], [0, gy], [gx, gy]]) if (ox || oy) { ctx.save(); ctx.translate(Math.round(G.px + ox), sy(G.dist + oy)); ctx.rotate(G.heading || 0); ctx.drawImage(k, -(k.width >> 1), -(k.height >> 1)); ctx.restore(); }
+    ctx.globalAlpha = 1;
   }
   // your tail: a line of Angies in kayaks following your wake
   for (const p of G.tailPos) {
@@ -374,5 +448,13 @@ export function bossHud(W) {
   text('SNAKE', x0 + 6, y0 + 3, 1, LCD.SNAKE_DARK); text(String(B.cells.length).padStart(3, '0'), x0 + 6, y0 + 11, 2, LCD.SNAKE_DARK);
   text('YOUR TAIL', x0 + 194, y0 + 3, 1, LCD.SNAKE_DARK, 1); text(String(G.tailN || 0).padStart(3, '0'), x0 + 194, y0 + 11, 2, LCD.SNAKE_DARK, 1);
   text(ahead ? '>' : '<', W / 2, y0 + 8, 2, ahead ? '#306230' : '#0f380f', 0.5);
-  if (B.hunting && ((t * 4) | 0) & 1) text('HUNTING!', W / 2, y0 + 30, 1, COLORS.ENEMY, 0.5);
+  // his lives: three chunky LCD blocks; a fresh loss blinks
+  const hx = W / 2 - 46, hy = y0 + 28, lost = t - B.hitT < 1.2 && ((t * 10) | 0) & 1;
+  rect(hx - 3, hy - 2, 98, 14, '#000');
+  for (let k = 0; k < SN.HP; k++) {
+    const alive = k < B.hp || (lost && k === B.hp);
+    rect(hx + k * 32, hy, 28, 10, LCD.SNAKE_DARK);
+    rect(hx + k * 32 + 1, hy + 1, 26, 8, alive ? ['#9bbc0f', '#e0b83a', '#ff5a3c'][anger(B)] : '#1c2a1c');
+  }
+  if (B.hunting && ((t * 4) | 0) & 1) text(anger(B) >= 2 ? 'FURIOUS!' : 'HUNTING!', W / 2, y0 + 44, 1, COLORS.ENEMY, 0.5);
 }

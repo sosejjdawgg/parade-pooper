@@ -165,6 +165,12 @@ export const BOSS = {
     CUT: 3, STUN: 0.6, DIE_AT: 4,         // hitting your tail costs it 3 segments; at 4 or fewer it's finished
     AGGRO_CELLS: 6,                       // it hunts you when you're this close and it's at least as long as your tail
     EGG_R: 15, HEAD_R: 11, BODY_R: 10, TAIL_GAP: 17,
+    HP: 3,                                // three hits and he's dead (a slice, him hitting your tail, or a crash)
+    HIT_SPEED: [1, 0.78, 0.6],            // step time per phase: every hit makes him faster...
+    HIT_AGGRO: [6, 10, 99],               // ...and angrier: how close you must be before he hunts you
+    HIT_INV: 1.4,                         // after a hit he can't be hit again for this long
+    BREAK_AT: 1,                          // with this many lives left he smashes the walls: the arena wraps round
+    LOOK: [0, 0.35, 0.6],                 // seconds ahead he predicts you, per phase
     SLICE_FROM: 4, SLICE_R: 11, SLICE_CD: 0.35,   // your tail slices its body from the 5th segment back (the neck is guarded); one kayak per slice
     INTRO: 5.2, REWARD_CASH: 50, REWARD_LEVELS: 3,
     // the arrival, in seconds: the grid builds out from the lighthouse, the border races round and slams shut,
